@@ -261,8 +261,9 @@ function generateStationList(count, startId = 1) {
 
         const quickChargeNum = randomInt(2, 16);
         const slowChargeNum = randomInt(2, 10);
-        const quickAvailableNum = randomInt(0, quickChargeNum);
-        const slowAvailableNum = randomInt(0, slowChargeNum);
+        const openStatus = Math.random() < 0.92 ? 1 : 0;
+        const quickAvailableNum = openStatus === 0 ? 0 : randomInt(0, quickChargeNum);
+        const slowAvailableNum = openStatus === 0 ? 0 : randomInt(0, slowChargeNum);
 
         const electricityPrice = parseFloat(random(0.5, 1.2).toFixed(2));
         const servicePrice = parseFloat(random(0.2, 0.6).toFixed(2));
@@ -285,7 +286,7 @@ function generateStationList(count, startId = 1) {
         }
 
         const maxPower = pick(powerLevels.filter(p => p.power >= 60)).power;
-        const openStatus = Math.random() < 0.92 ? 1 : 0;
+        const hasAvailable = quickAvailableNum > 0 || slowAvailableNum > 0;
 
         stations.push({
             stationId,
@@ -301,7 +302,7 @@ function generateStationList(count, startId = 1) {
             slowAvailableNum,
             totalCostPrice,
             memberPrice,
-            reservationAvailable: Math.random() > 0.35,
+            reservationAvailable: openStatus === 1 && hasAvailable && Math.random() > 0.35,
             maxPower,
             openStatus,
             openTime: openStatus ? pick(openTimes) : '00:00-24:00',
@@ -363,6 +364,29 @@ function generateStationDetails(stations) {
             });
         }
 
+        const slowConnectors = [];
+        for (let i = 0; i < station.slowChargeNum; i++) {
+            let status;
+            if (station.openStatus === 0) {
+                status = 0;
+            } else if (i < station.slowAvailableNum) {
+                status = 1;
+            } else {
+                const rand = Math.random();
+                if (rand < 0.75) status = 3;
+                else if (rand < 0.92) status = 2;
+                else status = 255;
+            }
+
+            slowConnectors.push({
+                id: `${station.stationId}-SC-${i + 1}`,
+                connectorName: `慢充${i + 1}`,
+                power: 7,
+                connectorType: pick(stationConnectorTypes),
+                status
+            });
+        }
+
         const periodPrices = timePeriods.map((period, index) => {
             const startHour = parseInt(period.startTime.split(':')[0]);
             const endHour = parseInt(period.endTime.split(':')[0]);
@@ -418,6 +442,7 @@ function generateStationDetails(stations) {
             stationId: station.stationId,
             connectorTypes: stationConnectorTypes,
             fastConnectors,
+            slowConnectors,
             periodPrices,
             reviewsCount,
             reviews,

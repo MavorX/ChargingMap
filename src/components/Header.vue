@@ -71,7 +71,7 @@ import { useUserStore } from '../store/modules/user';
 const userStore = useUserStore();
 const unreadNotificationsCount = computed(() => userStore.unreadNotificationsCount);
 
-const navItems = [
+const navItems = computed(() => [
   {
     id: 'showNotifications',
     label: '通知中心',
@@ -89,7 +89,7 @@ const navItems = [
     label: '定位当前位置',
     icon: 'fa fa-location-arrow text-primary-500'
   }
-];
+]);
 
 const toggleTheme = () => {
   userStore.toggleTheme();

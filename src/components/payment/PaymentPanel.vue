@@ -250,8 +250,8 @@ const coupons = computed(() => {
 })
 
 const paymentMethods = computed(() => [
-  { id: 'wechat', name: '微信支付', desc: '推荐使用', icon: 'fa fa-wechat text-green-500 text-lg', bgClass: 'bg-green-100 dark:bg-green-900/30' },
-  { id: 'alipay', name: '支付宝', desc: '快捷支付', icon: 'fa fa-alipay text-blue-500 text-lg', bgClass: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'wechat', name: '微信支付', desc: '推荐使用', icon: 'fab fa-weixin text-green-500 text-lg', bgClass: 'bg-green-100 dark:bg-green-900/30' },
+  { id: 'alipay', name: '支付宝', desc: '快捷支付', icon: 'fab fa-alipay text-blue-500 text-lg', bgClass: 'bg-blue-100 dark:bg-blue-900/30' },
   { id: 'wallet', name: '钱包余额', desc: `余额 ¥${userStore.userInfo.balance.toFixed(2)}`, icon: 'fa fa-credit-card text-primary-500 text-lg', bgClass: 'bg-primary-100 dark:bg-primary-900/30' },
 ])
 

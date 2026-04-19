@@ -7,7 +7,7 @@ export const useChargingStore = defineStore('charging', {
       duration: 0,
       energy: 5.2,
       cost: 12.50,
-      speed: 65,
+      speed: 0,
       battery: 35
     },
     settings: {
@@ -17,7 +17,8 @@ export const useChargingStore = defineStore('charging', {
       costThreshold: 50,
       smartCharge: false
     },
-    chargingInterval: null
+    chargingInterval: null,
+    speedUpdateInterval: null
   }),
   
   actions: {
@@ -27,18 +28,23 @@ export const useChargingStore = defineStore('charging', {
         duration: 0,
         energy: 0,
         cost: 0,
-        speed: 65,
+        speed: 0,
         battery: 35
       }
       
-      // 模拟充电过程
+      this.speedUpdateInterval = setInterval(() => {
+        const baseSpeed = 65
+        const wave = Math.sin(Date.now() / 8000) * 15
+        const noise = (Math.random() - 0.5) * 6
+        this.chargingData.speed = Math.max(30, Math.min(120, baseSpeed + wave + noise))
+      }, 2000)
+      
       this.chargingInterval = setInterval(() => {
         this.chargingData.duration += 1
         this.chargingData.energy += 0.1
         this.chargingData.cost += 0.25
         this.chargingData.battery += 0.5
         
-        // 充电完成
         if (this.chargingData.battery >= this.settings.targetBattery) {
           this.stopCharging()
         }
@@ -51,11 +57,14 @@ export const useChargingStore = defineStore('charging', {
         clearInterval(this.chargingInterval)
         this.chargingInterval = null
       }
+      if (this.speedUpdateInterval) {
+        clearInterval(this.speedUpdateInterval)
+        this.speedUpdateInterval = null
+      }
     },
     
     updateSettings(settings) {
       this.settings = { ...this.settings, ...settings }
-      // 保存设置到本地存储
       localStorage.setItem('chargingSettings', JSON.stringify(this.settings))
     },
     

@@ -208,25 +208,13 @@ export const useUserStore = defineStore('user', {
   actions: {
     toggleTheme() {
       this.isDarkMode = !this.isDarkMode
-      // 保存主题设置到本地存储
       localStorage.setItem('isDarkMode', this.isDarkMode)
-      // 应用主题类到文档根元素
-      if (this.isDarkMode) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
     },
     
     loadTheme() {
       const savedTheme = localStorage.getItem('isDarkMode')
       if (savedTheme !== null) {
         this.isDarkMode = savedTheme === 'true'
-        if (this.isDarkMode) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
       }
     },
     
@@ -282,7 +270,7 @@ export const useUserStore = defineStore('user', {
         ...transaction,
         date: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')
       })
-      if (updateBalance && ['recharge', 'payment', 'refund'].includes(transaction.type)) {
+      if (updateBalance && ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)) {
         this.userInfo.balance += transaction.amount
       }
     },

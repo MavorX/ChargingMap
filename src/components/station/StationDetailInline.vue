@@ -85,7 +85,7 @@
             <p class="text-[10px] text-surface-500 dark:text-surface-400 mb-0.5">营业时间</p>
             <p class="font-semibold text-surface-800 dark:text-surface-200 text-xs">{{ station.openTime }}</p>
           </div>
-          <span v-if="station.reservationAvailable" class="status-badge-warning text-[9px]">支持预约</span>
+          <span v-if="station.reservationAvailable && station.openStatus === 1 && (station.quickAvailableNum > 0 || station.slowAvailableNum > 0)" class="status-badge-warning text-[9px]">支持预约</span>
         </div>
 
         <div class="info-row hover:bg-surface-100/80 dark:hover:bg-surface-800/80 transition-colors duration-200 group">
@@ -114,7 +114,7 @@
           <div class="w-6 h-6 rounded-md bg-gradient-to-br from-warning-400 to-orange-500 flex items-center justify-center mr-2 shadow-sm">
             <i class="fa fa-bolt text-white text-[10px]" aria-hidden="true"></i>
           </div>
-          充电桩详情
+          快充桩详情
         </h3>
         <div class="space-y-2">
           <div v-for="(connector, index) in station.details.fastConnectors" :key="connector.id"
@@ -128,6 +128,33 @@
                 <div class="min-w-0">
                   <h4 class="font-bold text-surface-800 dark:text-surface-200 text-xs mb-0.5 truncate">{{ connector.connectorName }}</h4>
                   <p class="text-[10px] text-surface-500 dark:text-surface-400">{{ connector.power }}kW · {{ connector.connectorType || 'CCS Combo' }}</p>
+                </div>
+              </div>
+              <span class="ml-2 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap" :class="getConnectorStatusClass(connector.status)">{{ getConnectorStatusText(connector.status) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4 animate-in delay-250" v-if="station.details && station.details.slowConnectors && station.details.slowConnectors.length > 0">
+        <h3 class="section-title text-sm">
+          <div class="w-6 h-6 rounded-md bg-gradient-to-br from-primary-400 to-blue-500 flex items-center justify-center mr-2 shadow-sm">
+            <i class="fa fa-plug text-white text-[10px]" aria-hidden="true"></i>
+          </div>
+          慢充桩详情
+        </h3>
+        <div class="space-y-2">
+          <div v-for="(connector, index) in station.details.slowConnectors" :key="connector.id"
+               class="premium-card p-3 hover:shadow-soft-md transition-all duration-300 cursor-pointer group animate-in"
+               :style="{ animationDelay: `${index * 100}ms` }">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center flex-1 min-w-0">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3 shadow-inner-soft transition-transform duration-300 group-hover:scale-110" :class="getConnectorBgClass(connector.status)">
+                  <i class="fa fa-plug text-sm" :class="getConnectorIconClass(connector.status)" aria-hidden="true"></i>
+                </div>
+                <div class="min-w-0">
+                  <h4 class="font-bold text-surface-800 dark:text-surface-200 text-xs mb-0.5 truncate">{{ connector.connectorName }}</h4>
+                  <p class="text-[10px] text-surface-500 dark:text-surface-400">{{ connector.power }}kW · {{ connector.connectorType || 'Type 2' }}</p>
                 </div>
               </div>
               <span class="ml-2 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap" :class="getConnectorStatusClass(connector.status)">{{ getConnectorStatusText(connector.status) }}</span>

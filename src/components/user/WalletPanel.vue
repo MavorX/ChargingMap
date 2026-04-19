@@ -152,6 +152,7 @@ const getTransactionIconClass = (type) => {
     case 'recharge': return 'bg-gradient-to-br from-secondary-400 to-emerald-500'
     case 'payment': return 'bg-gradient-to-br from-primary-400 to-blue-500'
     case 'refund': return 'bg-gradient-to-br from-warning-400 to-orange-500'
+    case 'withdraw': return 'bg-gradient-to-br from-accent-400 to-purple-500'
     default: return 'bg-gradient-to-br from-surface-400 to-surface-500'
   }
 }
@@ -161,6 +162,7 @@ const getTransactionIcon = (type) => {
     case 'recharge': return 'fa fa-arrow-down'
     case 'payment': return 'fa fa-arrow-up'
     case 'refund': return 'fa fa-undo'
+    case 'withdraw': return 'fa fa-arrow-up'
     default: return 'fa fa-exchange'
   }
 }
@@ -188,7 +190,7 @@ const handleWithdraw = () => {
     return
   }
   const amount = -withdrawAmount.value
-  userStore.addWalletTransaction({ type: 'payment', amount, balance: userStore.userInfo.balance + amount })
+  userStore.addWalletTransaction({ type: 'withdraw', amount, balance: userStore.userInfo.balance + amount })
   showToast(`成功提现 ¥${Math.abs(amount).toFixed(2)}`, 'success')
   showWithdrawModal.value = false
   withdrawAmount.value = null
