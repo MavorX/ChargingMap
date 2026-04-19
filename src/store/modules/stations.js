@@ -28,6 +28,7 @@ export const useStationsStore = defineStore('stations', {
       connectors: ['CCS', 'GB/T', 'CHAdeMO', 'Type 2'],
       power: 50
     },
+    searchQuery: '',
     isLoading: false,
     error: null,
     viewportBounds: null,
@@ -126,6 +127,11 @@ export const useStationsStore = defineStore('stations', {
       this.listPage = 1
     },
 
+    setSearchQuery(query) {
+      this.searchQuery = query
+      this.listPage = 1
+    },
+
     toggleFilter(key) {
       this.filters[key] = !this.filters[key]
       this.listPage = 1
@@ -141,6 +147,7 @@ export const useStationsStore = defineStore('stations', {
         connectors: ['CCS', 'GB/T', 'CHAdeMO', 'Type 2'],
         power: 50
       }
+      this.searchQuery = ''
       this.listPage = 1
     },
 
@@ -221,18 +228,23 @@ export const useStationsStore = defineStore('stations', {
 
     filteredStations: (state) => {
       const filters = state.filters
+      const query = state.searchQuery.toLowerCase()
 
       return state.stations.filter(station => {
         if (filters.quickAvailable && station.quickAvailableNum <= 0) return false
         if (filters.slowAvailable && station.slowAvailableNum <= 0) return false
         if (filters.open24h && station.openTime !== '00:00-24:00') return false
-        if (filters.reservable && !station.reservationAvailable) return false
+        if (filters.reservable && !(station.reservationAvailable && station.openStatus === 1 && (station.quickAvailableNum > 0 || station.slowAvailableNum > 0))) return false
 
         if (station.maxPower && station.maxPower < filters.power) return false
 
         if (station.details && station.details.connectorTypes) {
           const hasMatching = filters.connectors.some(c => station.details.connectorTypes.includes(c))
           if (!hasMatching) return false
+        }
+
+        if (query) {
+          if (!station.stationName.toLowerCase().includes(query) && !station.address.toLowerCase().includes(query)) return false
         }
 
         return true

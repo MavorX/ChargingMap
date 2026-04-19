@@ -90,7 +90,7 @@
               </p>
             </div>
             <div class="flex flex-col items-end space-y-1.5 flex-shrink-0">
-              <span v-if="station.reservationAvailable" class="status-badge-warning text-[10px]">可预约</span>
+              <span v-if="station.reservationAvailable && station.openStatus === 1 && (station.quickAvailableNum > 0 || station.slowAvailableNum > 0)" class="status-badge-warning text-[10px]">可预约</span>
               <span class="status-badge text-[11px]" :class="getStationStatusClass(station)">{{ getStationStatusText(station) }}</span>
             </div>
           </div>
@@ -164,7 +164,10 @@ import { useStationsStore } from '../../store/modules/stations';
 const emit = defineEmits(['close', 'show-filter']);
 
 const stationsStore = useStationsStore();
-const searchQuery = ref('');
+const searchQuery = computed({
+  get: () => stationsStore.searchQuery,
+  set: (val) => stationsStore.setSearchQuery(val)
+});
 const filters = computed(() => stationsStore.filters);
 const activeFilterCount = computed(() => stationsStore.activeFilterCount);
 const viewportStationCount = computed(() => stationsStore.viewportStationCount);
@@ -189,17 +192,7 @@ const filterButtons = {
 };
 
 const displayedStations = computed(() => {
-  let stations = stationsStore.pagedStations;
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    stations = stations.filter(station =>
-      station.stationName.toLowerCase().includes(query) ||
-      station.address.toLowerCase().includes(query)
-    );
-  }
-
-  return stations;
+  return stationsStore.pagedStations;
 });
 
 const hasMore = computed(() => stationsStore.hasMoreStations);
@@ -215,7 +208,6 @@ const loadMore = () => {
 
 const resetFilters = () => {
   stationsStore.resetFilters();
-  searchQuery.value = '';
 };
 
 const selectStation = (station) => {

@@ -46,7 +46,7 @@
             <span class="text-sm text-surface-500 dark:text-surface-400">最低功率</span>
             <span class="text-lg font-black gradient-text">{{ selectedPower }}kW</span>
           </div>
-          <input type="range" min="50" max="300" step="50" v-model="selectedPower"
+          <input type="range" min="50" max="300" step="50" v-model.number="selectedPower"
             class="w-full h-2 bg-surface-200 dark:bg-surface-700 rounded-lg appearance-none cursor-pointer accent-primary-500">
           <div class="flex justify-between text-xs text-surface-400 mt-2">
             <span>50kW</span>

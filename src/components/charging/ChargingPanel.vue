@@ -7,11 +7,7 @@
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">充电中</h2>
-      <button
-        class="px-4 py-2 rounded-xl bg-danger-500/10 text-danger-600 dark:text-danger-400 font-bold text-sm hover:bg-danger-500/20 transition-all duration-200 active:scale-95"
-        @click="stopCharging">
-        结束充电
-      </button>
+      <div class="w-10"></div>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
@@ -102,14 +98,14 @@
               </div>
               <span class="font-bold text-surface-800 dark:text-surface-200">充电功率</span>
             </div>
-            <span class="text-2xl font-black gradient-text">{{ chargingData.speed }} kW</span>
+            <span class="text-2xl font-black gradient-text">{{ displayedSpeed.toFixed(1) }} kW</span>
           </div>
 
           <div class="relative">
             <div class="w-full h-3 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden shadow-inner-soft">
               <div
-                class="h-full rounded-full relative overflow-hidden transition-all duration-700 ease-out"
-                :style="{ width: `${(chargingData.speed / 150) * 100}%` }">
+                class="h-full rounded-full relative overflow-hidden"
+                :style="{ width: `${(chargingData.speed / 150) * 100}%`, transition: 'width 2s ease-in-out' }">
                 <div class="absolute inset-0 bg-gradient-to-r from-secondary-400 via-cyan-400 to-primary-500 animate-shimmer"
                      style="background-size: 200% 100%;"></div>
               </div>
@@ -138,12 +134,24 @@
         </div>
       </div>
     </div>
+
+    <div class="flex-shrink-0 glass-effect border-t border-surface-200/50 dark:border-surface-700/50 p-4 lg:p-5">
+      <button
+        class="group w-full relative overflow-hidden bg-gradient-to-r from-danger-500 via-red-600 to-rose-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-danger-500/25 hover:shadow-2xl hover:shadow-danger-500/35 transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+        @click="stopCharging">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+        <span class="relative z-10 flex items-center justify-center space-x-2.5 text-base">
+          <i class="fa fa-stop-circle text-lg" aria-hidden="true"></i>
+          <span>结束充电</span>
+        </span>
+      </button>
+    </div>
       </div>
 </div>
 </template>
 
 <script setup>
-import { computed, onUnmounted, inject } from 'vue'
+import { ref, computed, onMounted, onUnmounted, inject } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
 import { useStationsStore } from '../../store/modules/stations'
 
@@ -155,6 +163,40 @@ const showToast = inject('showToast')
 const chargingData = computed(() => chargingStore.chargingData)
 const currentStation = computed(() => stationsStore.currentStation)
 const targetBattery = computed(() => chargingStore.settings.targetBattery)
+
+const displayedSpeed = ref(0)
+let rafId = null
+let lastTime = 0
+
+const animateLoop = (timestamp) => {
+  if (!lastTime) lastTime = timestamp
+  const delta = (timestamp - lastTime) / 1000
+  lastTime = timestamp
+
+  const targetSpeed = chargingData.value.speed
+  const diff = targetSpeed - displayedSpeed.value
+
+  if (Math.abs(diff) > 0.05) {
+    const lerpFactor = 1 - Math.pow(0.03, delta)
+    displayedSpeed.value += diff * lerpFactor
+  } else {
+    displayedSpeed.value = targetSpeed
+  }
+
+  rafId = requestAnimationFrame(animateLoop)
+}
+
+onMounted(() => {
+  displayedSpeed.value = chargingData.value.speed
+  rafId = requestAnimationFrame(animateLoop)
+})
+
+onUnmounted(() => {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+})
 
 const circumference = 2 * Math.PI * 85
 const progressOffset = computed(() => {
@@ -182,8 +224,4 @@ const stopCharging = () => {
   showToast('充电已结束', 'success')
   emit('close')
 }
-
-onUnmounted(() => {
-  chargingStore.stopCharging()
-})
 </script>

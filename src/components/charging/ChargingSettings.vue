@@ -166,8 +166,9 @@ const showToast = inject('showToast')
 const currentStation = computed(() => stationsStore.currentStation)
 
 const availableConnectors = computed(() => {
-  if (!currentStation.value?.details?.fastConnectors) return []
-  return currentStation.value.details.fastConnectors.filter(c => c.status === 1)
+  const fast = currentStation.value?.details?.fastConnectors?.filter(c => c.status === 1) || []
+  const slow = currentStation.value?.details?.slowConnectors?.filter(c => c.status === 1) || []
+  return [...fast, ...slow]
 })
 
 const selectedConnector = ref('')
