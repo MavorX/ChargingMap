@@ -7,10 +7,10 @@
     <title>VWer-Charging</title>
     <script type="text/javascript">
       window._AMapSecurityConfig = {
-        securityJsCode: 'AMAP_SECURITY_CODE_REMOVED',
+        securityJsCode: '%VITE_AMAP_SECURITY_CODE%',
       }
     </script>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=AMAP_KEY_REMOVED&plugin=AMap.MarkerCluster,AMap.MarkerClusterer,AMap.Geolocation,AMap.Driving"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=%VITE_AMAP_KEY%&plugin=AMap.MarkerCluster,AMap.MarkerClusterer,AMap.Geolocation,AMap.Driving"></script>
     <style>
       @keyframes clusterPulse {
         0% { transform: scale(1); opacity: 0.6; }

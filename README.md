@@ -291,10 +291,10 @@ node generate_stations.js
 
 ## 高德地图配置
 
-项目使用高德地图 JS SDK 2.0，需要在 [index.html](index.html) 中配置：
+项目使用高德地图 JS SDK 2.0，密钥通过环境变量注入，不硬编码在代码中：
 
-1. **API Key** — 替换 `index.html` 中 script 标签的 `key` 参数
-2. **安全密钥** — 替换 `window._AMapSecurityConfig.securityJsCode`
+1. 复制 [.env.example](.env.example) 为 `.env.local`（此文件已被 .gitignore 忽略，不会提交）
+2. 在 `.env.local` 中填入你的 `VITE_AMAP_KEY` 和 `VITE_AMAP_SECURITY_CODE`
 
 获取密钥请前往 [高德开放平台](https://lbs.amap.com/) 注册并创建应用。
 
@@ -351,7 +351,7 @@ node generate_stations.js
 ## 注意事项
 
 - 本项目为前端演示应用，支付、预约等流程均为模拟数据，不涉及真实交易
-- 高德地图 API Key 和安全密钥为开发测试用途，生产环境请替换为自己的密钥
+- 高德地图 API Key 和安全密钥通过 `.env.local` 环境变量配置，切勿硬编码到代码或提交到仓库
 - 充电站数据由 `generate_stations.js` 脚本随机生成，仅供演示
 - 项目当前为单页应用，所有功能在一个页面内通过面板切换实现
 
