@@ -118,7 +118,7 @@
           >
             <i class="fa fa-rmb text-[10px] text-warning-500" aria-hidden="true"></i>
             <span class="text-xs font-bold text-warning-600"
-              >¥{{ station.currentPrice.toFixed(2) }}</span
+              >¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—' }}</span
             >
           </div>
         </div>
@@ -143,7 +143,9 @@
             class="flex items-center text-xs font-bold text-primary-600 transition-transform duration-200 group-hover:translate-x-1 dark:text-primary-400"
           >
             <i class="fa fa-location-arrow mr-1 text-[10px]" aria-hidden="true"></i>
-            {{ (station.distance / 1000).toFixed(1) }} km
+            {{
+              Number.isFinite(station.distance) ? (station.distance / 1000).toFixed(1) + ' km' : '—'
+            }}
           </div>
         </div>
       </div>

@@ -193,7 +193,7 @@
               <div class="min-w-0">
                 <p class="text-[9px] font-medium uppercase tracking-wide text-surface-500">电价</p>
                 <p class="text-xs font-bold text-warning-600">
-                  ¥{{ station.currentPrice.toFixed(2) }}
+                  ¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—' }}
                 </p>
               </div>
             </div>
@@ -221,7 +221,11 @@
               class="flex items-center text-sm font-bold text-primary-600 transition-transform duration-200 group-hover:translate-x-1 dark:text-primary-400"
             >
               <i class="fa fa-location-arrow mr-1.5 text-xs" aria-hidden="true"></i>
-              {{ (station.distance / 1000).toFixed(1) }} km
+              {{
+                Number.isFinite(station.distance)
+                  ? (station.distance / 1000).toFixed(1) + ' km'
+                  : '—'
+              }}
               <i
                 class="fa fa-chevron-right ml-1.5 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 aria-hidden="true"

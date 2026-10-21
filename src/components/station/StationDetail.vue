@@ -87,8 +87,12 @@
                 距离
               </p>
               <p class="gradient-text text-xl font-bold">
-                {{ (station.distance / 1000).toFixed(1)
-                }}<span class="ml-0.5 text-xs font-normal text-surface-500">km</span>
+                {{ Number.isFinite(station.distance) ? (station.distance / 1000).toFixed(1) : '—'
+                }}<span
+                  v-if="Number.isFinite(station.distance)"
+                  class="ml-0.5 text-xs font-normal text-surface-500"
+                  >km</span
+                >
               </p>
             </div>
 
@@ -170,7 +174,7 @@
                   当前电价
                 </p>
                 <p class="text-lg font-bold text-primary-600">
-                  ¥{{ station.currentPrice.toFixed(2)
+                  ¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—'
                   }}<span class="text-xs font-normal text-surface-400">/度</span>
                 </p>
               </div>

@@ -52,7 +52,7 @@ describe('stations store distance characterization', () => {
     expect(Number.isNaN(store.stations[0].distance)).toBe(true)
   })
 
-  it('falls back to the provided distance, or 0, when userLocation is absent', async () => {
+  it('leaves distance null when userLocation is absent instead of trusting the dataset distance', async () => {
     loadStationsList.mockResolvedValue([
       baseStation({ stationId: 'with-distance', distance: 1234.5 }),
       baseStation({ stationId: 'without-distance', distance: undefined })
@@ -63,7 +63,7 @@ describe('stations store distance characterization', () => {
 
     const withDistance = store.stations.find((s) => s.stationId === 'with-distance')
     const withoutDistance = store.stations.find((s) => s.stationId === 'without-distance')
-    expect(withDistance.distance).toBe(1234.5)
-    expect(withoutDistance.distance).toBe(0)
+    expect(withDistance.distance).toBeNull()
+    expect(withoutDistance.distance).toBeNull()
   })
 })

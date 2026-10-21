@@ -69,7 +69,7 @@ class MapManager {
     const color2 = this.adjustColor(color, -15)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
     const statusText = station.openStatus === 0 ? '维护中' : availableCount === 0 ? '已满' : '空闲'
-    const price = station.currentPrice ? station.currentPrice.toFixed(2) : '0.87'
+    const price = station.currentPrice != null ? station.currentPrice.toFixed(2) : '—'
     const isFav = station.isFavorite
 
     const content = document.createElement('div')

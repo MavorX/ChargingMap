@@ -87,9 +87,9 @@
                   class="fa fa-location-arrow mr-1.5 text-xs text-accent-500"
                   aria-hidden="true"
                 ></i>
-                <span class="text-xs text-surface-600 dark:text-surface-300"
-                  >{{ station.distance }}km</span
-                >
+                <span class="text-xs text-surface-600 dark:text-surface-300">{{
+                  station.distance == null ? '—' : station.distance + 'km'
+                }}</span>
               </div>
             </div>
           </div>

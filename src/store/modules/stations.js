@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { loadStationsList, loadStationDetail } from '../../services/api'
+import { currentPriceFor } from '../../utils/pricing'
 
 const notifyError = (message) => {
   if (typeof window !== 'undefined') {
@@ -19,6 +20,16 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
       Math.sin(dLng / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
+}
+
+function compareDistance(a, b) {
+  const aMissing = a.distance == null || Number.isNaN(a.distance)
+  const bMissing = b.distance == null || Number.isNaN(b.distance)
+
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1
+  if (bMissing) return -1
+  return a.distance - b.distance
 }
 
 export const useStationsStore = defineStore('stations', {
@@ -62,18 +73,19 @@ export const useStationsStore = defineStore('stations', {
                 station.lat,
                 station.lng
               )
-            : station.distance || 0
+            : null
+          const initialPrice = Number.parseFloat(station.totalCostPrice)
 
           return {
             ...station,
-            currentPrice: 0.87,
-            distance: distance,
+            currentPrice: Number.isFinite(initialPrice) ? initialPrice : null,
+            distance,
             isFavorite: false,
             detailsLoaded: false
           }
         })
 
-        this.stations.sort((a, b) => a.distance - b.distance)
+        this.stations.sort(compareDistance)
         this.loadFavoriteStations()
       } catch (err) {
         this.error = '站点数据加载失败'
@@ -99,7 +111,7 @@ export const useStationsStore = defineStore('stations', {
         const details = await loadStationDetail(stationId)
         station.details = details
         station.detailsLoaded = true
-        station.currentPrice = this.getCurrentPrice(details.periodPrices)
+        station.currentPrice = currentPriceFor(station)
         return details
       } catch (err) {
         this.detailsError = '站点详情加载失败'
@@ -124,7 +136,7 @@ export const useStationsStore = defineStore('stations', {
           station.lng
         )
       })
-      this.stations.sort((a, b) => a.distance - b.distance)
+      this.stations.sort(compareDistance)
     },
 
     async setCurrentStation(station) {
@@ -165,28 +177,7 @@ export const useStationsStore = defineStore('stations', {
     },
 
     getCurrentPrice(periodPrices) {
-      if (!periodPrices || !periodPrices.length) {
-        return 0.87
-      }
-
-      const currentHour = new Date().getHours()
-
-      for (let period of periodPrices) {
-        const start = parseInt(period.startTime.split(':')[0])
-        const end = parseInt(period.endTime.split(':')[0])
-
-        if (start < end) {
-          if (currentHour >= start && currentHour < end) {
-            return parseFloat(period.totalFee)
-          }
-        } else {
-          if (currentHour >= start || currentHour < end) {
-            return parseFloat(period.totalFee)
-          }
-        }
-      }
-
-      return 0.87
+      return currentPriceFor({ details: { periodPrices } })
     },
 
     loadFavoriteStations() {
@@ -245,39 +236,41 @@ export const useStationsStore = defineStore('stations', {
       const filters = state.filters
       const query = state.searchQuery.toLowerCase()
 
-      return state.stations.filter((station) => {
-        if (filters.quickAvailable && station.quickAvailableNum <= 0) return false
-        if (filters.slowAvailable && station.slowAvailableNum <= 0) return false
-        if (filters.open24h && station.openTime !== '00:00-24:00') return false
-        if (
-          filters.reservable &&
-          !(
-            station.reservationAvailable &&
-            station.openStatus === 1 &&
-            (station.quickAvailableNum > 0 || station.slowAvailableNum > 0)
-          )
-        )
-          return false
-
-        if (station.maxPower && station.maxPower < filters.power) return false
-
-        if (station.details && station.details.connectorTypes) {
-          const hasMatching = filters.connectors.some((c) =>
-            station.details.connectorTypes.includes(c)
-          )
-          if (!hasMatching) return false
-        }
-
-        if (query) {
+      return state.stations
+        .filter((station) => {
+          if (filters.quickAvailable && station.quickAvailableNum <= 0) return false
+          if (filters.slowAvailable && station.slowAvailableNum <= 0) return false
+          if (filters.open24h && station.openTime !== '00:00-24:00') return false
           if (
-            !station.stationName.toLowerCase().includes(query) &&
-            !station.address.toLowerCase().includes(query)
+            filters.reservable &&
+            !(
+              station.reservationAvailable &&
+              station.openStatus === 1 &&
+              (station.quickAvailableNum > 0 || station.slowAvailableNum > 0)
+            )
           )
             return false
-        }
 
-        return true
-      })
+          if (station.maxPower && station.maxPower < filters.power) return false
+
+          if (station.details && station.details.connectorTypes) {
+            const hasMatching = filters.connectors.some((c) =>
+              station.details.connectorTypes.includes(c)
+            )
+            if (!hasMatching) return false
+          }
+
+          if (query) {
+            if (
+              !station.stationName.toLowerCase().includes(query) &&
+              !station.address.toLowerCase().includes(query)
+            )
+              return false
+          }
+
+          return true
+        })
+        .sort(compareDistance)
     },
 
     viewportStations() {
@@ -325,7 +318,8 @@ export const useStationsStore = defineStore('stations', {
           address: s.address,
           availableConnectors: s.quickAvailableNum + s.slowAvailableNum,
           totalConnectors: s.quickChargeNum + s.slowChargeNum,
-          distance: (s.distance / 1000).toFixed(1),
+          distance:
+            s.distance == null || Number.isNaN(s.distance) ? null : (s.distance / 1000).toFixed(1),
           power: s.maxPower || 120
         }))
     },
