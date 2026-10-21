@@ -115,10 +115,17 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    addWalletTransaction(transaction, updateBalance = true) {
+    addWalletTransaction(transaction) {
+      const balanceDelta = ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)
+        ? Number(transaction.amount) || 0
+        : 0
+      if (balanceDelta !== 0) {
+        this.userInfo.balance = Math.round((this.userInfo.balance + balanceDelta) * 100) / 100
+      }
       this.walletTransactions.unshift({
         id: Date.now().toString(),
         ...transaction,
+        balance: this.userInfo.balance,
         date: new Date()
           .toLocaleString('zh-CN', {
             year: 'numeric',
@@ -129,12 +136,6 @@ export const useUserStore = defineStore('user', {
           })
           .replace(/\//g, '-')
       })
-      if (
-        updateBalance &&
-        ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)
-      ) {
-        this.userInfo.balance += transaction.amount
-      }
     },
 
     updateSettings(updates) {

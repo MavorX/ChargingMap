@@ -128,7 +128,7 @@
             </div>
             <div class="flex items-center space-x-2">
               <span v-if="selectedCoupon" class="text-sm font-black text-danger-500"
-                >-{{ formatPrice(selectedCoupon.discount) }}</span
+                >-{{ formatPrice(amounts.couponDiscount) }}</span
               >
               <i
                 class="fa fa-chevron-down text-surface-400 transition-transform duration-300"
@@ -248,7 +248,7 @@
           class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
         >
           <span class="text-sm font-medium text-surface-600 dark:text-surface-400">优惠券抵扣</span>
-          <span class="font-bold text-danger-500">-{{ formatPrice(selectedCoupon.discount) }}</span>
+          <span class="font-bold text-danger-500">-{{ formatPrice(amounts.couponDiscount) }}</span>
         </div>
         <div class="flex items-center justify-between pt-3">
           <span class="text-base font-bold text-surface-900 dark:text-surface-100">实付金额</span>
@@ -285,7 +285,7 @@
 import PanelShell from '../common/PanelShell.vue'
 import { ref, computed, inject } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
-import { useChargingStore } from '../../store/modules/charging'
+import { calculatePaymentAmounts, useChargingStore } from '../../store/modules/charging'
 import { useUserStore } from '../../store/modules/user'
 import { processPayment } from '../../services/api'
 import { formatDuration, formatPrice } from '../../utils/format'
@@ -305,47 +305,39 @@ const showCouponList = ref(false)
 const selectedPaymentMethod = ref('wechat')
 const selectedCoupon = ref(null)
 
-const chargeCost = computed(() => {
-  if (!currentStation.value) return 0
-  return chargingData.value.energy * currentStation.value.currentPrice
-})
+const receipt = ref(null)
 
-const serviceFee = computed(() => {
-  return chargeCost.value * 0.1
-})
+const preview = computed(() =>
+  calculatePaymentAmounts({
+    energy: chargingData.value.energy,
+    price: currentStation.value?.currentPrice,
+    coupon: selectedCoupon.value
+  })
+)
 
-const totalAmount = computed(() => {
-  return chargeCost.value + serviceFee.value
-})
-
-const finalAmount = computed(() => {
-  let amount = totalAmount.value
-  if (selectedCoupon.value) {
-    amount -= selectedCoupon.value.discount
-  }
-  return Math.max(0, amount)
-})
+const amounts = computed(() => receipt.value || preview.value)
+const chargeCost = computed(() => amounts.value.chargeCost)
+const serviceFee = computed(() => amounts.value.serviceFee)
+const totalAmount = computed(() => amounts.value.chargeCost + amounts.value.serviceFee)
+const finalAmount = computed(() => amounts.value.finalAmount)
 
 const coupons = computed(() => {
   return userStore.coupons
     .filter((c) => !c.used)
     .map((c) => {
-      let discount = 0
-      if (c.type === 'discount') {
-        discount = c.value
-      } else if (c.type === 'percent') {
-        discount = Math.min(
-          Math.round(totalAmount.value * (1 - c.percent / 100) * 100) / 100,
-          c.value
-        )
-      } else if (c.type === 'free') {
-        discount = c.value
-      }
+      const { couponDiscount } = calculatePaymentAmounts({
+        energy: chargingData.value.energy,
+        price: currentStation.value?.currentPrice,
+        coupon: c
+      })
       return {
         id: c.id,
         name: c.title,
-        discount,
-        expiry: c.expiryDate
+        discount: couponDiscount,
+        expiry: c.expiryDate,
+        type: c.type,
+        value: c.value,
+        percent: c.percent
       }
     })
     .filter((c) => c.discount > 0)
@@ -400,14 +392,12 @@ const handlePayment = async () => {
       stationId: currentStation.value?.stationId,
       energy: chargingData.value.energy
     })
-    if (selectedCoupon.value) {
-      userStore.useCoupon(selectedCoupon.value.id)
-    }
-    if (selectedPaymentMethod.value === 'wallet') {
-      userStore.userInfo.balance -= finalAmount.value
-    }
+    receipt.value = chargingStore.settlePayment({
+      couponId: selectedCoupon.value?.id || null,
+      method: selectedPaymentMethod.value
+    })
     showToast('支付成功', 'success')
-    emit('payment-success', finalAmount.value)
+    emit('payment-success', receipt.value)
   } catch {
     showToast('支付失败，请重试', 'error')
   } finally {

@@ -246,11 +246,10 @@
 import { computed, defineAsyncComponent, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
-import { useUserStore } from '../store/modules/user'
 import { useUiStore } from '../store/modules/ui'
 import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
-import { formatDuration, formatPrice } from '../utils/format'
+import { formatDuration } from '../utils/format'
 import MapView from '../components/map/MapView.vue'
 import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
@@ -282,7 +281,6 @@ const VehicleFilter = defineAsyncComponent(() => import('../components/filter/Ve
 
 const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
-const userStore = useUserStore()
 const uiStore = useUiStore()
 const showToast = inject('showToast')
 
@@ -347,42 +345,9 @@ const onChargingComplete = () => {
   uiStore.replace('payment')
 }
 
-const onPaymentSuccess = (paidAmount) => {
+const onPaymentSuccess = (receipt) => {
+  lastPaidAmount.value = receipt?.finalAmount ?? 0
   uiStore.open('paymentSuccess', { reset: true })
-
-  const station = currentStation.value
-  const chargingData = chargingStore.chargingData
-  if (station) {
-    const chargeCost = chargingData.energy * station.currentPrice
-    const serviceFee = chargeCost * 0.1
-    const totalCost = chargeCost + serviceFee
-    const actualPaid = paidAmount || totalCost
-    lastPaidAmount.value = actualPaid
-
-    userStore.addChargingHistory({
-      stationName: station.stationName,
-      stationAddress: station.address,
-      duration: formatDuration(chargingData.duration, 'hm-verbose'),
-      energy: `${chargingData.energy.toFixed(1)} kWh`,
-      cost: actualPaid,
-      vehicleModel: userStore.vehicles.length > 0 ? userStore.vehicles[0].model : '未知车型',
-      status: 'completed'
-    })
-
-    userStore.addWalletTransaction(
-      {
-        type: 'payment',
-        amount: -actualPaid,
-        description: `${station.stationName}充电`
-      },
-      false
-    )
-
-    userStore.addNotification({
-      title: '充电完成通知',
-      content: `您在${station.stationName}的充电已完成，充电${chargingData.energy.toFixed(1)}度，费用${formatPrice(actualPaid)}。`
-    })
-  }
 }
 
 const onPaymentSuccessClose = () => {

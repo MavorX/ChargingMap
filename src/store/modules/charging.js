@@ -1,4 +1,45 @@
 import { defineStore } from 'pinia'
+import { useStationsStore } from './stations'
+import { useUserStore } from './user'
+import { formatDuration, formatPrice } from '../../utils/format'
+
+export const SERVICE_FEE_RATE = 0.1
+
+const toAmount = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+// minSpend is deliberately not enforced: v10 already ignored it and honoring it
+// here would change the payable amount for existing coupons.
+const couponDiscountFor = (coupon, totalAmount) => {
+  if (!coupon) return 0
+  if (coupon.type === 'percent') {
+    return Math.min(
+      Math.round(totalAmount * (1 - toAmount(coupon.percent) / 100) * 100) / 100,
+      toAmount(coupon.value)
+    )
+  }
+  if (coupon.type === 'discount' || coupon.type === 'free') {
+    return toAmount(coupon.value)
+  }
+  return 0
+}
+
+export function calculatePaymentAmounts({ energy = 0, price = 0, coupon = null } = {}) {
+  const chargeCost = toAmount(energy) * toAmount(price)
+  const serviceFee = chargeCost * SERVICE_FEE_RATE
+  const totalAmount = chargeCost + serviceFee
+  const couponDiscount = couponDiscountFor(coupon, totalAmount)
+
+  return {
+    chargeCost,
+    serviceFee,
+    totalAmount,
+    couponDiscount,
+    finalAmount: Math.max(0, totalAmount - couponDiscount)
+  }
+}
 
 const DEFAULT_SETTINGS = {
   targetBattery: 80,
@@ -108,6 +149,69 @@ export const useChargingStore = defineStore('charging', {
         // Corrupted JSON: fall back to defaults rather than breaking app boot.
         this.settings = { ...DEFAULT_SETTINGS }
       }
+    },
+
+    quotePayment({ couponId = null } = {}) {
+      const stationsStore = useStationsStore()
+      const userStore = useUserStore()
+      // The quote path never throws: a coupon consumed elsewhere previews as
+      // no discount instead of breaking the payment panel render.
+      const coupon = couponId
+        ? (userStore.coupons.find((item) => item.id === couponId && !item.used) ?? null)
+        : null
+
+      return calculatePaymentAmounts({
+        energy: this.chargingData.energy,
+        price: stationsStore.currentStation?.currentPrice ?? 0,
+        coupon
+      })
+    },
+
+    settlePayment({ couponId = null, method = 'wechat' } = {}) {
+      const stationsStore = useStationsStore()
+      const userStore = useUserStore()
+      const station = stationsStore.currentStation
+
+      if (!station || !Number.isFinite(Number(station.currentPrice))) {
+        throw new Error('当前没有可结算的充电站点')
+      }
+
+      // Validate before any write: an unavailable coupon must leave balance,
+      // wallet, history and notifications untouched.
+      const coupon = couponId ? userStore.coupons.find((item) => item.id === couponId) : null
+      if (couponId && (!coupon || coupon.used)) {
+        throw new Error('优惠券不存在或已使用')
+      }
+
+      const { chargeCost, serviceFee, couponDiscount, finalAmount } = calculatePaymentAmounts({
+        energy: this.chargingData.energy,
+        price: station.currentPrice,
+        coupon
+      })
+      const paidAt = new Date()
+
+      if (coupon) userStore.useCoupon(coupon.id)
+      userStore.addWalletTransaction({
+        type: 'payment',
+        amount: -finalAmount,
+        description: `${station.stationName}充电`,
+        method
+      })
+      userStore.addChargingHistory({
+        stationName: station.stationName,
+        stationAddress: station.address,
+        duration: formatDuration(this.chargingData.duration, 'hm-verbose'),
+        energy: `${Number(this.chargingData.energy).toFixed(1)} kWh`,
+        cost: finalAmount,
+        vehicleModel: userStore.vehicles.length > 0 ? userStore.vehicles[0].model : '未知车型',
+        status: 'completed'
+      })
+      userStore.addNotification({
+        title: '充电完成通知',
+        content: `您在${station.stationName}的充电已完成，充电${Number(this.chargingData.energy).toFixed(1)}度，费用${formatPrice(finalAmount)}。`
+      })
+
+      return { chargeCost, serviceFee, couponDiscount, finalAmount, paidAt }
     }
   }
 })

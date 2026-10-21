@@ -263,8 +263,7 @@ const handleRecharge = () => {
   }
   userStore.addWalletTransaction({
     type: 'recharge',
-    amount,
-    balance: userStore.userInfo.balance + amount
+    amount
   })
   showToast(`成功充值${formatPrice(amount)}`, 'success')
   showRechargeModal.value = false
@@ -284,8 +283,7 @@ const handleWithdraw = () => {
   const amount = -withdrawAmount.value
   userStore.addWalletTransaction({
     type: 'withdraw',
-    amount,
-    balance: userStore.userInfo.balance + amount
+    amount
   })
   showToast(`成功提现 ${formatPrice(Math.abs(amount))}`, 'success')
   showWithdrawModal.value = false

@@ -48,7 +48,6 @@
 import PanelShell from '../common/PanelShell.vue'
 import { computed } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
-import { useStationsStore } from '../../store/modules/stations'
 import { formatDuration, formatPrice } from '../../utils/format'
 
 defineEmits(['close'])
@@ -61,14 +60,10 @@ const props = defineProps({
 })
 
 const chargingStore = useChargingStore()
-const stationsStore = useStationsStore()
 const chargingData = computed(() => chargingStore.chargingData)
 
 const paidAmount = computed(() => {
   if (props.amount > 0) return props.amount
-  const station = stationsStore.currentStation
-  const chargeCost = station ? chargingData.value.energy * station.currentPrice : 0
-  const serviceFee = chargeCost * 0.1
-  return chargeCost + serviceFee
+  return chargingStore.quotePayment().finalAmount
 })
 </script>
