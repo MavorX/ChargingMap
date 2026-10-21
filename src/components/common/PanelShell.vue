@@ -2,7 +2,7 @@
   <div
     ref="rootRef"
     class="panel-overlay"
-    :class="{ 'z-50': fullscreen }"
+    :class="{ 'z-panel': fullscreen }"
     role="dialog"
     aria-modal="true"
     :aria-label="title || undefined"

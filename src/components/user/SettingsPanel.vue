@@ -212,7 +212,7 @@
     <Transition name="fade">
       <div
         v-if="showEditNameModal"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
         @click.self="showEditNameModal = false"
       >
         <div
@@ -246,7 +246,7 @@
     <Transition name="fade">
       <div
         v-if="showAboutModal"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
         @click.self="showAboutModal = false"
       >
         <div

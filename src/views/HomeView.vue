@@ -6,7 +6,7 @@
 
         <div
           v-if="!isNavigating"
-          class="fixed bottom-24 z-40 flex flex-col space-y-3 transition-all duration-300"
+          class="fixed bottom-24 z-fab flex flex-col space-y-3 transition-all duration-300"
           :class="desktopSidebarOpen ? 'right-[424px] xl:right-[444px]' : 'right-6'"
         >
           <button
@@ -47,7 +47,7 @@
         <button
           v-if="!isNavigating && !desktopSidebarOpen"
           id="toggle-list"
-          class="group fixed bottom-8 left-1/2 z-40 -translate-x-1/2 transform overflow-hidden rounded-2xl px-7 py-3.5 shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary-500/30 active:scale-[0.98] lg:hidden"
+          class="group fixed bottom-8 left-1/2 z-fab -translate-x-1/2 transform overflow-hidden rounded-2xl px-7 py-3.5 shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary-500/30 active:scale-[0.98] lg:hidden"
           :class="
             uiStore.activePanel === 'stationsList'
               ? 'bg-gradient-to-r from-surface-700 to-surface-800 dark:from-surface-800 dark:to-surface-900'
@@ -124,7 +124,7 @@
 
       <button
         v-if="!desktopSidebarOpen && !isNavigating"
-        class="glass-card group fixed right-6 top-20 z-40 hidden h-10 w-10 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95 lg:flex"
+        class="glass-card group fixed right-6 top-20 z-fab hidden h-10 w-10 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95 lg:flex"
         title="打开站点列表"
         aria-label="打开站点列表"
         @click="desktopSidebarOpen = true"

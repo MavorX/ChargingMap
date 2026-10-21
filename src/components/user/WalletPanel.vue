@@ -111,7 +111,7 @@
     <Transition name="fade">
       <div
         v-if="showRechargeModal"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
         @click.self="showRechargeModal = false"
       >
         <div
@@ -163,7 +163,7 @@
     <Transition name="fade">
       <div
         v-if="showWithdrawModal"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
         @click.self="showWithdrawModal = false"
       >
         <div

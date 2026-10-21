@@ -1,5 +1,5 @@
 <template>
-  <div class="animate-slide-up fixed bottom-0 left-0 right-0 z-50">
+  <div class="animate-slide-up fixed bottom-0 left-0 right-0 z-header">
     <div class="glass-effect border-t border-surface-200/50 dark:border-surface-700/50">
       <div class="px-5 py-4">
         <div class="flex items-center justify-between">

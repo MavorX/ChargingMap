@@ -309,7 +309,7 @@
     <Transition name="fade">
       <div
         v-if="showDeleteConfirm"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
         @click.self="showDeleteConfirm = false"
       >
         <div

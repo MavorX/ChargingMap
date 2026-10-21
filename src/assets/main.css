@@ -23,6 +23,11 @@
     overflow: hidden;
   }
 
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid theme('colors.primary.500');
+    outline-offset: 2px;
+  }
+
   ::selection {
     @apply bg-primary-200 dark:bg-primary-800 text-primary-900 dark:text-primary-100;
   }
@@ -164,7 +169,7 @@
   }
 
   .panel-overlay {
-    @apply fixed inset-0 z-[55] flex justify-end;
+    @apply fixed inset-0 z-panel flex justify-end;
   }
 
   .panel-backdrop {
@@ -216,4 +221,13 @@
   .delay-300 { animation-delay: 300ms; }
   .delay-400 { animation-delay: 400ms; }
   .delay-500 { animation-delay: 500ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

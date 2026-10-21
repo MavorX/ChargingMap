@@ -3,7 +3,7 @@
     id="loading"
     role="status"
     aria-busy="true"
-    class="fixed inset-0 z-[60] flex items-center justify-center bg-surface-900/60 backdrop-blur-md"
+    class="fixed inset-0 z-modal flex items-center justify-center bg-surface-900/60 backdrop-blur-md"
   >
     <div class="relative animate-scale-in rounded-3xl bg-white p-8 shadow-2xl dark:bg-surface-800">
       <div

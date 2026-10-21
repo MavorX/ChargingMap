@@ -7,6 +7,13 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      zIndex: {
+        fab: '30',
+        panel: '40',
+        header: '50',
+        modal: '60',
+        toast: '70',
+      },
       colors: {
         primary: {
           50: '#EFF6FF',

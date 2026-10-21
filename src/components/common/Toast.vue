@@ -6,7 +6,7 @@
       :aria-live="isError ? undefined : 'polite'"
       :aria-atomic="isError ? undefined : 'true'"
       :class="[
-        'fixed left-1/2 top-20 z-[70] flex min-w-[300px] max-w-[90vw] -translate-x-1/2 transform items-center space-x-3.5 rounded-2xl border px-6 py-4 shadow-xl backdrop-blur-xl',
+        'fixed left-1/2 top-20 z-toast flex min-w-[300px] max-w-[90vw] -translate-x-1/2 transform items-center space-x-3.5 rounded-2xl border px-6 py-4 shadow-xl backdrop-blur-xl',
         toastContainerClass
       ]"
       @mouseenter="handlePause"
