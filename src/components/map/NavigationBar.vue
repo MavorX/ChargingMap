@@ -1,7 +1,7 @@
 <template>
   <div class="animate-slide-up fixed bottom-0 left-0 right-0 z-header">
     <div class="glass-effect border-t border-surface-200/50 dark:border-surface-700/50">
-      <div class="px-5 py-4">
+      <div class="px-5 py-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))]">
         <div class="flex items-center justify-between">
           <div class="flex min-w-0 flex-1 items-center space-x-4">
             <div

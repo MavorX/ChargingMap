@@ -1,7 +1,7 @@
 <template>
   <div
     id="stations-list"
-    class="glass-card fixed bottom-0 left-0 right-0 z-panel max-h-[75vh] overflow-y-auto rounded-t-3xl shadow-2xl lg:left-1/2 lg:max-w-lg lg:-translate-x-1/2 lg:transform"
+    class="glass-card fixed bottom-0 left-0 right-0 z-panel max-h-[75vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)] shadow-2xl lg:left-1/2 lg:max-w-lg lg:-translate-x-1/2 lg:transform"
   >
     <div
       class="glass-effect sticky top-0 z-10 flex items-center justify-between border-b border-surface-200/50 p-5 dark:border-surface-700/50"
