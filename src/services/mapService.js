@@ -7,15 +7,25 @@ class MapManager {
     this._currentInfoWindow = null
     this._userLocation = null
     this._driving = null
+    this._directMarkers = []
+    this._stationIndex = new Map()
+    this._markerSignature = ''
   }
 
   setMap(mapInstance) {
     this.map = mapInstance
+    this._markerSignature = ''
     console.log('[MapManager] Map instance set')
   }
 
   setStations(stationsData) {
     this.stations = stationsData
+    this._stationIndex = new Map()
+    stationsData.forEach((station) => {
+      if (station && station.stationId != null) {
+        this._stationIndex.set(station.stationId, station)
+      }
+    })
     console.log('[MapManager] Stations set:', stationsData.length)
   }
 
@@ -177,12 +187,18 @@ class MapManager {
   }
 
   _clearDirectMarkers() {
-    if (this._directMarkers) {
-      this._directMarkers.forEach((m) => {
-        if (this.map) this.map.remove(m)
-      })
-      this._directMarkers = []
-    }
+    this._directMarkers.forEach((m) => {
+      if (this.map) this.map.remove(m)
+    })
+    this._directMarkers = []
+  }
+
+  _markerSignatureFor(points) {
+    if (points.length === 0) return '0'
+    const ids = points
+      .map((point) => point.station?.stationId ?? `${point.lnglat[0]},${point.lnglat[1]}`)
+      .sort()
+    return `${points.length}:${ids.join('|')}`
   }
 
   updateMarkers(filteredStations) {
@@ -199,10 +215,21 @@ class MapManager {
         station: station
       }))
 
+    const signature = this._markerSignatureFor(points)
+    if (signature === this._markerSignature) {
+      return
+    }
+    this._markerSignature = signature
+
     if (points.length === 0) {
+      this._clearDirectMarkers()
       if (this.markerClusterer) {
-        this.markerClusterer.setMap(null)
-        this.markerClusterer = null
+        if (typeof this.markerClusterer.setPoints === 'function') {
+          this.markerClusterer.setPoints([])
+        } else {
+          this.markerClusterer.setMap(null)
+          this.markerClusterer = null
+        }
       }
       return
     }
@@ -223,13 +250,6 @@ class MapManager {
       })
     }
 
-    const stationMap = new Map()
-    filteredStations.forEach((s) => {
-      if (s.lng && s.lat) {
-        stationMap.set(`${s.lng},${s.lat}`, s)
-      }
-    })
-
     const renderClusterMarker = (context) => {
       const count = context.count
 
@@ -240,7 +260,8 @@ class MapManager {
       const dataItems = context.data || context.clusterData || []
       if (Array.isArray(dataItems) && dataItems.length > 0) {
         dataItems.forEach((item) => {
-          const station = item.station || stationMap.get(`${item.lnglat?.[0]},${item.lnglat?.[1]}`)
+          const station =
+            item.station || (item.stationId != null ? self._stationIndex.get(item.stationId) : null)
           if (station) {
             totalAvailable += (station.quickAvailableNum || 0) + (station.slowAvailableNum || 0)
             totalCount += (station.quickChargeNum || 0) + (station.slowChargeNum || 0)
@@ -376,6 +397,8 @@ class MapManager {
         return
       }
 
+      this._clearDirectMarkers()
+
       if (this.markerClusterer && typeof this.markerClusterer.setPoints === 'function') {
         this.markerClusterer.setPoints(points)
       } else {
@@ -383,13 +406,20 @@ class MapManager {
           this.markerClusterer.setMap(null)
           this.markerClusterer = null
         }
-        this.markerClusterer = new ClusterClass(this.map, points, {
+        const clusterOptions = {
           gridSize: 80,
           maxZoom: 16,
           minClusterSize: 2,
           renderMarker: renderMarker,
           renderClusterMarker: renderClusterMarker
-        })
+        }
+        this.markerClusterer = new ClusterClass(this.map, [], clusterOptions)
+        if (typeof this.markerClusterer.setPoints === 'function') {
+          this.markerClusterer.setPoints(points)
+        } else {
+          this.markerClusterer.setMap(null)
+          this.markerClusterer = new ClusterClass(this.map, points, clusterOptions)
+        }
       }
     } catch (err) {
       console.error('[MapManager] MarkerCluster error:', err)
