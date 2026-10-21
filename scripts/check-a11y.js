@@ -35,6 +35,21 @@ const stripTags = (html) =>
 const hasAccessibleName = (attrs) =>
   /\baria-label(?:ledby)?\s*=/.test(attrs) || /\bv-bind\s*=\s*"\s*\{[^}]*aria-label/.test(attrs)
 
+const findOpeningTagEnd = (source, start) => {
+  let quote = null
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i]
+    if (quote) {
+      if (char === quote) quote = null
+    } else if (char === '"' || char === "'") {
+      quote = char
+    } else if (char === '>') {
+      return i
+    }
+  }
+  return -1
+}
+
 const isWhitelisted = (relativePath, attrs) =>
   WHITELIST.some((entry) => {
     if (entry.path !== relativePath) return false
@@ -60,12 +75,19 @@ let iconOnlyButtons = 0
 for (const file of walk(SRC_DIR)) {
   const relativePath = path.relative(ROOT, file).split(path.sep).join('/')
   const source = fs.readFileSync(file, 'utf8')
-  const buttonRe = /<button\b([^>]*)>([\s\S]*?)<\/button>/g
+  const buttonStartRe = /<button\b/g
   let match
-  while ((match = buttonRe.exec(source)) !== null) {
+  while ((match = buttonStartRe.exec(source)) !== null) {
     checkedButtons += 1
-    const attrs = match[1]
-    const inner = match[2]
+    const attrsStart = match.index + match[0].length
+    const openingTagEnd = findOpeningTagEnd(source, attrsStart)
+    if (openingTagEnd === -1) continue
+
+    const closeIndex = source.indexOf('</button>', openingTagEnd)
+    if (closeIndex === -1) continue
+
+    const attrs = source.slice(attrsStart, openingTagEnd)
+    const inner = source.slice(openingTagEnd + 1, closeIndex)
 
     const hasIcon = /<i\b|<svg\b/.test(inner)
     // Mustache interpolations and v-text render text, so they count as content.
