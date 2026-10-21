@@ -284,10 +284,14 @@ npm run preview
 项目包含充电站数据生成脚本，可自定义生成站点数据：
 
 ```bash
+# 默认生成 500 个站点（seed=42）
 node generate_stations.js
+
+# 自定义数量与随机种子
+node generate_stations.js --count 300 --seed 7
 ```
 
-脚本会在 `public/data/` 目录下生成 `station_list.json` 和 `station_details.json`，默认生成 500 个站点，数据覆盖合肥市各区域，包含多种充电品牌、接口类型和功率等级。
+脚本会**全量覆盖重建** `public/data/station_list.json` 和 `station_details.json`（不再追加旧数据），默认生成 500 个站点，数据覆盖合肥市各区域，包含多种充电品牌、接口类型和功率等级。`--count` 取值范围 1..1000，`--seed` 取值范围 0..4294967295；同一 `--seed` 下重复运行会得到逐字节一致的数据文件。
 
 ## 高德地图配置
 

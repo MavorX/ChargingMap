@@ -1,3 +1,4 @@
+/* global process */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -5,12 +6,36 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --- Deterministic PRNG (mulberry32) -------------------------------------
+// Every random value in this script must flow through `rand` so that the same
+// --seed always produces byte-identical JSON files.
+let rand = mulberry32(42);
+
+const REFERENCE_HOUR = 10;
+const REVIEW_YEAR = 2026;
+const DEFAULT_COUNT = 500;
+const DEFAULT_SEED = 42;
+const MIN_COUNT = 1;
+const MAX_COUNT = 1000;
+const MAX_SEED = 0xffffffff;
+
+function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function next() {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 function random(min, max) {
-    return Math.random() * (max - min) + min;
+    return rand() * (max - min) + min;
 }
 
 function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(rand() * (max - min + 1)) + min;
 }
 
 function pick(arr) {
@@ -213,7 +238,7 @@ const reviewContents = [
 
 function pickRoad() {
     const totalWeight = roadSegments.reduce((sum, r) => sum + r.weight, 0);
-    let r = Math.random() * totalWeight;
+    let r = rand() * totalWeight;
     for (const road of roadSegments) {
         r -= road.weight;
         if (r <= 0) return road;
@@ -222,7 +247,7 @@ function pickRoad() {
 }
 
 function generatePointOnRoad(road) {
-    const t = Math.random();
+    const t = rand();
     const lng = road.start[0] + (road.end[0] - road.start[0]) * t;
     const lat = road.start[1] + (road.end[1] - road.start[1]) * t;
 
@@ -234,7 +259,7 @@ function generatePointOnRoad(road) {
     const perpX = -dy / len;
     const perpY = dx / len;
 
-    const offsetMeters = (Math.random() - 0.5) * 80;
+    const offsetMeters = (rand() - 0.5) * 80;
     const latOffset = offsetMeters / 111000;
     const lngOffset = offsetMeters / (111000 * Math.cos(lat * Math.PI / 180));
 
@@ -244,16 +269,13 @@ function generatePointOnRoad(road) {
     };
 }
 
-function generateStationList(count, startId = 1) {
+function generateStationList(count) {
     const stations = [];
-    const usedIds = new Set();
 
     for (let i = 0; i < count; i++) {
-        let stationId;
-        do {
-            stationId = `HF${String(startId + i).padStart(6, '0')}`;
-        } while (usedIds.has(stationId));
-        usedIds.add(stationId);
+        // 固定 id 契约: HF + 6 位零填充数字 (HF000001...)。分片加载按数字段推导分片号，
+        // scripts/validate-data.mjs 以 ^HF\d{6}$ 强制校验，不可随意变更。
+        const stationId = `HF${String(i + 1).padStart(6, '0')}`;
 
         const road = pickRoad();
         const district = road.district;
@@ -261,7 +283,7 @@ function generateStationList(count, startId = 1) {
 
         const quickChargeNum = randomInt(2, 16);
         const slowChargeNum = randomInt(2, 10);
-        const openStatus = Math.random() < 0.92 ? 1 : 0;
+        const openStatus = rand() < 0.92 ? 1 : 0;
         const quickAvailableNum = openStatus === 0 ? 0 : randomInt(0, quickChargeNum);
         const slowAvailableNum = openStatus === 0 ? 0 : randomInt(0, slowChargeNum);
 
@@ -269,7 +291,7 @@ function generateStationList(count, startId = 1) {
         const servicePrice = parseFloat(random(0.2, 0.6).toFixed(2));
         const totalCostPrice = parseFloat((electricityPrice + servicePrice).toFixed(2));
 
-        const hasMember = Math.random() > 0.3;
+        const hasMember = rand() > 0.3;
         const memberPrice = hasMember ? parseFloat((totalCostPrice * 0.88).toFixed(2)) : null;
 
         let stationName;
@@ -302,7 +324,7 @@ function generateStationList(count, startId = 1) {
             slowAvailableNum,
             totalCostPrice,
             memberPrice,
-            reservationAvailable: openStatus === 1 && hasAvailable && Math.random() > 0.35,
+            reservationAvailable: openStatus === 1 && hasAvailable && rand() > 0.35,
             maxPower,
             openStatus,
             openTime: openStatus ? pick(openTimes) : '00:00-24:00',
@@ -329,7 +351,7 @@ function generateStationDetails(stations) {
         { startTime: '23:00', endTime: '24:00' }
     ];
 
-    const currentHour = new Date().getHours();
+    const currentHour = REFERENCE_HOUR;
 
     for (const station of stations) {
         const stationConnectorTypes = [];
@@ -347,9 +369,9 @@ function generateStationDetails(stations) {
             } else if (i < station.quickAvailableNum) {
                 status = 1;
             } else {
-                const rand = Math.random();
-                if (rand < 0.75) status = 3;
-                else if (rand < 0.92) status = 2;
+                const roll = rand();
+                if (roll < 0.75) status = 3;
+                else if (roll < 0.92) status = 2;
                 else status = 255;
             }
 
@@ -372,9 +394,9 @@ function generateStationDetails(stations) {
             } else if (i < station.slowAvailableNum) {
                 status = 1;
             } else {
-                const rand = Math.random();
-                if (rand < 0.75) status = 3;
-                else if (rand < 0.92) status = 2;
+                const roll = rand();
+                if (roll < 0.75) status = 3;
+                else if (roll < 0.92) status = 2;
                 else status = 255;
             }
 
@@ -432,7 +454,7 @@ function generateStationDetails(stations) {
                 userName: pick(userNames),
                 rating: randomInt(2, 5),
                 content: pick(reviewContents),
-                date: `${new Date().getFullYear()}-${String(randomInt(1, 12)).padStart(2, '0')}-${String(randomInt(1, 28)).padStart(2, '0')}`,
+                date: `${REVIEW_YEAR}-${String(randomInt(1, 12)).padStart(2, '0')}-${String(randomInt(1, 28)).padStart(2, '0')}`,
                 images: []
             });
         }
@@ -453,84 +475,128 @@ function generateStationDetails(stations) {
     return details;
 }
 
-const publicDataDir = path.join(__dirname, 'public', 'data');
-if (!fs.existsSync(publicDataDir)) {
+function parseBoundedInt(flag, raw, min, max) {
+    if (raw === undefined || String(raw).trim() === '') {
+        throw new Error(`${flag} 缺少取值（要求 ${min}..${max} 的整数）`);
+    }
+    if (!/^\d+$/.test(String(raw).trim())) {
+        throw new Error(`${flag} 必须为非负整数（收到 "${raw}"）`);
+    }
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value < min || value > max) {
+        throw new Error(`${flag} 超出范围：要求 ${min}..${max} 的整数（收到 ${raw}）`);
+    }
+    return value;
+}
+
+function parseArgs(argv) {
+    const options = { count: DEFAULT_COUNT, seed: DEFAULT_SEED, help: false };
+
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+        if (arg === '--help' || arg === '-h') {
+            options.help = true;
+            continue;
+        }
+        if (!arg.startsWith('--')) {
+            throw new Error(`未知参数: ${arg}`);
+        }
+        const eq = arg.indexOf('=');
+        const key = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
+        const raw = eq === -1 ? argv[++i] : arg.slice(eq + 1);
+
+        if (key === 'count') {
+            options.count = parseBoundedInt('--count', raw, MIN_COUNT, MAX_COUNT);
+        } else if (key === 'seed') {
+            options.seed = parseBoundedInt('--seed', raw, 0, MAX_SEED);
+        } else {
+            throw new Error(`未知参数: --${key}`);
+        }
+    }
+
+    return options;
+}
+
+function writeDataFiles(stations, details) {
+    const publicDataDir = path.join(__dirname, 'public', 'data');
     fs.mkdirSync(publicDataDir, { recursive: true });
+
+    const listPath = path.join(publicDataDir, 'station_list.json');
+    const detailsPath = path.join(publicDataDir, 'station_details.json');
+
+    fs.writeFileSync(listPath, JSON.stringify(stations), 'utf8');
+    fs.writeFileSync(detailsPath, JSON.stringify(details), 'utf8');
+
+    return { listPath, detailsPath };
 }
 
-const listPath = path.join(publicDataDir, 'station_list.json');
-const detailsPath = path.join(publicDataDir, 'station_details.json');
+function formatSize(bytes) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+}
 
-let existingStations = [];
-let existingDetails = {};
-let startId = 1;
+function printSummary(stations, listPath, detailsPath, seed) {
+    console.log(`生成完成: count=${stations.length}, seed=${seed}（全量覆盖重建，未追加旧数据）`);
+    console.log(`站点列表: ${listPath} (${formatSize(fs.statSync(listPath).size)})`);
+    console.log(`站点详情: ${detailsPath} (${formatSize(fs.statSync(detailsPath).size)})`);
 
-if (fs.existsSync(listPath) && fs.existsSync(detailsPath)) {
+    const statusCounts = { open: 0, closed: 0 };
+    stations.forEach(s => { s.openStatus === 1 ? statusCounts.open++ : statusCounts.closed++; });
+    console.log(`\n状态分布: ${statusCounts.open}个营业中, ${statusCounts.closed}个维护中`);
+
+    const districtCounts = {};
+    stations.forEach(s => {
+        const d = s.district || '未知';
+        districtCounts[d] = (districtCounts[d] || 0) + 1;
+    });
+    console.log('\n区域分布:');
+    Object.entries(districtCounts).sort((a, b) => b[1] - a[1]).forEach(([d, count]) => {
+        console.log(`  ${d}: ${count}个`);
+    });
+
+    const roadCounts = {};
+    stations.forEach(s => {
+        const roadName = s.address.match(/(?:蜀山区|包河区|庐阳区|瑶海区|滨湖新区|政务区|高新区|经开区|新站区|肥西县|肥东县|长丰县|庐江县)(.+?)(?:\d+号$)/);
+        if (roadName) {
+            const rn = roadName[1];
+            roadCounts[rn] = (roadCounts[rn] || 0) + 1;
+        }
+    });
+    console.log('\n道路分布 (前20):');
+    Object.entries(roadCounts).sort((a, b) => b[1] - a[1]).slice(0, 20).forEach(([rn, count]) => {
+        console.log(`  ${rn}: ${count}个`);
+    });
+
+    const latValues = stations.map(s => s.lat);
+    const lngValues = stations.map(s => s.lng);
+    console.log('\n经纬度覆盖范围:');
+    console.log(`  纬度: ${Math.min(...latValues).toFixed(4)} ~ ${Math.max(...latValues).toFixed(4)}`);
+    console.log(`  经度: ${Math.min(...lngValues).toFixed(4)} ~ ${Math.max(...lngValues).toFixed(4)}`);
+}
+
+function main() {
+    let options;
     try {
-        existingStations = JSON.parse(fs.readFileSync(listPath, 'utf8'));
-        existingDetails = JSON.parse(fs.readFileSync(detailsPath, 'utf8'));
-
-        const maxIdNum = existingStations.reduce((max, s) => {
-            const num = parseInt(s.stationId.replace('HF', ''), 10);
-            return num > max ? num : max;
-        }, 0);
-        startId = maxIdNum + 1;
-
-        console.log(`发现已有数据: ${existingStations.length} 个站点，新站点从 HF${String(startId).padStart(6, '0')} 开始`);
+        options = parseArgs(process.argv.slice(2));
     } catch (err) {
-        console.warn('读取已有数据失败，将重新生成:', err.message);
-        existingStations = [];
-        existingDetails = {};
-        startId = 1;
+        console.error(`参数错误: ${err.message}`);
+        console.error('用法: node generate_stations.js [--count 1..1000] [--seed 0..4294967295]');
+        process.exitCode = 1;
+        return;
     }
+
+    if (options.help) {
+        console.log('用法: node generate_stations.js [--count 1..1000] [--seed 0..4294967295]');
+        console.log(`默认: --count ${DEFAULT_COUNT} --seed ${DEFAULT_SEED}；每次运行全量覆盖 public/data 下的数据文件。`);
+        return;
+    }
+
+    rand = mulberry32(options.seed);
+
+    const stations = generateStationList(options.count);
+    const details = generateStationDetails(stations);
+    const { listPath, detailsPath } = writeDataFiles(stations, details);
+
+    printSummary(stations, listPath, detailsPath, options.seed);
 }
 
-const stationCount = 2000;
-const newStations = generateStationList(stationCount, startId);
-const newDetails = generateStationDetails(newStations);
-
-const allStations = [...existingStations, ...newStations];
-const allDetails = { ...existingDetails, ...newDetails };
-
-fs.writeFileSync(listPath, JSON.stringify(allStations), 'utf8');
-fs.writeFileSync(detailsPath, JSON.stringify(allDetails), 'utf8');
-
-const listSize = (fs.statSync(listPath).size / 1024 / 1024).toFixed(2);
-const detailsSize = (fs.statSync(detailsPath).size / 1024 / 1024).toFixed(2);
-
-console.log(`本次新增 ${stationCount} 个站点，总计 ${allStations.length} 个站点`);
-console.log(`站点列表: ${listPath} (${listSize} MB)`);
-console.log(`站点详情: ${detailsPath} (${detailsSize} MB)`);
-
-const statusCounts = { open: 0, closed: 0 };
-allStations.forEach(s => { s.openStatus === 1 ? statusCounts.open++ : statusCounts.closed++; });
-console.log(`\n状态分布: ${statusCounts.open}个营业中, ${statusCounts.closed}个维护中`);
-
-const districtCounts = {};
-allStations.forEach(s => {
-    const d = s.district || '未知';
-    districtCounts[d] = (districtCounts[d] || 0) + 1;
-});
-console.log('\n区域分布:');
-Object.entries(districtCounts).sort((a, b) => b[1] - a[1]).forEach(([d, count]) => {
-    console.log(`  ${d}: ${count}个`);
-});
-
-const roadCounts = {};
-allStations.forEach(s => {
-    const roadName = s.address.match(/(?:蜀山区|包河区|庐阳区|瑶海区|滨湖新区|政务区|高新区|经开区|新站区|肥西县|肥东县|长丰县|庐江县)(.+?)(?:\d+号$)/);
-    if (roadName) {
-        const rn = roadName[1];
-        roadCounts[rn] = (roadCounts[rn] || 0) + 1;
-    }
-});
-console.log('\n道路分布 (前20):');
-Object.entries(roadCounts).sort((a, b) => b[1] - a[1]).slice(0, 20).forEach(([rn, count]) => {
-    console.log(`  ${rn}: ${count}个`);
-});
-
-const latValues = allStations.map(s => s.lat);
-const lngValues = allStations.map(s => s.lng);
-console.log(`\n经纬度覆盖范围:`);
-console.log(`  纬度: ${Math.min(...latValues).toFixed(4)} ~ ${Math.max(...latValues).toFixed(4)}`);
-console.log(`  经度: ${Math.min(...lngValues).toFixed(4)} ~ ${Math.max(...lngValues).toFixed(4)}`);
+main();
