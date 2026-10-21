@@ -1,0 +1,90 @@
+# Optional GitHub Pages deployment (manual only).
+#
+# This workflow is intentionally NOT triggered by push/pull_request — deploying
+# is an explicit action (Actions → "Deploy to GitHub Pages" → Run workflow).
+#
+# Deployment parameters (documented here because README is owned by another task):
+#   * VITE_BASE=/ChargingMap/ targets a project site:
+#       https://<user>.github.io/ChargingMap/
+#     If you serve the site from a custom domain (or a user/organization root
+#     site), change VITE_BASE to "/" below.
+#   * VITE_DEMO=true ships the built-in demo data so the full list → detail →
+#     charging → payment flow is demoable on the deployed site.
+#   * Map keys are resolved with a three-level fallback so the workflow can
+#     always build:
+#       1. manual input (workflow_dispatch inputs.amap_key / amap_security_code)
+#       2. repository secrets AMAP_KEY / AMAP_SECURITY_CODE
+#       3. literal "dummy" (map panel degrades gracefully and prompts the user
+#          to configure a real key)
+#     Never commit real keys: set them as repo secrets or pass them as inputs.
+#   * dist/404.html is a copy of dist/index.html so a hard refresh on a
+#     sub-route (history mode) still boots the SPA instead of showing GitHub's
+#     404 page.
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      amap_key:
+        description: 'AMap JS API key (optional; falls back to secrets.AMAP_KEY, then "dummy")'
+        required: false
+        type: string
+      amap_security_code:
+        description: 'AMap security code (optional; falls back to secrets.AMAP_SECURITY_CODE, then "dummy")'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_AMAP_KEY: ${{ inputs.amap_key || secrets.AMAP_KEY || 'dummy' }}
+          VITE_AMAP_SECURITY_CODE: ${{ inputs.amap_security_code || secrets.AMAP_SECURITY_CODE || 'dummy' }}
+          VITE_BASE: /ChargingMap/
+          VITE_DEMO: 'true'
+        run: npm run build
+
+      - name: SPA fallback (404.html)
+        run: cp dist/index.html dist/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
