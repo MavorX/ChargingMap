@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { useStationsStore } from '../store/modules/stations'
+
+const dataset = JSON.parse(readFileSync('public/data/station_list.json', 'utf8'))
 
 const makeStation = (overrides) => ({
   stationId: 's1',
@@ -12,6 +15,7 @@ const makeStation = (overrides) => ({
   reservationAvailable: true,
   openStatus: 1,
   maxPower: 120,
+  connectorTypes: ['CCS Combo', 'GB/T'],
   ...overrides
 })
 
@@ -32,7 +36,8 @@ const fixtures = () => [
     slowAvailableNum: 3,
     openTime: '06:00-22:00',
     reservationAvailable: false,
-    maxPower: 60
+    maxPower: 60,
+    connectorTypes: ['GB/T']
   }),
   makeStation({
     stationId: 'c',
@@ -41,14 +46,15 @@ const fixtures = () => [
     quickAvailableNum: 0,
     slowAvailableNum: 0,
     openStatus: 2,
-    maxPower: 200
+    maxPower: 200,
+    connectorTypes: ['CHAdeMO']
   }),
   makeStation({
     stationId: 'd',
     stationName: 'Delta 混合站',
     address: '合肥市瑶海区',
     maxPower: 150,
-    details: { connectorTypes: ['CCS'] }
+    connectorTypes: ['CCS Combo']
   })
 ]
 
@@ -78,17 +84,35 @@ describe('stations store filteredStations characterization', () => {
     store.stations = fixtures()
     store.filters.reservable = true
     store.filters.power = 100
-    store.filters.connectors = ['CCS']
+    store.filters.connectors = ['CCS Combo']
 
     expect(store.filteredStations.map((s) => s.stationId)).toEqual(['a', 'd'])
   })
 
-  it('excludes detail-backed stations whose connector types do not match, while stations without details bypass the check', () => {
+  it('matches connectorTypes on the list record and never bypasses stations without details', () => {
     const store = useStationsStore()
     store.stations = fixtures()
     store.filters.connectors = ['GB/T']
 
-    expect(store.filteredStations.map((s) => s.stationId)).toEqual(['a', 'b', 'c'])
+    expect(store.filteredStations.map((s) => s.stationId)).toEqual(['a', 'b'])
+  })
+
+  it('excludes stations that carry no connector metadata', () => {
+    const store = useStationsStore()
+    store.stations = [makeStation({ stationId: 'no-meta', connectorTypes: undefined })]
+
+    expect(store.filteredStations).toHaveLength(0)
+  })
+
+  it('filters by brand via stationName and ignores an empty brand', () => {
+    const store = useStationsStore()
+    store.stations = fixtures()
+
+    store.filters.brand = 'Alpha'
+    expect(store.filteredStations.map((s) => s.stationId)).toEqual(['a'])
+
+    store.filters.brand = ''
+    expect(store.filteredStations).toHaveLength(4)
   })
 
   it('applies search across the full unpaged list, not just the first page', () => {
@@ -119,5 +143,43 @@ describe('stations store filteredStations characterization', () => {
 
     store.setSearchQuery('瑶海')
     expect(store.filteredStations.map((s) => s.stationId)).toEqual(['d'])
+  })
+})
+
+describe('stations store on the generated dataset', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('keeps all 500 generated stations under default filters', () => {
+    const store = useStationsStore()
+    store.stations = dataset
+
+    expect(store.filteredStations).toHaveLength(dataset.length)
+  })
+
+  it('filters by brand using the station name', () => {
+    const store = useStationsStore()
+    store.stations = dataset
+    store.filters.brand = '国家电网'
+
+    const result = store.filteredStations
+
+    expect(result).toHaveLength(40)
+    expect(result.every((station) => station.stationName.includes('国家电网'))).toBe(true)
+    expect(store.activeFilterCount).toBe(1)
+  })
+
+  it('filters by connector before any detail shard is loaded', () => {
+    const store = useStationsStore()
+    store.stations = dataset
+    store.filters.connectors = ['CHAdeMO']
+
+    expect(store.stations.every((station) => station.details === undefined)).toBe(true)
+
+    const result = store.filteredStations
+
+    expect(result.length).toBeGreaterThan(0)
+    expect(result.every((station) => station.connectorTypes.includes('CHAdeMO'))).toBe(true)
   })
 })

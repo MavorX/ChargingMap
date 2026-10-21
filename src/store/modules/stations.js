@@ -45,7 +45,7 @@ export const useStationsStore = defineStore('stations', {
       open24h: false,
       reservable: false,
       brand: '',
-      connectors: ['CCS', 'GB/T', 'CHAdeMO', 'Type 2'],
+      connectors: ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2'],
       power: 50
     },
     searchQuery: '',
@@ -169,7 +169,7 @@ export const useStationsStore = defineStore('stations', {
         open24h: false,
         reservable: false,
         brand: '',
-        connectors: ['CCS', 'GB/T', 'CHAdeMO', 'Type 2'],
+        connectors: ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2'],
         power: 50
       }
       this.searchQuery = ''
@@ -253,12 +253,10 @@ export const useStationsStore = defineStore('stations', {
 
           if (station.maxPower && station.maxPower < filters.power) return false
 
-          if (station.details && station.details.connectorTypes) {
-            const hasMatching = filters.connectors.some((c) =>
-              station.details.connectorTypes.includes(c)
-            )
-            if (!hasMatching) return false
-          }
+          if (filters.brand && !station.stationName.includes(filters.brand)) return false
+
+          const types = station.connectorTypes || station.details?.connectorTypes || []
+          if (!filters.connectors.some((connector) => types.includes(connector))) return false
 
           if (query) {
             if (

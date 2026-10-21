@@ -144,16 +144,15 @@ const stationsStore = useStationsStore()
 const showToast = inject('showToast')
 
 const chargingBrands = [
-  { label: '国家电网', value: 'sgcc' },
-  { label: '特来电', value: 'teld' },
-  { label: '星星充电', value: 'star' },
-  { label: '小桔充电', value: 'xiaoju' },
-  { label: '云快充', value: 'yun' },
-  { label: '其他', value: 'other' }
+  { label: '国家电网', value: '国家电网' },
+  { label: '特来电', value: '特来电' },
+  { label: '星星充电', value: '星星充电' },
+  { label: '小桔充电', value: '小桔充电' },
+  { label: '云快充', value: '云快充' }
 ]
 
 const connectorTypes = [
-  { label: 'CCS Combo', value: 'CCS' },
+  { label: 'CCS Combo', value: 'CCS Combo' },
   { label: 'GB/T', value: 'GB/T' },
   { label: 'CHAdeMO', value: 'CHAdeMO' },
   { label: 'Type 2', value: 'Type 2' }
@@ -174,7 +173,7 @@ const toggleConnector = (value) => {
 
 const resetFilters = () => {
   selectedBrand.value = ''
-  selectedConnectors.value = ['CCS', 'GB/T', 'CHAdeMO', 'Type 2']
+  selectedConnectors.value = ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']
   selectedPower.value = 50
 }
 

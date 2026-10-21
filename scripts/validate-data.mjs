@@ -21,6 +21,7 @@ const MIN_STATIONS = 1;
 const MAX_STATIONS = 1000;
 const BBOX = { lngMin: 117.0, lngMax: 117.6, latMin: 31.2, latMax: 32.2 };
 const ALLOWED_STATUS = new Set([0, 1, 2, 3, 255]);
+const ALLOWED_CONNECTOR_TYPES = new Set(['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']);
 const PERIOD_COUNT = 8;
 const ID_PATTERN = /^HF\d{6}$/;
 const MAX_SAMPLES = 10;
@@ -211,6 +212,25 @@ assert('stationId 格式', (f) => {
     if (!ID_PATTERN.test(id)) bad.push(`${id} (detail key)`);
   }
   if (bad.length > 0) f.push(`stationId 不符合 ^HF\\d{6}$: ${sample(bad)}`);
+});
+
+// 9. List-level connectorTypes must be a non-empty array of allowed values.
+// The list payload carries this so filters work before detail shards load.
+assert('列表 connectorTypes', (f) => {
+  const bad = [];
+  for (const s of listRecords) {
+    const id = (s && s.stationId) || '(no id)';
+    const types = s && s.connectorTypes;
+    if (!Array.isArray(types) || types.length < 1) {
+      bad.push(`${id}: ${Array.isArray(types) ? 'empty array' : 'missing/not array'}`);
+      continue;
+    }
+    const invalid = types.filter((t) => !ALLOWED_CONNECTOR_TYPES.has(t));
+    if (invalid.length > 0) bad.push(`${id}: 非法值 ${invalid.join(',')}`);
+  }
+  if (bad.length > 0) {
+    f.push(`列表 connectorTypes 缺失或非法(允许 ${[...ALLOWED_CONNECTOR_TYPES].join('/')}): ${sample(bad)}`);
+  }
 });
 
 // --- Report: aggregate all failures, then exit once ---------------------

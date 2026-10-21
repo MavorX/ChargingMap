@@ -544,6 +544,10 @@ function writeDataFiles(stations, details) {
         fs.rmSync(legacyDetailsPath);
     }
 
+    for (const station of stations) {
+        station.connectorTypes = [...details[station.stationId].connectorTypes];
+    }
+
     const listPath = path.join(publicDataDir, 'station_list.json');
     fs.writeFileSync(listPath, JSON.stringify(stations), 'utf8');
 

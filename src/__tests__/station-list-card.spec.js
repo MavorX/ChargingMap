@@ -18,7 +18,8 @@ const station = {
   distance: 1234,
   stationGradeScore: 4.3,
   openStatus: 1,
-  reservationAvailable: true
+  reservationAvailable: true,
+  connectorTypes: ['CCS Combo', 'GB/T']
 }
 
 describe('StationListCard', () => {
