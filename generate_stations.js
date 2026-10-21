@@ -517,27 +517,64 @@ function parseArgs(argv) {
     return options;
 }
 
+const DETAILS_PER_SHARD = 100;
+
+function shardFileNameForId(stationId) {
+    // id 契约（T6 固化）: HF + 6 位数字，分片号 = ceil(序号 / 100)
+    const numeric = parseInt(stationId.slice(2), 10);
+    if (!Number.isInteger(numeric) || numeric < 1) {
+        throw new Error(`无法从站点 id 推导分片: ${stationId}`);
+    }
+    return `part-${String(Math.ceil(numeric / DETAILS_PER_SHARD)).padStart(2, '0')}.json`;
+}
+
 function writeDataFiles(stations, details) {
     const publicDataDir = path.join(__dirname, 'public', 'data');
-    fs.mkdirSync(publicDataDir, { recursive: true });
+    const detailsDir = path.join(publicDataDir, 'details');
+    fs.mkdirSync(detailsDir, { recursive: true });
+
+    // 重置式重建：清掉上一轮的分片与旧单文件，避免残留死载荷随 dist 发布。
+    for (const file of fs.readdirSync(detailsDir)) {
+        if (/^part-\d+\.json$/.test(file)) {
+            fs.rmSync(path.join(detailsDir, file));
+        }
+    }
+    const legacyDetailsPath = path.join(publicDataDir, 'station_details.json');
+    if (fs.existsSync(legacyDetailsPath)) {
+        fs.rmSync(legacyDetailsPath);
+    }
 
     const listPath = path.join(publicDataDir, 'station_list.json');
-    const detailsPath = path.join(publicDataDir, 'station_details.json');
-
     fs.writeFileSync(listPath, JSON.stringify(stations), 'utf8');
-    fs.writeFileSync(detailsPath, JSON.stringify(details), 'utf8');
 
-    return { listPath, detailsPath };
+    const shards = new Map();
+    for (const [stationId, detail] of Object.entries(details)) {
+        const fileName = shardFileNameForId(stationId);
+        if (!shards.has(fileName)) shards.set(fileName, {});
+        shards.get(fileName)[stationId] = detail;
+    }
+
+    const detailPaths = [];
+    for (const fileName of [...shards.keys()].sort()) {
+        const shardPath = path.join(detailsDir, fileName);
+        fs.writeFileSync(shardPath, JSON.stringify(shards.get(fileName)), 'utf8');
+        detailPaths.push(shardPath);
+    }
+
+    return { listPath, detailPaths, detailsDir };
 }
 
 function formatSize(bytes) {
     return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-function printSummary(stations, listPath, detailsPath, seed) {
+function printSummary(stations, listPath, detailPaths, seed) {
     console.log(`生成完成: count=${stations.length}, seed=${seed}（全量覆盖重建，未追加旧数据）`);
     console.log(`站点列表: ${listPath} (${formatSize(fs.statSync(listPath).size)})`);
-    console.log(`站点详情: ${detailsPath} (${formatSize(fs.statSync(detailsPath).size)})`);
+    console.log(`站点详情分片: ${detailPaths.length} 片，每片 ${DETAILS_PER_SHARD} 站`);
+    detailPaths.forEach((detailPath) => {
+        console.log(`  ${path.basename(detailPath)} (${formatSize(fs.statSync(detailPath).size)})`);
+    });
 
     const statusCounts = { open: 0, closed: 0 };
     stations.forEach(s => { s.openStatus === 1 ? statusCounts.open++ : statusCounts.closed++; });
@@ -594,9 +631,9 @@ function main() {
 
     const stations = generateStationList(options.count);
     const details = generateStationDetails(stations);
-    const { listPath, detailsPath } = writeDataFiles(stations, details);
+    const { listPath, detailPaths } = writeDataFiles(stations, details);
 
-    printSummary(stations, listPath, detailsPath, options.seed);
+    printSummary(stations, listPath, detailPaths, options.seed);
 }
 
 main();

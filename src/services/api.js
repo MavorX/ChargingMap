@@ -1,6 +1,10 @@
+// import.meta.env.BASE_URL always ends with a slash, so paths are relative to
+// the configured deploy base (e.g. /ChargingMap/).
+const dataUrl = (p) => import.meta.env.BASE_URL + p
+
 export const loadStationsList = async () => {
   try {
-    const response = await fetch('/data/station_list.json')
+    const response = await fetch(dataUrl('data/station_list.json'))
     if (!response.ok) throw new Error('站点列表加载失败')
     const data = await response.json()
     return data
@@ -10,32 +14,46 @@ export const loadStationsList = async () => {
   }
 }
 
-let _detailsCache = null
+// Details are sharded 100 stations per file: HF000001..HF000100 -> part-01.
+const DETAILS_PER_PART = 100
 
-export const loadStationDetail = async (stationId) => {
-  try {
-    if (!_detailsCache) {
-      const response = await fetch('/data/station_details.json')
-      if (!response.ok) throw new Error('站点详情加载失败')
-      _detailsCache = await response.json()
-    }
-    return _detailsCache[stationId] || null
-  } catch (err) {
-    console.error('加载站点详情失败:', err)
-    return null
+export const partIdFor = (stationId) => {
+  const numeric = parseInt(String(stationId ?? '').slice(2), 10)
+  if (!Number.isFinite(numeric) || numeric < 1) {
+    throw new Error(`非法站点 id: ${stationId}`)
   }
+  return `part-${String(Math.ceil(numeric / DETAILS_PER_PART)).padStart(2, '0')}`
 }
 
-export const loadStationDetails = async () => {
-  try {
-    const response = await fetch('/data/station_details.json')
-    if (!response.ok) throw new Error('站点详情加载失败')
-    _detailsCache = await response.json()
-    return _detailsCache
-  } catch (err) {
-    console.error('加载站点详情失败:', err)
-    return {}
-  }
+// Single source of detail data: one Promise per shard. Storing the Promise (not
+// the parsed value) makes concurrent requests for the same shard share a single
+// in-flight fetch.
+const _partCache = new Map()
+
+const fetchPart = (partId) => {
+  const cached = _partCache.get(partId)
+  if (cached) return cached
+
+  const pending = (async () => {
+    const response = await fetch(dataUrl(`data/details/${partId}.json`))
+    if (!response.ok) throw new Error(`站点详情分片加载失败: ${partId}`)
+    return response.json()
+  })()
+
+  _partCache.set(partId, pending)
+  // Failed shards are not cached, so a later call can retry.
+  pending.catch(() => {
+    if (_partCache.get(partId) === pending) _partCache.delete(partId)
+  })
+  return pending
+}
+
+export const loadStationDetail = async (stationId) => {
+  const partId = partIdFor(stationId)
+  const part = await fetchPart(partId)
+  const detail = part[stationId]
+  if (!detail) throw new Error(`站点详情不存在: ${stationId}`)
+  return detail
 }
 
 export const processPayment = async (_paymentData) => {

@@ -36,8 +36,7 @@ export const useStationsStore = defineStore('stations', {
     error: null,
     viewportBounds: null,
     listPage: 1,
-    listPageSize: 20,
-    _detailsCache: {}
+    listPageSize: 20
   }),
 
   actions: {
@@ -85,21 +84,11 @@ export const useStationsStore = defineStore('stations', {
         return station.details
       }
 
-      if (this._detailsCache[stationId]) {
-        station.details = this._detailsCache[stationId]
-        station.detailsLoaded = true
-        station.currentPrice = this.getCurrentPrice(station.details?.periodPrices)
-        return station.details
-      }
-
       try {
         const details = await loadStationDetail(stationId)
-        if (details) {
-          this._detailsCache[stationId] = details
-          station.details = details
-          station.detailsLoaded = true
-          station.currentPrice = this.getCurrentPrice(details.periodPrices)
-        }
+        station.details = details
+        station.detailsLoaded = true
+        station.currentPrice = this.getCurrentPrice(details.periodPrices)
         return details
       } catch (err) {
         console.error('加载站点详情失败:', err)
