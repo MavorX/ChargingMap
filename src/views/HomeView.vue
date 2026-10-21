@@ -32,7 +32,7 @@
           <button
             class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-secondary active:scale-95"
             title="我的车辆"
-            @click="showVehiclePanel = true"
+            @click="uiStore.open('vehicle')"
           >
             <i
               class="fa fa-car text-surface-600 transition-all duration-200 group-hover:scale-110 group-hover:text-secondary-500 dark:text-surface-300"
@@ -46,18 +46,21 @@
           id="toggle-list"
           class="group fixed bottom-8 left-1/2 z-40 -translate-x-1/2 transform overflow-hidden rounded-2xl px-7 py-3.5 shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary-500/30 active:scale-[0.98] lg:hidden"
           :class="
-            showStationsList
+            uiStore.activePanel === 'stationsList'
               ? 'bg-gradient-to-r from-surface-700 to-surface-800 dark:from-surface-800 dark:to-surface-900'
               : 'bg-gradient-to-r from-primary-500 to-accent-500'
           "
-          @click="showStationsList = !showStationsList"
+          @click="toggleStationsList"
         >
           <div
             class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
           ></div>
           <span class="relative z-10 flex items-center space-x-2.5 font-semibold text-white">
-            <i :class="showStationsList ? 'fa fa-times' : 'fa fa-list'" aria-hidden="true"></i>
-            <span>{{ showStationsList ? '关闭列表' : '查看站点列表' }}</span>
+            <i
+              :class="uiStore.activePanel === 'stationsList' ? 'fa fa-times' : 'fa fa-list'"
+              aria-hidden="true"
+            ></i>
+            <span>{{ uiStore.activePanel === 'stationsList' ? '关闭列表' : '查看站点列表' }}</span>
           </span>
         </button>
 
@@ -104,8 +107,8 @@
             key="detail"
             :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
             @close="closeStationDetail"
-            @start-reservation="openReservation"
-            @start-charging="openCharging"
+            @start-reservation="uiStore.open('reservation')"
+            @start-charging="uiStore.open('chargingSettings')"
             @navigate="navigateToStation"
           />
         </Transition>
@@ -126,9 +129,9 @@
 
     <Transition name="slide-up">
       <StationsList
-        v-if="showStationsList"
-        @close="showStationsList = false"
-        @show-filter="showVehicleFilter = true"
+        v-if="uiStore.activePanel === 'stationsList'"
+        @close="uiStore.close()"
+        @show-filter="uiStore.open('vehicleFilter')"
       />
     </Transition>
 
@@ -137,110 +140,115 @@
         v-if="currentStation && !desktopSidebarOpen"
         :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
         @close="closeStationDetail"
-        @start-reservation="openReservation"
-        @start-charging="openCharging"
+        @start-reservation="uiStore.open('reservation')"
+        @start-charging="uiStore.open('chargingSettings')"
         @navigate="navigateToStation"
       />
     </Transition>
 
     <Transition name="slide-right">
-      <VehicleFilter v-if="showVehicleFilter" @close="showVehicleFilter = false" />
+      <VehicleFilter v-if="uiStore.activePanel === 'vehicleFilter'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
       <ReservationPanel
-        v-if="showReservation"
-        @close="showReservation = false"
+        v-if="uiStore.activePanel === 'reservation'"
+        @close="uiStore.close()"
         @reservation-success="onReservationSuccess"
       />
     </Transition>
 
     <Transition name="slide-right">
       <ChargingSettings
-        v-if="showChargingSettings"
-        @close="showChargingSettings = false"
+        v-if="uiStore.activePanel === 'chargingSettings'"
+        @close="uiStore.close()"
         @start-charging="onChargingSettingsConfirmed"
       />
     </Transition>
 
     <Transition name="slide-right">
-      <ChargingPanel v-if="showCharging" @close="onChargingComplete" />
+      <ChargingPanel v-if="uiStore.activePanel === 'charging'" @close="onChargingComplete" />
     </Transition>
 
     <Transition name="slide-right">
       <PaymentPanel
-        v-if="showPayment"
-        @close="showPayment = false"
+        v-if="uiStore.activePanel === 'payment'"
+        @close="uiStore.close()"
         @payment-success="onPaymentSuccess"
       />
     </Transition>
 
     <Transition name="fade-scale">
       <PaymentSuccess
-        v-if="showPaymentSuccess"
+        v-if="uiStore.activePanel === 'paymentSuccess'"
         :amount="lastPaidAmount"
         @close="onPaymentSuccessClose"
       />
     </Transition>
 
     <Transition name="slide-right">
-      <ReviewPanel v-if="showReview" @close="showReview = false" />
+      <ReviewPanel v-if="uiStore.activePanel === 'review'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
       <UserProfile
-        v-if="showUserProfile"
-        @close="showUserProfile = false"
-        @show-notifications="openNotifications"
-        @show-vehicles="openVehiclePanel"
-        @show-charging-history="openChargingHistory"
-        @show-coupons="openCoupons"
-        @show-wallet="openWallet"
-        @show-favorites="openFavorites"
-        @show-settings="openSettings"
-        @show-help="openHelp"
+        v-if="uiStore.activePanel === 'userProfile'"
+        @close="uiStore.close()"
+        @show-notifications="uiStore.open('notifications')"
+        @show-vehicles="uiStore.open('vehicle')"
+        @show-charging-history="uiStore.open('chargingHistory')"
+        @show-coupons="uiStore.open('coupons')"
+        @show-wallet="uiStore.open('wallet')"
+        @show-favorites="uiStore.open('favorites')"
+        @show-settings="uiStore.open('settings')"
+        @show-help="uiStore.open('help')"
       />
     </Transition>
 
     <Transition name="slide-right">
-      <NotificationsPanel v-if="showNotifications" @close="showNotifications = false" />
+      <NotificationsPanel v-if="uiStore.activePanel === 'notifications'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <VehiclePanel v-if="showVehiclePanel" @close="showVehiclePanel = false" />
+      <VehiclePanel v-if="uiStore.activePanel === 'vehicle'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <ChargingHistoryPanel v-if="showChargingHistory" @close="showChargingHistory = false" />
+      <ChargingHistoryPanel
+        v-if="uiStore.activePanel === 'chargingHistory'"
+        @close="uiStore.close()"
+      />
     </Transition>
 
     <Transition name="slide-right">
-      <CouponsPanel v-if="showCoupons" @close="showCoupons = false" />
+      <CouponsPanel v-if="uiStore.activePanel === 'coupons'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <WalletPanel v-if="showWallet" @close="showWallet = false" />
+      <WalletPanel v-if="uiStore.activePanel === 'wallet'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <FavoritesPanel v-if="showFavorites" @close="showFavorites = false" />
+      <FavoritesPanel v-if="uiStore.activePanel === 'favorites'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+      <SettingsPanel v-if="uiStore.activePanel === 'settings'" @close="uiStore.close()" />
     </Transition>
 
     <Transition name="slide-right">
-      <HelpCenterPanel v-if="showHelp" @close="showHelp = false" />
+      <HelpCenterPanel v-if="uiStore.activePanel === 'help'" @close="uiStore.close()" />
     </Transition>
   </main>
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, onMounted, onUnmounted } from 'vue'
+import { computed, defineAsyncComponent, inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
 import { useUserStore } from '../store/modules/user'
+import { useUiStore } from '../store/modules/ui'
+import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
 import { formatDuration, formatPrice } from '../utils/format'
 import MapView from '../components/map/MapView.vue'
@@ -253,21 +261,29 @@ import ChargingPanel from '../components/charging/ChargingPanel.vue'
 import ChargingSettings from '../components/charging/ChargingSettings.vue'
 import PaymentPanel from '../components/payment/PaymentPanel.vue'
 import PaymentSuccess from '../components/payment/PaymentSuccess.vue'
-import ReviewPanel from '../components/review/ReviewPanel.vue'
-import UserProfile from '../components/user/UserProfile.vue'
-import NotificationsPanel from '../components/user/NotificationsPanel.vue'
-import VehiclePanel from '../components/user/VehiclePanel.vue'
-import ChargingHistoryPanel from '../components/user/ChargingHistoryPanel.vue'
-import CouponsPanel from '../components/user/CouponsPanel.vue'
-import WalletPanel from '../components/user/WalletPanel.vue'
-import FavoritesPanel from '../components/user/FavoritesPanel.vue'
-import SettingsPanel from '../components/user/SettingsPanel.vue'
-import HelpCenterPanel from '../components/user/HelpCenterPanel.vue'
-import VehicleFilter from '../components/filter/VehicleFilter.vue'
+
+// Panels that are only needed after a user action are loaded on demand so the
+// initial bundle stays focused on the map, station list and station detail.
+const ReviewPanel = defineAsyncComponent(() => import('../components/review/ReviewPanel.vue'))
+const UserProfile = defineAsyncComponent(() => import('../components/user/UserProfile.vue'))
+const NotificationsPanel = defineAsyncComponent(
+  () => import('../components/user/NotificationsPanel.vue')
+)
+const VehiclePanel = defineAsyncComponent(() => import('../components/user/VehiclePanel.vue'))
+const ChargingHistoryPanel = defineAsyncComponent(
+  () => import('../components/user/ChargingHistoryPanel.vue')
+)
+const CouponsPanel = defineAsyncComponent(() => import('../components/user/CouponsPanel.vue'))
+const WalletPanel = defineAsyncComponent(() => import('../components/user/WalletPanel.vue'))
+const FavoritesPanel = defineAsyncComponent(() => import('../components/user/FavoritesPanel.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('../components/user/SettingsPanel.vue'))
+const HelpCenterPanel = defineAsyncComponent(() => import('../components/user/HelpCenterPanel.vue'))
+const VehicleFilter = defineAsyncComponent(() => import('../components/filter/VehicleFilter.vue'))
 
 const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
 const userStore = useUserStore()
+const uiStore = useUiStore()
 const showToast = inject('showToast')
 
 const currentStation = computed(() => stationsStore.currentStation)
@@ -278,23 +294,7 @@ const closeStationDetail = () => {
   stationsStore.setCurrentStation(null)
 }
 
-const showStationsList = ref(false)
-const showReservation = ref(false)
-const showCharging = ref(false)
-const showChargingSettings = ref(false)
-const showPayment = ref(false)
-const showPaymentSuccess = ref(false)
-const showReview = ref(false)
-const showUserProfile = ref(false)
-const showNotifications = ref(false)
-const showVehiclePanel = ref(false)
-const showChargingHistory = ref(false)
-const showCoupons = ref(false)
-const showWallet = ref(false)
-const showFavorites = ref(false)
-const showSettings = ref(false)
-const showHelp = ref(false)
-const showVehicleFilter = ref(false)
+// Non-panel state: layout + last receipt amount stay local to the view.
 const lastPaidAmount = ref(0)
 const desktopSidebarOpen = ref(false)
 
@@ -302,24 +302,30 @@ const selectStationFromSidebar = (station) => {
   stationsStore.setCurrentStation(station)
 }
 
+const closeStationsListIfOpen = () => {
+  if (uiStore.activePanel === 'stationsList') {
+    uiStore.close()
+  }
+}
+
+const toggleStationsList = () => {
+  if (uiStore.activePanel === 'stationsList') {
+    uiStore.close()
+  } else {
+    uiStore.open('stationsList')
+  }
+}
+
 watch(currentStation, (newStation) => {
   if (newStation) {
-    showStationsList.value = false
+    closeStationsListIfOpen()
   }
 })
-
-const openReservation = () => {
-  showReservation.value = true
-}
-
-const openCharging = () => {
-  showChargingSettings.value = true
-}
 
 const navigateToStation = () => {
   if (currentStation.value) {
     const station = currentStation.value
-    showStationsList.value = false
+    closeStationsListIfOpen()
     stationsStore.setCurrentStation(null)
     mapManager.clearRoute()
     mapManager.navigateToStation(station)
@@ -327,25 +333,22 @@ const navigateToStation = () => {
 }
 
 const onReservationSuccess = () => {
-  showReservation.value = false
+  uiStore.dismiss()
   showToast('预约成功！请按时到达充电站', 'success')
 }
 
 const onChargingSettingsConfirmed = () => {
-  showChargingSettings.value = false
+  uiStore.replace('charging')
   chargingStore.startCharging()
-  showCharging.value = true
   showToast('充电已开始', 'success')
 }
 
 const onChargingComplete = () => {
-  showCharging.value = false
-  showPayment.value = true
+  uiStore.replace('payment')
 }
 
 const onPaymentSuccess = (paidAmount) => {
-  showPayment.value = false
-  showPaymentSuccess.value = true
+  uiStore.open('paymentSuccess', { reset: true })
 
   const station = currentStation.value
   const chargingData = chargingStore.chargingData
@@ -383,59 +386,17 @@ const onPaymentSuccess = (paidAmount) => {
 }
 
 const onPaymentSuccessClose = () => {
-  showPaymentSuccess.value = false
-  showReview.value = true
-}
-
-const openNotifications = () => {
-  showUserProfile.value = false
-  showNotifications.value = true
-}
-
-const openVehiclePanel = () => {
-  showUserProfile.value = false
-  showVehiclePanel.value = true
-}
-
-const openChargingHistory = () => {
-  showUserProfile.value = false
-  showChargingHistory.value = true
-}
-
-const openCoupons = () => {
-  showUserProfile.value = false
-  showCoupons.value = true
-}
-
-const openWallet = () => {
-  showUserProfile.value = false
-  showWallet.value = true
-}
-
-const openFavorites = () => {
-  showUserProfile.value = false
-  showFavorites.value = true
-}
-
-const openSettings = () => {
-  showUserProfile.value = false
-  showSettings.value = true
-}
-
-const openHelp = () => {
-  showUserProfile.value = false
-  showHelp.value = true
+  uiStore.replace('review')
 }
 
 const handleHeaderEvent = (event) => {
   const { type } = event.detail
+  const headerPanel = HEADER_PANEL_EVENTS[type]
+  if (headerPanel) {
+    uiStore.open(headerPanel)
+    return
+  }
   switch (type) {
-    case 'showNotifications':
-      showNotifications.value = true
-      break
-    case 'showUserProfile':
-      showUserProfile.value = true
-      break
     case 'locateUser':
       mapManager.clearRoute()
       stationsStore.stopNavigation()
@@ -452,7 +413,7 @@ const handleHeaderEvent = (event) => {
       break
     case 'home':
       stationsStore.setCurrentStation(null)
-      showStationsList.value = false
+      closeStationsListIfOpen()
       mapManager.clearRoute()
       stationsStore.stopNavigation()
       break
@@ -484,7 +445,7 @@ const handleMapClick = () => {
 
 const handleNavigateToStation = (event) => {
   const station = event.detail
-  showStationsList.value = false
+  closeStationsListIfOpen()
   mapManager.clearRoute()
   mapManager.navigateToStation(station)
 }
@@ -525,7 +486,7 @@ const applyDesktopLayout = (isDesktop) => {
     }
   } else {
     desktopSidebarOpen.value = false
-    showStationsList.value = false
+    closeStationsListIfOpen()
   }
 }
 
