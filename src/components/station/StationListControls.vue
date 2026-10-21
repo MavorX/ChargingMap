@@ -5,6 +5,7 @@
       v-model="searchQuery"
       type="text"
       placeholder="搜索充电站名称或地址..."
+      aria-label="搜索充电站名称或地址"
       class="input-premium"
       :class="isCompact ? 'py-3 pl-11 pr-4 text-sm' : 'py-3.5 pl-12 pr-4'"
     />

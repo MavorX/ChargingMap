@@ -3,7 +3,11 @@
     class="group cursor-pointer bg-gradient-to-br from-white to-surface-50 dark:from-surface-800 dark:to-surface-900"
     :class="cardClass"
     :style="{ animationDelay: `${Math.min(index, 10) * delayStep}ms` }"
+    role="button"
+    tabindex="0"
     @click="emit('select', station)"
+    @keydown.enter.self.prevent="emit('select', station)"
+    @keydown.space.self.prevent="emit('select', station)"
   >
     <div class="flex items-start justify-between" :class="compact ? 'mb-2' : 'mb-3'">
       <div class="min-w-0 flex-1" :class="compact ? 'pr-2' : 'pr-3'">

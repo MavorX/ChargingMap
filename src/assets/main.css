@@ -178,6 +178,10 @@
 
   .panel-content {
     @apply relative w-full h-full bg-white dark:bg-surface-900 flex flex-col shadow-2xl overflow-hidden;
+    /* Keep footer CTAs above the iPhone home indicator. env() resolves to 0
+       on desktop and on browsers without safe-area support, so the box model
+       is unchanged there (border-box is the Tailwind base default). */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .panel-content > .overflow-y-auto {

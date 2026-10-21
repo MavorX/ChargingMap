@@ -825,16 +825,37 @@ const toggleFavorite = () => {
   }
 }
 
-const shareStation = () => {
-  if (station.value && navigator.share) {
-    navigator
-      .share({
-        title: station.value.stationName,
-        text: `推荐充电站: ${station.value.stationName} - ${station.value.address}`
-      })
-      .catch(() => {})
-  } else {
-    showToast('分享链接已复制到剪贴板', 'success')
+const shareStation = async () => {
+  if (!station.value) return
+
+  const url = window.location.href
+  const shareData = {
+    title: station.value.stationName,
+    text: `推荐充电站: ${station.value.stationName} - ${station.value.address}`,
+    url
   }
+
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share(shareData)
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        showToast('分享失败，请手动复制地址栏链接', 'warning')
+      }
+    }
+    return
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('分享链接已复制到剪贴板', 'success')
+    } catch {
+      showToast('复制失败，请手动复制地址栏链接', 'warning')
+    }
+    return
+  }
+
+  showToast('请手动复制地址栏链接', 'warning')
 }
 </script>

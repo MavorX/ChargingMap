@@ -22,6 +22,12 @@ jobs:
 
       - run: npm run lint
 
+      - name: Format check
+        run: npm run format:check
+
+      - name: Accessibility scan
+        run: npm run check:a11y
+
       - run: npm run test -- --run
 
       - run: npm run check:data

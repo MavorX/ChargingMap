@@ -31,7 +31,7 @@ class MapManager {
   setMap(mapInstance) {
     this.map = mapInstance
     this._markerSignature = ''
-    console.log('[MapManager] Map instance set')
+    if (import.meta.env.DEV) console.log('[MapManager] Map instance set')
   }
 
   setStations(stationsData) {
@@ -42,7 +42,7 @@ class MapManager {
         this._stationIndex.set(station.stationId, station)
       }
     })
-    console.log('[MapManager] Stations set:', stationsData.length)
+    if (import.meta.env.DEV) console.log('[MapManager] Stations set:', stationsData.length)
   }
 
   getStationColor(station) {
@@ -618,7 +618,7 @@ class MapManager {
           needAddress: false
         })
         this.map.addControl(this._geolocation)
-        console.log('[MapManager] Geolocation plugin loaded')
+        if (import.meta.env.DEV) console.log('[MapManager] Geolocation plugin loaded')
         this._doLocate(resolve, reject)
       })
     })
@@ -642,7 +642,7 @@ class MapManager {
     }
 
     this._geolocation.getCurrentPosition((status, result) => {
-      console.log('[MapManager] Geolocation result:', status, result)
+      if (import.meta.env.DEV) console.log('[MapManager] Geolocation result:', status, result)
       if (status === 'complete') {
         if (!this.map) {
           reject(new Error('地图已销毁'))
@@ -708,15 +708,17 @@ class MapManager {
     const endLat = station.lat
 
     const doDriving = (startLng, startLat) => {
-      console.log(
-        '[MapManager] Planning route from [',
-        startLng,
-        startLat,
-        '] to [',
-        endLng,
-        endLat,
-        ']'
-      )
+      if (import.meta.env.DEV) {
+        console.log(
+          '[MapManager] Planning route from [',
+          startLng,
+          startLat,
+          '] to [',
+          endLng,
+          endLat,
+          ']'
+        )
+      }
 
       AMap.plugin(['AMap.Driving'], () => {
         try {
@@ -730,11 +732,13 @@ class MapManager {
             new AMap.LngLat(startLng, startLat),
             new AMap.LngLat(endLng, endLat),
             function (status, result) {
-              console.log(
-                '[MapManager] Driving search result:',
-                status,
-                JSON.stringify(result).substring(0, 500)
-              )
+              if (import.meta.env.DEV) {
+                console.log(
+                  '[MapManager] Driving search result:',
+                  status,
+                  JSON.stringify(result).substring(0, 500)
+                )
+              }
               if (status === 'complete') {
                 if (result.routes && result.routes.length > 0) {
                   const route = result.routes[0]

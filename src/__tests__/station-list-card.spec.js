@@ -67,6 +67,19 @@ describe('StationListCard', () => {
 
     expect(wrapper.emitted('select')).toEqual([[station]])
   })
+
+  it('is keyboard operable as a button and emits select once per Enter/Space', async () => {
+    const enterWrapper = mount(StationListCard, { props: { station } })
+    expect(enterWrapper.attributes('role')).toBe('button')
+    expect(enterWrapper.attributes('tabindex')).toBe('0')
+
+    await enterWrapper.trigger('keydown', { key: 'Enter' })
+    expect(enterWrapper.emitted('select')).toEqual([[station]])
+
+    const spaceWrapper = mount(StationListCard, { props: { station } })
+    await spaceWrapper.trigger('keydown', { key: ' ' })
+    expect(spaceWrapper.emitted('select')).toEqual([[station]])
+  })
 })
 
 describe('useStationList', () => {

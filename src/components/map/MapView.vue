@@ -218,20 +218,13 @@ watch(
   }
 )
 
-const handleStationClick = (event) => {
-  const station = event.detail
-  stationsStore.setCurrentStation(station)
-}
-
 onMounted(() => {
   initMap()
   loadStations()
-  window.addEventListener('stationClick', handleStationClick)
 })
 
 onUnmounted(() => {
   isUnmounted = true
-  window.removeEventListener('stationClick', handleStationClick)
   if (viewportTimer) clearTimeout(viewportTimer)
   mapManager.destroy()
   if (map) {
