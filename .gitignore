@@ -47,3 +47,6 @@ Thumbs.db
 # Package manager files
 yarn.lock
 pnpm-lock.yaml
+
+# Build analysis report (npm run build:analyze)
+stats.html

@@ -22,3 +22,16 @@ if (!key || key === PLACEHOLDER) {
   console.error('')
   process.exit(1)
 }
+
+// VITE_BASE is optional (defaults to '/'), but when set it must be an absolute
+// URL path such as /ChargingMap/ or Vite would emit relative/broken asset URLs.
+const base = (env.VITE_BASE || '').trim()
+
+if (base && !base.startsWith('/')) {
+  console.error('')
+  console.error(`[prebuild-check] VITE_BASE 格式非法: "${base}"`)
+  console.error('  必须以 "/" 开头，例如 / 或 /ChargingMap/')
+  console.error('  GitHub Pages 项目站点请使用 /<仓库名>/')
+  console.error('')
+  process.exit(1)
+}
