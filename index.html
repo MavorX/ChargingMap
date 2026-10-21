@@ -5,12 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VWer-Charging</title>
-    <script type="text/javascript">
-      window._AMapSecurityConfig = {
-        securityJsCode: '%VITE_AMAP_SECURITY_CODE%',
-      }
-    </script>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=%VITE_AMAP_KEY%&plugin=AMap.MarkerCluster,AMap.MarkerClusterer,AMap.Geolocation,AMap.Driving"></script>
+    <link rel="preconnect" href="https://webapi.amap.com" crossorigin />
     <style>
       @keyframes clusterPulse {
         0% { transform: scale(1); opacity: 0.6; }

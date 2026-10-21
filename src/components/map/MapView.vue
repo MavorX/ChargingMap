@@ -22,28 +22,65 @@
       </div>
     </div>
     <div id="map-container" class="h-full w-full"></div>
+    <div
+      v-if="mapError"
+      class="absolute inset-0 z-10 flex items-center justify-center bg-surface-100/80 p-6 backdrop-blur-sm dark:bg-surface-900/80"
+      role="alert"
+      data-testid="map-fallback"
+    >
+      <div
+        class="glass-card w-[min(92%,24rem)] min-w-0 border border-danger-200 p-6 text-center shadow-soft-lg dark:border-danger-800/60"
+      >
+        <div
+          class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-50 dark:bg-danger-900/30"
+        >
+          <i class="fa fa-map-marked-alt text-2xl text-danger-500" aria-hidden="true"></i>
+        </div>
+        <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">地图加载失败</h2>
+        <p class="mt-2 break-words text-sm leading-relaxed text-surface-500 dark:text-surface-400">
+          {{ mapError }}
+        </p>
+        <button
+          class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-danger-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-danger-600 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="isMapLoading"
+          @click="retryMap"
+        >
+          <i
+            :class="isMapLoading ? 'fa fa-spinner fa-spin' : 'fa fa-rotate-right'"
+            aria-hidden="true"
+          ></i>
+          {{ isMapLoading ? '正在重新加载…' : '重新加载' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch, inject } from 'vue'
+import { onMounted, onUnmounted, watch, inject, ref } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 import { useUserStore } from '../../store/modules/user'
 import mapManager from '../../services/mapService'
+import { amapLoader } from '../../services/amapLoader'
 
 const stationsStore = useStationsStore()
 const userStore = useUserStore()
 const showToast = inject('showToast')
 const setLoading = inject('setLoading')
 
-let map = null
+const mapError = ref(null)
+const isMapLoading = ref(false)
 
-const initMap = () => {
+let map = null
+let isUnmounted = false
+
+const initMap = async () => {
+  isMapLoading.value = true
+  mapError.value = null
+
   try {
-    if (typeof AMap === 'undefined') {
-      showToast('地图SDK加载失败', 'error')
-      return
-    }
+    await amapLoader.load()
+    if (isUnmounted) return
 
     map = new AMap.Map('map-container', {
       zoom: 13,
@@ -62,11 +99,25 @@ const initMap = () => {
     map.on('moveend', onMapViewportChange)
     map.on('zoomend', onMapViewportChange)
 
+    onMapViewportChange()
     doInitialGeolocation()
   } catch (err) {
     console.error('[MapView] Map init error:', err)
+    if (map) {
+      map.destroy()
+      map = null
+    }
+    mapError.value = err?.message || '地图初始化失败，请稍后重试'
     setLoading(false)
+  } finally {
+    isMapLoading.value = false
   }
+}
+
+const retryMap = () => {
+  if (isMapLoading.value) return
+  amapLoader.reset()
+  initMap()
 }
 
 const onMapViewportChange = () => {
@@ -158,6 +209,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  isUnmounted = true
   window.removeEventListener('stationClick', handleStationClick)
   if (updateTimer) clearTimeout(updateTimer)
   mapManager.destroy()
