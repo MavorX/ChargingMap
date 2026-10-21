@@ -17,6 +17,8 @@ VWer-Charging 是一款面向电动汽车车主的充电站查找与管理 Web �
 | Font Awesome | 7.2 | 图标库（本地 npm 包） |
 | 高德地图 JS SDK  | 2.0 | 地图、定位、导航      |
 | Vite         | 6.0 | 构建工具          |
+| Vitest       | 3.2 | 单元测试          |
+| ESLint       | 9.x | 代码检查          |
 
 ## 功能概览
 
@@ -141,23 +143,34 @@ Header Logo → 回到地图初始状态
 
 ```
 vwcharging/
-├── index.html                        # 入口 HTML，含高德地图 SDK 和安全密钥配置
+├── index.html                        # 入口 HTML（viewport-fit=cover）
 ├── package.json                      # 项目依赖与脚本
-├── vite.config.js                    # Vite 构建配置
-├── tailwind.config.js                # TailwindCSS 主题配置
+├── vite.config.js                    # base / vendor 分包 / analyze 构建
+├── vitest.config.js                  # Vitest 配置（jsdom + 演示数据环境）
+├── tailwind.config.js                # TailwindCSS 主题、z-index 令牌
 ├── postcss.config.js                 # PostCSS 配置
-├── generate_stations.js              # 充电站数据生成脚本
+├── generate_stations.js              # 确定性数据生成（--count / --seed）
+├── scripts/
+│   ├── prebuild-check.mjs            # 构建前校验 VITE_AMAP_KEY / VITE_BASE
+│   ├── validate-data.mjs             # npm run check:data
+│   └── check-a11y.js                 # npm run check:a11y（icon-only 按钮扫描）
+├── .github/workflows/
+│   ├── ci.yml                        # lint + test + check:data + build
+│   └── deploy-pages.yml              # 手动触发的 GitHub Pages 部署
 ├── public/
+│   ├── favicon.svg
 │   └── data/
-│       ├── station_list.json         # 站点列表数据
-│       └── station_details.json      # 站点详情数据
+│       ├── station_list.json         # 站点列表（500 站）
+│       └── details/
+│           └── part-01..05.json      # 站点详情分片（每片 100 站）
 └── src/
     ├── main.js                       # 应用入口，路由/Pinia/Font Awesome 配置
     ├── App.vue                       # 根组件，全局状态（深色模式/Toast/Loading）
     ├── assets/
-    │   └── main.css                  # TailwindCSS + 自定义组件样式
+    │   ├── main.css                  # TailwindCSS + 自定义组件样式 + a11y 基线
+    │   └── logo.webp                 # 80×80 WebP Logo
     ├── views/
-    │   └── HomeView.vue              # 主页面，面板联动控制中心
+    │   └── HomeView.vue              # 主页面，面板编排与地图联动
     ├── components/
     │   ├── Header.vue                # 顶部导航栏（响应式通知角标）
     │   ├── map/
@@ -166,50 +179,54 @@ vwcharging/
     │   ├── station/
     │   │   ├── StationsList.vue      # 站点列表面板（移动端）
     │   │   ├── DesktopStationList.vue # 桌面端站点列表
-    │   │   ├── StationDetail.vue     # 站点详情面板（移动端弹出）
-    │   │   └── StationDetailInline.vue # 站点详情内联面板（桌面端）
-    │   ├── reservation/
-    │   │   └── ReservationPanel.vue  # 预约充电面板
+    │   │   ├── StationDetail.vue     # 站点详情（移动弹层 / 桌面内联共用）
+    │   │   ├── StationListCard.vue   # 站点卡片
+    │   │   └── StationListControls.vue # 搜索/筛选控件
+    │   ├── reservation/ReservationPanel.vue
     │   ├── charging/
-    │   │   ├── ChargingSettings.vue  # 充电设置面板
-    │   │   └── ChargingPanel.vue     # 充电中面板
+    │   │   ├── ChargingSettings.vue
+    │   │   └── ChargingPanel.vue
     │   ├── payment/
-    │   │   ├── PaymentPanel.vue      # 支付面板
-    │   │   └── PaymentSuccess.vue    # 支付成功页面
-    │   ├── review/
-    │   │   └── ReviewPanel.vue       # 评价面板
-    │   ├── user/
-    │   │   ├── UserProfile.vue       # 用户中心面板
-    │   │   ├── NotificationsPanel.vue# 通知中心面板
-    │   │   ├── VehiclePanel.vue      # 车辆管理面板
-    │   │   ├── ChargingHistoryPanel.vue # 充电记录面板
-    │   │   ├── CouponsPanel.vue      # 优惠券面板
-    │   │   ├── WalletPanel.vue       # 钱包面板
-    │   │   ├── FavoritesPanel.vue    # 收藏面板
-    │   │   ├── HelpCenterPanel.vue   # 帮助中心面板
-    │   │   └── SettingsPanel.vue     # 设置面板
-    │   ├── filter/
-    │   │   └── VehicleFilter.vue     # 筛选面板
+    │   │   ├── PaymentPanel.vue
+    │   │   └── PaymentSuccess.vue
+    │   ├── review/ReviewPanel.vue
+    │   ├── user/                     # 用户中心 / 通知 / 车辆 / 记录 / 券 / 钱包 / 收藏 / 帮助 / 设置
+    │   ├── filter/VehicleFilter.vue
     │   └── common/
-    │       ├── Loading.vue           # 加载遮罩
-    │       └── Toast.vue             # 消息提示
+    │       ├── PanelShell.vue        # 面板容器（dialog 语义 / 焦点陷阱 / Esc）
+    │       ├── Loading.vue
+    │       ├── Toast.vue
+    │       ├── StarRating.vue
+    │       └── ToggleSwitch.vue
+    ├── composables/
+    │   ├── useStationList.js         # 列表分页/筛选/搜索
+    │   └── useAvailableConnectors.js # 快慢充可用桩合并
+    ├── constants/headerEvents.js     # Header 事件到面板名的映射
+    ├── mocks/userDemo.js             # VITE_DEMO 演示用户数据
     ├── services/
-    │   ├── api.js                    # API 服务（数据加载 + 模拟支付/评价）
-    │   └── mapService.js             # 地图服务（标记管理/聚合/定位/导航/资源销毁）
-    └── store/
-        ├── index.js                  # Pinia 导出
-        └── modules/
-            ├── stations.js           # 站点状态管理（筛选/收藏/距离计算/搜索关键词）
-            ├── charging.js           # 充电状态管理（充电模拟/设置持久化）
-            ├── reservation.js        # 预约状态管理
-            └── user.js               # 用户状态管理（主题/通知/车辆/钱包）
+    │   ├── api.js                    # 列表 + 详情分片 + 模拟支付/评价
+    │   ├── amapLoader.js             # 高德 JSAPI 动态加载与降级
+    │   └── mapService.js             # 标记/聚合/定位/导航/资源销毁
+    ├── utils/
+    │   ├── format.js
+    │   ├── pricing.js
+    │   └── stationStatus.js
+    ├── store/
+    │   ├── index.js
+    │   └── modules/
+    │       ├── stations.js           # 站点数据、筛选、收藏、距离、搜索
+    │       ├── charging.js           # 充电模拟与设置
+    │       ├── reservation.js        # 预约记录
+    │       ├── user.js               # 用户、车辆、通知、钱包、主题
+    │       └── ui.js                 # activePanel 单源面板编排
+    └── __tests__/                    # 21 个 spec 文件（137 用例）
 ```
 
 ## 架构设计
 
 ### 状态管理
 
-项目使用 Pinia 进行状态管理，按业务领域拆分为 4 个独立 Store：
+项目使用 Pinia 进行状态管理，按业务领域拆分为 5 个独立 Store：
 
 | Store         | 职责                        |
 | ------------- | ------------------------- |
@@ -217,27 +234,29 @@ vwcharging/
 | `charging`    | 充电过程模拟、充电设置管理             |
 | `reservation` | 预约记录的创建与取消                |
 | `user`        | 用户信息、车辆管理、通知、钱包交易、深色模式    |
+| `ui`          | `activePanel` 单源面板编排、返回历史栈 |
 
 ### 地图服务
 
-[mapService.js](src/services/mapService.js) 封装了 `MapManager` 类，统一管理高德地图交互：
+[mapService.js](src/services/mapService.js) 封装了 `MapManager` 类，统一管理高德地图交互；[amapLoader.js](src/services/amapLoader.js) 负责 JSAPI 加载与失败降级：
 
 - **标记渲染** — 自定义 SVG 图标，颜色根据可用状态动态计算
 - **聚合显示** — 兼容 AMap 2.0 的 MarkerCluster API，支持 `renderMarker` / `renderClusterMarker` 自定义渲染
-- **信息窗口** — 自定义 HTML 内容，含关闭按钮和导航交互
+- **信息窗口** — 全站复用一个 InfoWindow 实例，避免每个标记各建一个
 - **用户定位** — 异步加载 Geolocation 插件，GPS 优先定位
 - **路线规划** — 异步加载 Driving 插件，自动绘制驾车路线
-- **降级处理** — MarkerCluster 不可用时直接添加标记到地图
+- **降级处理** — MarkerCluster 不可用时直接添加标记；地图脚本或密钥不可用时显示降级面板并给出配置指引
 - **资源管理** — 提供 `destroy()` 方法清理标记、路线、信息窗口等资源，防止内存泄漏
 
 ### 面板联动
 
-[HomeView.vue](src/views/HomeView.vue) 作为面板联动控制中心，通过 `ref` 状态变量控制各面板的显示/隐藏，并通过 `Transition` 组件实现滑入/滑出/淡入淡出动画。面板间的数据传递通过 Pinia Store 和 `inject/provide` 实现。
+[HomeView.vue](src/views/HomeView.vue) 是面板编排入口，所有弹层由 [ui store](src/store/modules/ui.js) 的 `activePanel` 单一状态驱动：`open()` 互斥打开并记录返回栈，`replace()` 用于支付流程内的顺序切换，`close()` 出栈返回，`dismiss()` 终止流程。弹层统一使用 `PanelShell`（`role="dialog"`、焦点陷阱、Esc 关闭、滚动锁定），非首屏面板通过 `defineAsyncComponent` 按需加载。
 
 ### 数据流
 
 ```
-JSON 文件 → api.js (fetch) → Pinia Store → Vue 组件
+station_list.json → api.js (fetch) → Pinia Store → Vue 组件
+data/details/part-NN.json → api.js（按 stationId 推导分片，Promise 级缓存）→ Store
 localStorage ←→ Pinia Store (收藏/主题/充电设置)
 CustomEvent ←→ mapService.js ←→ HomeView.vue (地图交互)
 ```
@@ -247,14 +266,14 @@ CustomEvent ←→ mapService.js ←→ HomeView.vue (地图交互)
 | 数据   | 存储方式         | 说明                                 |
 | ---- | ------------ | ---------------------------------- |
 | 站点列表 | JSON 文件      | `public/data/station_list.json`    |
-| 站点详情 | JSON 文件      | `public/data/station_details.json` |
+| 站点详情 | JSON 分片      | `public/data/details/part-01..05.json`（每片 100 站） |
 | 收藏站点 | localStorage | key: `favoriteStations`            |
 | 主题设置 | localStorage | key: `isDarkMode`                  |
 | 充电设置 | localStorage | key: `chargingSettings`            |
-| 用户信息 | Pinia 内存     | 模拟数据                               |
-| 预约记录 | Pinia 内存     | 模拟数据                               |
-| 通知数据 | Pinia 内存     | 模拟数据                               |
-| 钱包交易 | Pinia 内存     | 模拟数据（支持充值/支付/退款/提现四种类型）            |
+| 用户信息 | Pinia 内存     | 空态或 `VITE_DEMO` 演示数据               |
+| 预约记录 | Pinia 内存     | 空态或 `VITE_DEMO` 演示数据               |
+| 通知数据 | Pinia 内存     | 空态或 `VITE_DEMO` 演示数据               |
+| 钱包交易 | Pinia 内存     | 空态或 `VITE_DEMO` 演示数据（充值/支付/退款/提现） |
 
 ## 快速开始
 
@@ -277,6 +296,11 @@ npm run build
 
 # 预览生产构建
 npm run preview
+
+# 代码检查 / 单元测试 / 数据契约校验
+npm run lint
+npm run test -- --run
+npm run check:data
 ```
 
 ### 数据生成
@@ -291,7 +315,9 @@ node generate_stations.js
 node generate_stations.js --count 300 --seed 7
 ```
 
-脚本会**全量覆盖重建** `public/data/station_list.json` 和 `station_details.json`（不再追加旧数据），默认生成 500 个站点，数据覆盖合肥市各区域，包含多种充电品牌、接口类型和功率等级。`--count` 取值范围 1..1000，`--seed` 取值范围 0..4294967295；同一 `--seed` 下重复运行会得到逐字节一致的数据文件。
+脚本会**重置式重建**数据：先删除旧的 `public/data/details/part-*.json` 和遗留的 `public/data/station_details.json`，再写入全新的 `public/data/station_list.json` 与按 100 站/片切分的 `public/data/details/part-01.json`…。默认生成 500 个站点（seed=42），数据覆盖合肥市各区域，包含多种充电品牌、接口类型和功率等级。站点 ID 固定为 `HF` + 6 位序号（`HF000001` 起），分片号 = `ceil(序号 / 100)`。
+
+`--count` 取值范围 1..1000，`--seed` 取值范围 0..4294967295，超出范围会直接报错退出；同一 `--seed` 下重复运行会得到逐字节一致的数据文件（脚本内所有随机数都走 mulberry32）。`--help` 可查看内置用法说明。
 
 ### 演示数据
 
@@ -314,6 +340,67 @@ VITE_DEMO=true
 
 获取密钥请前往 [高德开放平台](https://lbs.amap.com/) 注册并创建应用。
 
+## 部署
+
+项目是纯静态单页应用，`npm run build` 的产物在 `dist/`，可托管到任意静态站点。
+
+### GitHub Pages（内置工作流）
+
+仓库包含 [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)，只支持手动触发，push 不会自动部署：
+
+1. 打开仓库 **Settings → Pages → Build and deployment → Source**，选择 **GitHub Actions**
+2. 打开 **Actions → Deploy to GitHub Pages → Run workflow**，按需填写：
+   - `amap_key`：本次构建使用的高德 JS API Key（可选）
+   - `amap_security_code`：对应的高德安全密钥（可选）
+3. 密钥采用三级回退，保证工作流永远能跑通：手动输入 → 仓库 secrets `AMAP_KEY` / `AMAP_SECURITY_CODE` → 字面量 `dummy`。使用 `dummy` 构建的站点地图会显示降级面板并提示配置真实 key，列表、详情、充电、支付等演示流程仍然可用
+4. 工作流固定注入 `VITE_BASE=/ChargingMap/` 与 `VITE_DEMO=true`，构建后把 `dist/index.html` 复制为 `dist/404.html`，因此子路径下硬刷新不会落到 GitHub 的 404 页面
+
+配置真实密钥：**Settings → Secrets and variables → Actions → New repository secret**，名称必须为 `AMAP_KEY` 与 `AMAP_SECURITY_CODE`。配置后重新 Run workflow，地图即点亮。不要把密钥写进仓库文件。
+
+### 自定义域名与根路径
+
+项目站点地址是 `https://<user>.github.io/ChargingMap/`，所以 `VITE_BASE` 为 `/ChargingMap/`。若绑定自定义域名，或发布到用户/组织根站点，则改为根路径：
+
+```bash
+VITE_BASE=/ npm run build
+```
+
+`VITE_BASE` 必须以 `/` 开头，否则 `scripts/prebuild-check.mjs` 会在构建开始前直接失败。
+
+### 其他托管方式
+
+GitHub Pages 在中国大陆访问可能较慢甚至不稳定。面向国内用户时，可把同一份 `dist/` 部署到 Vercel、Netlify 或 Gitee Pages：这些平台通常使用根路径，保持 `VITE_BASE=/`；若部署在子路径，按平台要求改成对应前缀。构建命令统一为 `npm run build`，产物目录为 `dist`。
+
+## 安全
+
+### 高德密钥与 securityJsCode
+
+高德 JSAPI 2.0 要求页面在加载 SDK 前设置 `window._AMapSecurityConfig.securityJsCode`（实现见 [src/services/amapLoader.js](src/services/amapLoader.js)）。按高德的设计，这个值必须出现在浏览器端，因此 `VITE_AMAP_SECURITY_CODE` 会随构建进入 `dist/assets/*.js`。这是 JSAPI 2.0 的既定机制，不是本项目把密钥硬编码进源码；但它只能降低密钥被直接盗用的风险，不代表密钥可以公开。
+
+仓库历史上的 `dist/` 曾把带密钥的构建产物一并入库，因此建议：
+
+1. 到[高德开放平台控制台](https://console.amap.com/)为该项目**轮换密钥**：删除旧 Key 与 securityJsCode，重新创建一对，旧值一律视为已泄露
+2. 为 Key 配置**域名白名单**，只允许实际使用的域名（如 `<user>.github.io`、自定义域名、本地 `localhost` 调试）
+3. 设置**日配额与并发上限**，把潜在滥用的影响限制在可控范围
+4. 新密钥只放 `.env.local`（已被 `.gitignore` 忽略）或 CI secrets，不要提交到仓库，也不要出现在 README、issue、截图中
+5. 若怀疑密钥已泄露，先轮换再排查访问日志
+
+由于 `securityJsCode` 一定会进入前端产物，公开演示站建议单独申请一把低配额 Key，不要与生产环境共用。
+
+### 历史大文件找回（仅存档用途）
+
+v12 移除了仓库根目录 3.75MB 的 `大众学院logo.png`，替换为 4.4KB 的 WebP。只在需要原始设计稿时才从 Git 历史中找回：
+
+```bash
+# 1. 找到曾包含该文件的提交
+git log --all --full-history -- "大众学院logo.png"
+
+# 2. 把 <sha> 换成删除前的提交号，取出文件
+git checkout <sha> -- "大众学院logo.png"
+```
+
+找回后请勿再次提交该文件；当前代码引用的是 `src/assets/logo.webp`。
+
 ## UI 设计体系
 
 项目基于 TailwindCSS 构建了完整的设计体系（见 [tailwind.config.js](tailwind.config.js)）：
@@ -325,6 +412,17 @@ VITE_DEMO=true
 - **组件类** — glass-effect / glass-card / premium-card / btn-premium / input-premium / status-badge / icon-button
 
 ## 更新日志
+
+### v12 质量与交付（2026-10）
+
+- **质量网** — 引入 Vitest（21 个测试文件 / 137 个用例），覆盖筛选、计价、支付结算、地图生命周期、面板编排、可访问性等核心契约；新增 `npm run check:data` 数据校验与 `npm run check:a11y` 按钮可访问名扫描
+- **数据分片** — 详情从 6.2MB 单文件拆为 `public/data/details/part-01..05.json`（每片 100 站），按 stationId 推导分片并做 Promise 级缓存；生成器改为确定性输出，默认 500 站，`--count` / `--seed` 带范围校验，重复运行逐字节一致
+- **演示数据开关** — 新增 `VITE_DEMO`，默认空态；开启后从 `src/mocks/userDemo.js` 载入演示记录，站点统一引用 `HF000001`
+- **地图运行时** — 抽出 `amapLoader` 统一加载 SDK、插件与 securityJsCode；地图实例生命周期可测试化，脚本或密钥不可用时显示降级面板与配置指引
+- **组件合一** — 新增 `PanelShell`、`StarRating`、`ToggleSwitch`、`StationListCard`、`StationListControls` 与 `useStationList` / `useAvailableConnectors`，收敛列表、详情、面板的重复实现
+- **可访问性** — 图标按钮补齐可访问名，面板统一 `role="dialog"`、焦点陷阱与 Esc 关闭，Toast 增加 live region；扫描范围内 37 个 icon-only 按钮全部有可访问名
+- **资源体积** — 3.75MB PNG Logo 换为 4.4KB WebP，补齐 favicon；详情分片与 vendor 分包后，入口 JS（index + vendor-vue）由 344.5KB 降至 262.3KB（约 -23.9%），dist 总体积约 2.56MB
+- **构建与部署** — 支持 `VITE_BASE` 子路径构建，prebuild 校验缺失 key 与非法 base；新增手动触发的 GitHub Pages 工作流（密钥三级回退 + SPA 404 回退）与安全章节
 
 ### v11 Bug 修复
 
