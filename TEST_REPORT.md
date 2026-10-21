@@ -24,6 +24,8 @@
 
 原始输出保存在 `.omo/evidence/task-30-lint2.log`、`task-30-vitest.log`、`task-30-check-data.log`、`task-30-build.log`、`task-30-a11y.log`。
 
+补充说明：`npm run test -- --run` 首次执行时，PowerShell 将输出重定向到日志文件的过程中遇到一次 Windows 文件占用错误，shell 退出码为 1；但 Vitest 自身汇总仍为 21/137 全通过。随后原样重跑，退出码 0、结果一致。此处如实记录该次重试，它属于本地日志重定向的基础设施问题，不是测试用例失败。
+
 ### 构建产物要点（v12）
 
 | 文件 | 字节 | 说明 |
