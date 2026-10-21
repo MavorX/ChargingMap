@@ -1,15 +1,23 @@
 <template>
   <Transition name="toast-premium">
-    <div v-if="show"
-         :class="[
-           'fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-4 rounded-2xl shadow-xl z-[70] flex items-center space-x-3.5 max-w-[90vw] min-w-[300px] backdrop-blur-xl border',
-           toastContainerClass
-         ]">
-      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md" :class="toastIconBgClass">
+    <div
+      v-if="show"
+      :class="[
+        'fixed left-1/2 top-20 z-[70] flex min-w-[300px] max-w-[90vw] -translate-x-1/2 transform items-center space-x-3.5 rounded-2xl border px-6 py-4 shadow-xl backdrop-blur-xl',
+        toastContainerClass
+      ]"
+    >
+      <div
+        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl shadow-md"
+        :class="toastIconBgClass"
+      >
         <i :class="toastIconClass" aria-hidden="true"></i>
       </div>
-      <p class="text-sm font-bold flex-1" :class="toastTextClass">{{ message }}</p>
-      <button @click="$emit('update:show', false)" class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-200">
+      <p class="flex-1 text-sm font-bold" :class="toastTextClass">{{ message }}</p>
+      <button
+        class="flex-shrink-0 opacity-60 transition-opacity duration-200 hover:opacity-100"
+        @click="$emit('update:show', false)"
+      >
         <i class="fa fa-times text-xs" :class="toastTextClass" aria-hidden="true"></i>
       </button>
     </div>
@@ -17,7 +25,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 const props = defineProps({
   message: {
@@ -32,9 +40,9 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-});
+})
 
-const emit = defineEmits(['update:show']);
+defineEmits(['update:show'])
 
 const toastConfigMap = {
   error: {
@@ -61,16 +69,16 @@ const toastConfigMap = {
     icon: 'fa fa-check text-white text-sm',
     text: 'text-white'
   }
-};
+}
 
 const currentConfig = computed(() => {
-  return toastConfigMap[props.type] || toastConfigMap.success;
-});
+  return toastConfigMap[props.type] || toastConfigMap.success
+})
 
-const toastContainerClass = computed(() => currentConfig.value.container);
-const toastIconBgClass = computed(() => currentConfig.value.iconBg);
-const toastIconClass = computed(() => currentConfig.value.icon);
-const toastTextClass = computed(() => currentConfig.value.text);
+const toastContainerClass = computed(() => currentConfig.value.container)
+const toastIconBgClass = computed(() => currentConfig.value.iconBg)
+const toastIconClass = computed(() => currentConfig.value.icon)
+const toastTextClass = computed(() => currentConfig.value.text)
 </script>
 
 <style scoped>

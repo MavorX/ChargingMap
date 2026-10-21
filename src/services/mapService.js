@@ -40,16 +40,18 @@ class MapManager {
     const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) + amount))
     const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) + amount))
     const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) + amount))
-    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
+    return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')
   }
 
   createStationMarkerContent(station) {
     const color = this.getStationColor(station)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
-    const statusText = station.openStatus === 0 ? '维护' : availableCount === 0 ? '已满' : `${availableCount}空`
+    const statusText =
+      station.openStatus === 0 ? '维护' : availableCount === 0 ? '已满' : `${availableCount}空`
 
     const div = document.createElement('div')
-    div.style.cssText = 'cursor:pointer;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));'
+    div.style.cssText =
+      'cursor:pointer;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));'
     div.innerHTML = `
       <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -71,7 +73,8 @@ class MapManager {
     const isFav = station.isFavorite
 
     const content = document.createElement('div')
-    content.style.cssText = 'background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);min-width:260px;max-width:300px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
+    content.style.cssText =
+      'background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);min-width:260px;max-width:300px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
     content.innerHTML = `
       <div style="background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0;color:white;font-size:15px;font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${station.stationName}</h3>
@@ -112,7 +115,11 @@ class MapManager {
     const favBtn = content.querySelector('.info-fav-btn')
     favBtn.addEventListener('click', (e) => {
       e.stopPropagation()
-      window.dispatchEvent(new CustomEvent('toggleFavoriteFromMap', { detail: { stationId: station.stationId, btnElement: favBtn } }))
+      window.dispatchEvent(
+        new CustomEvent('toggleFavoriteFromMap', {
+          detail: { stationId: station.stationId, btnElement: favBtn }
+        })
+      )
     })
     favBtn.addEventListener('mouseenter', () => {
       favBtn.style.transform = 'scale(1.05)'
@@ -171,7 +178,7 @@ class MapManager {
 
   _clearDirectMarkers() {
     if (this._directMarkers) {
-      this._directMarkers.forEach(m => {
+      this._directMarkers.forEach((m) => {
         if (this.map) this.map.remove(m)
       })
       this._directMarkers = []
@@ -185,8 +192,8 @@ class MapManager {
     }
 
     const points = filteredStations
-      .filter(station => station.lng && station.lat)
-      .map(station => ({
+      .filter((station) => station.lng && station.lat)
+      .map((station) => ({
         lnglat: [station.lng, station.lat],
         weight: 1,
         station: station
@@ -217,7 +224,7 @@ class MapManager {
     }
 
     const stationMap = new Map()
-    filteredStations.forEach(s => {
+    filteredStations.forEach((s) => {
       if (s.lng && s.lat) {
         stationMap.set(`${s.lng},${s.lat}`, s)
       }
@@ -232,7 +239,7 @@ class MapManager {
 
       const dataItems = context.data || context.clusterData || []
       if (Array.isArray(dataItems) && dataItems.length > 0) {
-        dataItems.forEach(item => {
+        dataItems.forEach((item) => {
           const station = item.station || stationMap.get(`${item.lnglat?.[0]},${item.lnglat?.[1]}`)
           if (station) {
             totalAvailable += (station.quickAvailableNum || 0) + (station.slowAvailableNum || 0)
@@ -330,7 +337,7 @@ class MapManager {
         const clusterMarkers = context.clusterMarkers || context.markers || []
         if (clusterMarkers.length > 0) {
           const bounds = new AMap.Bounds()
-          clusterMarkers.forEach(m => {
+          clusterMarkers.forEach((m) => {
             const pos = m.getPosition ? m.getPosition() : m
             bounds.extend(pos)
           })
@@ -352,7 +359,7 @@ class MapManager {
       if (!ClusterClass) {
         console.warn('[MapManager] MarkerCluster not available, adding markers directly')
         this._clearDirectMarkers()
-        points.forEach(point => {
+        points.forEach((point) => {
           const station = point.station
           const marker = new AMap.Marker({
             position: point.lnglat,
@@ -387,7 +394,7 @@ class MapManager {
     } catch (err) {
       console.error('[MapManager] MarkerCluster error:', err)
       this._clearDirectMarkers()
-      points.forEach(point => {
+      points.forEach((point) => {
         const station = point.station
         const marker = new AMap.Marker({
           position: point.lnglat,
@@ -408,7 +415,8 @@ class MapManager {
     }
     this._userMarker = new AMap.Marker({
       position: [lng, lat],
-      content: '<div style="width:20px;height:20px;background:rgba(59,130,246,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(59,130,246,0.5);"></div></div>',
+      content:
+        '<div style="width:20px;height:20px;background:rgba(59,130,246,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(59,130,246,0.5);"></div></div>',
       offset: new AMap.Pixel(-10, -10),
       zIndex: 200
     })
@@ -497,7 +505,11 @@ class MapManager {
         console.warn('[MapManager] AMap geolocation failed:', result)
         let errorMsg = '定位失败'
         if (result && result.message) {
-          if (result.message.includes('permission') || result.message.includes('denied') || result.message.includes('权限')) {
+          if (
+            result.message.includes('permission') ||
+            result.message.includes('denied') ||
+            result.message.includes('权限')
+          ) {
             errorMsg = '定位权限被拒绝，请在浏览器设置中允许位置访问'
           } else if (result.message.includes('timeout') || result.message.includes('超时')) {
             errorMsg = '定位请求超时，请重试'
@@ -532,7 +544,15 @@ class MapManager {
     const endLat = station.lat
 
     const doDriving = (startLng, startLat) => {
-      console.log('[MapManager] Planning route from [', startLng, startLat, '] to [', endLng, endLat, ']')
+      console.log(
+        '[MapManager] Planning route from [',
+        startLng,
+        startLat,
+        '] to [',
+        endLng,
+        endLat,
+        ']'
+      )
 
       AMap.plugin(['AMap.Driving'], () => {
         try {
@@ -546,19 +566,27 @@ class MapManager {
             new AMap.LngLat(startLng, startLat),
             new AMap.LngLat(endLng, endLat),
             function (status, result) {
-              console.log('[MapManager] Driving search result:', status, JSON.stringify(result).substring(0, 500))
+              console.log(
+                '[MapManager] Driving search result:',
+                status,
+                JSON.stringify(result).substring(0, 500)
+              )
               if (status === 'complete') {
                 if (result.routes && result.routes.length > 0) {
                   const route = result.routes[0]
                   const distance = (route.distance / 1000).toFixed(1)
                   const duration = Math.ceil(route.time / 60)
-                  window.dispatchEvent(new CustomEvent('routeResult', {
-                    detail: { distance, duration, station }
-                  }))
+                  window.dispatchEvent(
+                    new CustomEvent('routeResult', {
+                      detail: { distance, duration, station }
+                    })
+                  )
                 } else {
-                  window.dispatchEvent(new CustomEvent('routeResult', {
-                    detail: { error: '未找到可行路线' }
-                  }))
+                  window.dispatchEvent(
+                    new CustomEvent('routeResult', {
+                      detail: { error: '未找到可行路线' }
+                    })
+                  )
                 }
               } else {
                 console.error('[MapManager] Route planning error:', status, result)
@@ -570,17 +598,21 @@ class MapManager {
                 } else if (result && result.info) {
                   errMsg = '路线规划失败：' + result.info
                 }
-                window.dispatchEvent(new CustomEvent('routeResult', {
-                  detail: { error: errMsg }
-                }))
+                window.dispatchEvent(
+                  new CustomEvent('routeResult', {
+                    detail: { error: errMsg }
+                  })
+                )
               }
             }
           )
         } catch (e) {
           console.error('[MapManager] Failed to create AMap.Driving:', e)
-          window.dispatchEvent(new CustomEvent('routeResult', {
-            detail: { error: '导航服务初始化失败：' + e.message }
-          }))
+          window.dispatchEvent(
+            new CustomEvent('routeResult', {
+              detail: { error: '导航服务初始化失败：' + e.message }
+            })
+          )
         }
       })
     }
@@ -588,12 +620,14 @@ class MapManager {
     if (this._userLocation) {
       doDriving(this._userLocation.lng, this._userLocation.lat)
     } else {
-      this.locateUser().then((loc) => {
-        doDriving(loc.lng, loc.lat)
-      }).catch(() => {
-        const center = this.map.getCenter()
-        doDriving(center.lng, center.lat)
-      })
+      this.locateUser()
+        .then((loc) => {
+          doDriving(loc.lng, loc.lat)
+        })
+        .catch(() => {
+          const center = this.map.getCenter()
+          doDriving(center.lng, center.lat)
+        })
     }
   }
 

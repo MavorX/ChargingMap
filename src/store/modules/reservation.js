@@ -21,25 +21,25 @@ export const useReservationStore = defineStore('reservation', {
     isLoading: false,
     error: null
   }),
-  
+
   actions: {
     async createReservation(reservationData) {
       this.isLoading = true
       this.error = null
-      
+
       try {
         // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
         const newReservation = {
           id: Date.now().toString(),
           ...reservationData,
           status: 'upcoming'
         }
-        
+
         this.reservations.push(newReservation)
         this.currentReservation = newReservation
-        
+
         return newReservation
       } catch (err) {
         this.error = err.message
@@ -48,16 +48,16 @@ export const useReservationStore = defineStore('reservation', {
         this.isLoading = false
       }
     },
-    
+
     async cancelReservation(reservationId) {
       this.isLoading = true
       this.error = null
-      
+
       try {
         // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        this.reservations = this.reservations.filter(r => r.id !== reservationId)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        this.reservations = this.reservations.filter((r) => r.id !== reservationId)
         if (this.currentReservation && this.currentReservation.id === reservationId) {
           this.currentReservation = null
         }
@@ -68,7 +68,7 @@ export const useReservationStore = defineStore('reservation', {
         this.isLoading = false
       }
     },
-    
+
     setCurrentReservation(reservation) {
       this.currentReservation = reservation
     }

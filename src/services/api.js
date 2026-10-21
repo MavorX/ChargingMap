@@ -38,9 +38,9 @@ export const loadStationDetails = async () => {
   }
 }
 
-export const processPayment = async (paymentData) => {
+export const processPayment = async (_paymentData) => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     return {
       success: true,
       transactionId: `PAY${Date.now()}`,
@@ -52,9 +52,9 @@ export const processPayment = async (paymentData) => {
   }
 }
 
-export const submitReview = async (reviewData) => {
+export const submitReview = async (_reviewData) => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     return {
       success: true,
       reviewId: Date.now().toString()

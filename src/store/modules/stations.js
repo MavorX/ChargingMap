@@ -3,11 +3,14 @@ import { loadStationsList, loadStationDetail } from '../../services/api'
 
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
 }
@@ -45,10 +48,15 @@ export const useStationsStore = defineStore('stations', {
       try {
         const listData = await loadStationsList()
 
-        this.stations = listData.map(station => {
+        this.stations = listData.map((station) => {
           const distance = this.userLocation
-            ? haversineDistance(this.userLocation.lat, this.userLocation.lng, station.lat, station.lng)
-            : (station.distance || 0)
+            ? haversineDistance(
+                this.userLocation.lat,
+                this.userLocation.lng,
+                station.lat,
+                station.lng
+              )
+            : station.distance || 0
 
           return {
             ...station,
@@ -70,7 +78,7 @@ export const useStationsStore = defineStore('stations', {
     },
 
     async loadStationDetails(stationId) {
-      const station = this.stations.find(s => s.stationId === stationId)
+      const station = this.stations.find((s) => s.stationId === stationId)
       if (!station) return null
 
       if (station.detailsLoaded && station.details) {
@@ -106,10 +114,12 @@ export const useStationsStore = defineStore('stations', {
 
     recalculateDistances() {
       if (!this.userLocation) return
-      this.stations.forEach(station => {
+      this.stations.forEach((station) => {
         station.distance = haversineDistance(
-          this.userLocation.lat, this.userLocation.lng,
-          station.lat, station.lng
+          this.userLocation.lat,
+          this.userLocation.lng,
+          station.lat,
+          station.lng
         )
       })
       this.stations.sort((a, b) => a.distance - b.distance)
@@ -179,7 +189,7 @@ export const useStationsStore = defineStore('stations', {
     loadFavoriteStations() {
       try {
         const favoriteStations = JSON.parse(localStorage.getItem('favoriteStations') || '[]')
-        this.stations.forEach(station => {
+        this.stations.forEach((station) => {
           station.isFavorite = favoriteStations.includes(station.stationId)
         })
       } catch (err) {
@@ -189,7 +199,9 @@ export const useStationsStore = defineStore('stations', {
 
     saveFavoriteStations() {
       try {
-        const favoriteStations = this.stations.filter(station => station.isFavorite).map(station => station.stationId)
+        const favoriteStations = this.stations
+          .filter((station) => station.isFavorite)
+          .map((station) => station.stationId)
         localStorage.setItem('favoriteStations', JSON.stringify(favoriteStations))
       } catch (err) {
         console.error('保存收藏站点失败:', err)
@@ -197,7 +209,7 @@ export const useStationsStore = defineStore('stations', {
     },
 
     toggleFavorite(stationId) {
-      const station = this.stations.find(s => s.stationId === stationId)
+      const station = this.stations.find((s) => s.stationId === stationId)
       if (station) {
         station.isFavorite = !station.isFavorite
         this.saveFavoriteStations()
@@ -230,21 +242,35 @@ export const useStationsStore = defineStore('stations', {
       const filters = state.filters
       const query = state.searchQuery.toLowerCase()
 
-      return state.stations.filter(station => {
+      return state.stations.filter((station) => {
         if (filters.quickAvailable && station.quickAvailableNum <= 0) return false
         if (filters.slowAvailable && station.slowAvailableNum <= 0) return false
         if (filters.open24h && station.openTime !== '00:00-24:00') return false
-        if (filters.reservable && !(station.reservationAvailable && station.openStatus === 1 && (station.quickAvailableNum > 0 || station.slowAvailableNum > 0))) return false
+        if (
+          filters.reservable &&
+          !(
+            station.reservationAvailable &&
+            station.openStatus === 1 &&
+            (station.quickAvailableNum > 0 || station.slowAvailableNum > 0)
+          )
+        )
+          return false
 
         if (station.maxPower && station.maxPower < filters.power) return false
 
         if (station.details && station.details.connectorTypes) {
-          const hasMatching = filters.connectors.some(c => station.details.connectorTypes.includes(c))
+          const hasMatching = filters.connectors.some((c) =>
+            station.details.connectorTypes.includes(c)
+          )
           if (!hasMatching) return false
         }
 
         if (query) {
-          if (!station.stationName.toLowerCase().includes(query) && !station.address.toLowerCase().includes(query)) return false
+          if (
+            !station.stationName.toLowerCase().includes(query) &&
+            !station.address.toLowerCase().includes(query)
+          )
+            return false
         }
 
         return true
@@ -257,11 +283,13 @@ export const useStationsStore = defineStore('stations', {
 
       if (!bounds) return filtered
 
-      return filtered.filter(station => {
-        return station.lng >= bounds.west &&
-               station.lng <= bounds.east &&
-               station.lat >= bounds.south &&
-               station.lat <= bounds.north
+      return filtered.filter((station) => {
+        return (
+          station.lng >= bounds.west &&
+          station.lng <= bounds.east &&
+          station.lat >= bounds.south &&
+          station.lat <= bounds.north
+        )
       })
     },
 
@@ -287,8 +315,8 @@ export const useStationsStore = defineStore('stations', {
 
     favoriteStationsList: (state) => {
       return state.stations
-        .filter(s => s.isFavorite)
-        .map(s => ({
+        .filter((s) => s.isFavorite)
+        .map((s) => ({
           id: s.stationId,
           name: s.stationName,
           address: s.address,
@@ -300,7 +328,7 @@ export const useStationsStore = defineStore('stations', {
     },
 
     favoriteStationIds: (state) => {
-      return state.stations.filter(s => s.isFavorite).map(s => s.stationId)
+      return state.stations.filter((s) => s.isFavorite).map((s) => s.stationId)
     }
   }
 })

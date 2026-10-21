@@ -6,7 +6,7 @@ export const useUserStore = defineStore('user', {
       name: '电动汽车用户',
       level: '白银会员',
       points: 128,
-      balance: 56.80
+      balance: 56.8
     },
     vehicles: [
       {
@@ -43,7 +43,7 @@ export const useUserStore = defineStore('user', {
         date: '2025-04-10 09:15',
         duration: '1小时20分钟',
         energy: '45.0 kWh',
-        cost: 58.50,
+        cost: 58.5,
         vehicleModel: '汉EV',
         status: 'completed'
       },
@@ -54,7 +54,7 @@ export const useUserStore = defineStore('user', {
         date: '2025-04-08 16:45',
         duration: '30分钟',
         energy: '55.0 kWh',
-        cost: 71.50,
+        cost: 71.5,
         vehicleModel: 'Model 3',
         status: 'completed'
       },
@@ -76,7 +76,7 @@ export const useUserStore = defineStore('user', {
         date: '2025-04-02 08:20',
         duration: '35分钟',
         energy: '42.0 kWh',
-        cost: 52.50,
+        cost: 52.5,
         vehicleModel: 'Model 3',
         status: 'refunded'
       }
@@ -119,10 +119,10 @@ export const useUserStore = defineStore('user', {
       {
         id: 'wt1',
         type: 'recharge',
-        amount: 100.00,
+        amount: 100.0,
         description: '钱包充值',
         date: '2025-04-12 14:00',
-        balance: 156.80
+        balance: 156.8
       },
       {
         id: 'wt2',
@@ -135,34 +135,34 @@ export const useUserStore = defineStore('user', {
       {
         id: 'wt3',
         type: 'recharge',
-        amount: 50.00,
+        amount: 50.0,
         description: '钱包充值',
         date: '2025-04-10 08:50',
-        balance: 156.80
+        balance: 156.8
       },
       {
         id: 'wt4',
         type: 'payment',
-        amount: -58.50,
+        amount: -58.5,
         description: '中心商业区充电站充电',
         date: '2025-04-10 10:35',
-        balance: 106.80
+        balance: 106.8
       },
       {
         id: 'wt5',
         type: 'refund',
-        amount: 52.50,
+        amount: 52.5,
         description: '高铁站快充中心退款',
         date: '2025-04-03 09:00',
-        balance: 165.30
+        balance: 165.3
       },
       {
         id: 'wt6',
         type: 'payment',
-        amount: -71.50,
+        amount: -71.5,
         description: '西湖景区超充站充电',
         date: '2025-04-08 17:15',
-        balance: 112.80
+        balance: 112.8
       }
     ],
     settings: {
@@ -204,38 +204,38 @@ export const useUserStore = defineStore('user', {
     ],
     isDarkMode: false
   }),
-  
+
   actions: {
     toggleTheme() {
       this.isDarkMode = !this.isDarkMode
       localStorage.setItem('isDarkMode', this.isDarkMode)
     },
-    
+
     loadTheme() {
       const savedTheme = localStorage.getItem('isDarkMode')
       if (savedTheme !== null) {
         this.isDarkMode = savedTheme === 'true'
       }
     },
-    
+
     addVehicle(vehicle) {
       this.vehicles.push({
         id: Date.now().toString(),
         ...vehicle
       })
     },
-    
+
     removeVehicle(vehicleId) {
-      this.vehicles = this.vehicles.filter(v => v.id !== vehicleId)
+      this.vehicles = this.vehicles.filter((v) => v.id !== vehicleId)
     },
-    
+
     updateVehicle(vehicleId, updates) {
-      const vehicle = this.vehicles.find(v => v.id === vehicleId)
+      const vehicle = this.vehicles.find((v) => v.id === vehicleId)
       if (vehicle) {
         Object.assign(vehicle, updates)
       }
     },
-    
+
     addNotification(notification) {
       this.notifications.unshift({
         id: Date.now().toString(),
@@ -243,22 +243,22 @@ export const useUserStore = defineStore('user', {
         read: false
       })
     },
-    
+
     markNotificationAsRead(notificationId) {
-      const notification = this.notifications.find(n => n.id === notificationId)
+      const notification = this.notifications.find((n) => n.id === notificationId)
       if (notification) {
         notification.read = true
       }
     },
-    
+
     markAllNotificationsAsRead() {
-      this.notifications.forEach(notification => {
+      this.notifications.forEach((notification) => {
         notification.read = true
       })
     },
 
     useCoupon(couponId) {
-      const coupon = this.coupons.find(c => c.id === couponId)
+      const coupon = this.coupons.find((c) => c.id === couponId)
       if (coupon) {
         coupon.used = true
       }
@@ -268,9 +268,20 @@ export const useUserStore = defineStore('user', {
       this.walletTransactions.unshift({
         id: Date.now().toString(),
         ...transaction,
-        date: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')
+        date: new Date()
+          .toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+          .replace(/\//g, '-')
       })
-      if (updateBalance && ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)) {
+      if (
+        updateBalance &&
+        ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)
+      ) {
         this.userInfo.balance += transaction.amount
       }
     },
@@ -287,10 +298,10 @@ export const useUserStore = defineStore('user', {
       })
     }
   },
-  
+
   getters: {
     unreadNotificationsCount: (state) => {
-      return state.notifications.filter(n => !n.read).length
+      return state.notifications.filter((n) => !n.read).length
     }
   }
 })

@@ -1,27 +1,27 @@
 <template>
-  <div class="h-full w-full relative">
+  <div class="relative h-full w-full">
     <div id="map-container" class="h-full w-full"></div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch, inject } from 'vue';
-import { useStationsStore } from '../../store/modules/stations';
-import { useUserStore } from '../../store/modules/user';
-import mapManager from '../../services/mapService';
+import { onMounted, onUnmounted, watch, inject } from 'vue'
+import { useStationsStore } from '../../store/modules/stations'
+import { useUserStore } from '../../store/modules/user'
+import mapManager from '../../services/mapService'
 
-const stationsStore = useStationsStore();
-const userStore = useUserStore();
-const showToast = inject('showToast');
-const setLoading = inject('setLoading');
+const stationsStore = useStationsStore()
+const userStore = useUserStore()
+const showToast = inject('showToast')
+const setLoading = inject('setLoading')
 
-let map = null;
+let map = null
 
 const initMap = () => {
   try {
     if (typeof AMap === 'undefined') {
-      showToast('地图SDK加载失败', 'error');
-      return;
+      showToast('地图SDK加载失败', 'error')
+      return
     }
 
     map = new AMap.Map('map-container', {
@@ -30,104 +30,115 @@ const initMap = () => {
       viewMode: '3D',
       mapStyle: userStore.isDarkMode ? 'amap://styles/dark' : 'amap://styles/whitesmoke',
       center: [117.283042, 31.86119]
-    });
+    })
 
-    mapManager.setMap(map);
+    mapManager.setMap(map)
     map.on('click', () => {
-      mapManager.closeInfoWindow();
-      window.dispatchEvent(new CustomEvent('mapClickClose'));
-    });
+      mapManager.closeInfoWindow()
+      window.dispatchEvent(new CustomEvent('mapClickClose'))
+    })
 
-    map.on('moveend', onMapViewportChange);
-    map.on('zoomend', onMapViewportChange);
+    map.on('moveend', onMapViewportChange)
+    map.on('zoomend', onMapViewportChange)
 
-    doInitialGeolocation();
+    doInitialGeolocation()
   } catch (err) {
-    console.error('[MapView] Map init error:', err);
-    setLoading(false);
+    console.error('[MapView] Map init error:', err)
+    setLoading(false)
   }
-};
+}
 
 const onMapViewportChange = () => {
-  if (!map) return;
-  const bounds = map.getBounds();
-  if (!bounds) return;
+  if (!map) return
+  const bounds = map.getBounds()
+  if (!bounds) return
 
-  const ne = bounds.getNorthEast();
-  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast()
+  const sw = bounds.getSouthWest()
 
   stationsStore.setViewportBounds({
     north: ne.lat,
     south: sw.lat,
     east: ne.lng,
     west: sw.lng
-  });
+  })
 
-  debouncedUpdateMarkers();
-};
+  debouncedUpdateMarkers()
+}
 
 const doInitialGeolocation = () => {
-  setLoading(true);
-  mapManager.locateUser().then((loc) => {
-    stationsStore.userLocation = loc;
-    stationsStore.recalculateDistances();
-  }).catch(() => {
-    map.setCenter([117.283042, 31.86119]);
-  }).finally(() => {
-    setLoading(false);
-  });
-};
+  setLoading(true)
+  mapManager
+    .locateUser()
+    .then((loc) => {
+      stationsStore.userLocation = loc
+      stationsStore.recalculateDistances()
+    })
+    .catch(() => {
+      map.setCenter([117.283042, 31.86119])
+    })
+    .finally(() => {
+      setLoading(false)
+    })
+}
 
-let updateTimer = null;
+let updateTimer = null
 const debouncedUpdateMarkers = () => {
-  if (updateTimer) clearTimeout(updateTimer);
+  if (updateTimer) clearTimeout(updateTimer)
   updateTimer = setTimeout(() => {
-    const viewportStations = stationsStore.viewportStations;
-    mapManager.updateMarkers(viewportStations);
-  }, 150);
-};
+    const viewportStations = stationsStore.viewportStations
+    mapManager.updateMarkers(viewportStations)
+  }, 150)
+}
 
 const loadStations = async () => {
-  setLoading(true);
+  setLoading(true)
   try {
-    await stationsStore.loadStations();
-    mapManager.setStations(stationsStore.stations);
-    onMapViewportChange();
+    await stationsStore.loadStations()
+    mapManager.setStations(stationsStore.stations)
+    onMapViewportChange()
   } catch (err) {
-    console.error('[MapView] Load stations error:', err);
-    showToast('加载站点数据失败', 'error');
+    console.error('[MapView] Load stations error:', err)
+    showToast('加载站点数据失败', 'error')
   } finally {
-    setLoading(false);
+    setLoading(false)
   }
-};
+}
 
-watch(() => stationsStore.filters, () => {
-  debouncedUpdateMarkers();
-}, { deep: true });
+watch(
+  () => stationsStore.filters,
+  () => {
+    debouncedUpdateMarkers()
+  },
+  { deep: true }
+)
 
-watch(() => userStore.isDarkMode, (isDark) => {
-  if (map) {
-    map.setMapStyle(isDark ? 'amap://styles/dark' : 'amap://styles/whitesmoke');
+watch(
+  () => userStore.isDarkMode,
+  (isDark) => {
+    if (map) {
+      map.setMapStyle(isDark ? 'amap://styles/dark' : 'amap://styles/whitesmoke')
+    }
   }
-});
+)
 
 const handleStationClick = (event) => {
-  const station = event.detail;
-  stationsStore.setCurrentStation(station);
-};
+  const station = event.detail
+  stationsStore.setCurrentStation(station)
+}
 
 onMounted(() => {
-  initMap();
-  loadStations();
-  window.addEventListener('stationClick', handleStationClick);
-});
+  initMap()
+  loadStations()
+  window.addEventListener('stationClick', handleStationClick)
+})
 
 onUnmounted(() => {
-  window.removeEventListener('stationClick', handleStationClick);
-  if (updateTimer) clearTimeout(updateTimer);
-  mapManager.destroy();
+  window.removeEventListener('stationClick', handleStationClick)
+  if (updateTimer) clearTimeout(updateTimer)
+  mapManager.destroy()
   if (map) {
-    map.destroy();
+    map.destroy()
   }
-});
+})
 </script>

@@ -1,0 +1,6 @@
+dist
+node_modules
+public/data
+coverage
+package-lock.json
+stats.html
