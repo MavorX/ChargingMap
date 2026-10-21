@@ -1,3 +1,5 @@
+const LOCATE_TIMEOUT_MS = 8000
+
 class MapManager {
   constructor() {
     this.map = null
@@ -5,6 +7,7 @@ class MapManager {
     this.stations = []
     this._geolocation = null
     this._currentInfoWindow = null
+    this._infoWindow = null
     this._userLocation = null
     this._driving = null
     this._directMarkers = []
@@ -172,6 +175,7 @@ class MapManager {
   }
 
   _openInfoWindow(infoWindow, position) {
+    if (!this.map) return
     if (this._currentInfoWindow) {
       this._currentInfoWindow.close()
     }
@@ -180,6 +184,7 @@ class MapManager {
   }
 
   closeInfoWindow() {
+    if (!this.map) return
     if (this._currentInfoWindow) {
       this._currentInfoWindow.close()
       this._currentInfoWindow = null
@@ -440,6 +445,7 @@ class MapManager {
   }
 
   _addUserMarker(lng, lat, accuracy) {
+    if (!this.map) return
     if (this._userMarker) {
       this.map.remove(this._userMarker)
     }
@@ -471,18 +477,26 @@ class MapManager {
   }
 
   locateUser() {
-    return new Promise((resolve, reject) => {
-      if (!this.map) {
-        reject(new Error('地图未初始化'))
-        return
-      }
+    if (!this.map) {
+      return Promise.reject(new Error('地图未初始化'))
+    }
 
+    const locatePromise = new Promise((resolve, reject) => {
       if (this._geolocation) {
         this._doLocate(resolve, reject)
         return
       }
 
+      if (typeof AMap === 'undefined' || typeof AMap.plugin !== 'function') {
+        reject(new Error('定位插件加载失败'))
+        return
+      }
+
       AMap.plugin(['AMap.Geolocation'], () => {
+        if (!this.map) {
+          reject(new Error('地图已销毁'))
+          return
+        }
         this._geolocation = new AMap.Geolocation({
           enableHighAccuracy: true,
           timeout: 15000,
@@ -503,6 +517,17 @@ class MapManager {
         this._doLocate(resolve, reject)
       })
     })
+
+    let timeoutId = null
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('定位超时，请检查定位权限或网络'))
+      }, LOCATE_TIMEOUT_MS)
+    })
+
+    return Promise.race([locatePromise, timeoutPromise]).finally(() => {
+      if (timeoutId) clearTimeout(timeoutId)
+    })
   }
 
   _doLocate(resolve, reject) {
@@ -514,6 +539,10 @@ class MapManager {
     this._geolocation.getCurrentPosition((status, result) => {
       console.log('[MapManager] Geolocation result:', status, result)
       if (status === 'complete') {
+        if (!this.map) {
+          reject(new Error('地图已销毁'))
+          return
+        }
         const userLocation = {
           lng: result.position.lng,
           lat: result.position.lat,
@@ -561,7 +590,7 @@ class MapManager {
   }
 
   navigateToStation(station) {
-    if (!this.map || !station.lng || !station.lat) {
+    if (!this.map || !station || !station.lng || !station.lat) {
       console.warn('[MapManager] Cannot navigate: map or station position missing')
       return
     }
@@ -662,6 +691,7 @@ class MapManager {
   }
 
   clearRoute() {
+    if (!this.map) return
     if (this._driving) {
       this._driving.clear()
       this._driving = null
@@ -669,11 +699,13 @@ class MapManager {
   }
 
   zoomIn() {
-    if (this.map) this.map.zoomIn()
+    if (!this.map) return
+    this.map.zoomIn()
   }
 
   zoomOut() {
-    if (this.map) this.map.zoomOut()
+    if (!this.map) return
+    this.map.zoomOut()
   }
 
   destroy() {
@@ -684,14 +716,26 @@ class MapManager {
       this.markerClusterer.setMap(null)
       this.markerClusterer = null
     }
+    if (this._geolocation) {
+      if (this.map && typeof this.map.removeControl === 'function') {
+        this.map.removeControl(this._geolocation)
+      }
+      this._geolocation = null
+    }
     if (this._userMarker && this.map) {
       this.map.remove(this._userMarker)
-      this._userMarker = null
     }
+    this._userMarker = null
     if (this._accuracyCircle && this.map) {
       this.map.remove(this._accuracyCircle)
-      this._accuracyCircle = null
     }
+    this._accuracyCircle = null
+    this._userLocation = null
+    this._infoWindow = null
+    this._currentInfoWindow = null
+    this._driving = null
+    this._stationIndex = new Map()
+    this._markerSignature = ''
     this.map = null
     this.stations = []
   }

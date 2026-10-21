@@ -147,7 +147,7 @@ const doInitialGeolocation = () => {
       stationsStore.recalculateDistances()
     })
     .catch(() => {
-      map.setCenter([117.283042, 31.86119])
+      if (map) map.setCenter([117.283042, 31.86119])
     })
     .finally(() => {
       setLoading(false)
@@ -186,6 +186,13 @@ watch(
     debouncedUpdateMarkers()
   },
   { deep: true }
+)
+
+watch(
+  () => stationsStore.searchQuery,
+  () => {
+    debouncedUpdateMarkers()
+  }
 )
 
 watch(
