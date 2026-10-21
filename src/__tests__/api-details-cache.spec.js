@@ -34,6 +34,29 @@ describe('api loadStationDetail shard cache', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('loads the station list through BASE_URL for subpath deployments', async () => {
+    vi.stubEnv('BASE_URL', '/ChargingMap/')
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([{ stationId: 'HF000001' }]))
+    vi.stubGlobal('fetch', fetchMock)
+    const { loadStationsList } = await import('../services/api')
+
+    await loadStationsList()
+
+    expect(fetchMock).toHaveBeenCalledWith('/ChargingMap/data/station_list.json')
+  })
+
+  it('loads detail shards through BASE_URL for subpath deployments', async () => {
+    vi.stubEnv('BASE_URL', '/ChargingMap/')
+    const fetchMock = shardFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const { loadStationDetail } = await import('../services/api')
+
+    await loadStationDetail('HF000001')
+
+    expect(fetchMock).toHaveBeenCalledWith('/ChargingMap/data/details/part-01.json')
   })
 
   it('fetches one shard exactly once for ids of the same part', async () => {
@@ -55,10 +78,7 @@ describe('api loadStationDetail shard cache', () => {
     vi.stubGlobal('fetch', fetchMock)
     const { loadStationDetail } = await import('../services/api')
 
-    const [a, b] = await Promise.all([
-      loadStationDetail('HF000001'),
-      loadStationDetail('HF000050')
-    ])
+    const [a, b] = await Promise.all([loadStationDetail('HF000001'), loadStationDetail('HF000050')])
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(a.stationId).toBe('HF000001')
