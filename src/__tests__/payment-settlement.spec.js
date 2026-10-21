@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import {
-  SERVICE_FEE_RATE,
-  isCouponUsable,
-  useChargingStore
-} from '../store/modules/charging'
+import { SERVICE_FEE_RATE, isCouponUsable, useChargingStore } from '../store/modules/charging'
 import { useStationsStore } from '../store/modules/stations'
 import { useUserStore } from '../store/modules/user'
 

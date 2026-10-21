@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import {
-  DEMO_STATION_ID,
-  demoChargingHistory,
-  demoReservations
-} from '../mocks/userDemo'
+import { DEMO_STATION_ID, demoChargingHistory, demoReservations } from '../mocks/userDemo'
 
 // 相对路径由 node:fs 按仓库根目录解析（vitest 从根目录运行）。
 const stationList = JSON.parse(readFileSync('public/data/station_list.json', 'utf8'))

@@ -84,9 +84,11 @@ describe('MapManager lifecycle', () => {
 
     let finalized = false
     const pending = manager.locateUser()
-    pending.finally(() => {
-      finalized = true
-    }).catch(() => {})
+    pending
+      .finally(() => {
+        finalized = true
+      })
+      .catch(() => {})
     const rejection = expect(pending).rejects.toThrow('定位超时')
 
     await vi.advanceTimersByTimeAsync(9000)

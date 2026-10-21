@@ -127,10 +127,7 @@ describe('MapManager shared info window', () => {
   })
 
   it('builds no info window while rendering markers', async () => {
-    const stations = [
-      makeStation('HF000001', 117.1, 31.8),
-      makeStation('HF000002', 117.2, 31.9)
-    ]
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
     const { AMap, manager } = await setup(stations)
 
     expect(manager._directMarkers).toHaveLength(2)
@@ -139,10 +136,7 @@ describe('MapManager shared info window', () => {
   })
 
   it('reuses one shared InfoWindow instance for every marker click', async () => {
-    const stations = [
-      makeStation('HF000001', 117.1, 31.8),
-      makeStation('HF000002', 117.2, 31.9)
-    ]
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
     const { AMap, manager } = await setup(stations)
     const [firstMarker, secondMarker] = manager._directMarkers
 

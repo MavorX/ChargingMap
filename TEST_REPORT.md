@@ -6,9 +6,9 @@
 
 ### 验证边界（先读）
 
-- **未打开任何浏览器**：本次任务受用户明令约束，禁止启动浏览器 / Playwright / dev server / preview / 截图。因此 `npm run preview` 冒烟、390×844 手机视口截图、键盘走查均**未执行**（详见第四节）。
+- **未打开任何浏览器**：本次任务受用户明令约束，禁止启动浏览器 / Playwright / 截图。T31 仅执行过 **HTTP-only preview 冒烟**（无浏览器，见第四节）；390×844 手机视口截图、视觉比对与真实键盘走查均**未执行**。
 - **无真实高德 key**：本地 `.env.local` 仅含占位值。地图加载、图标视觉、聚合外观、信息窗口点击等依赖真实 JSAPI 的项目标注为“待真实 key 验证（步骤见 README「高德地图配置」与「部署」）”。
-- 自动化命令执行环境：Windows + PowerShell 5.1，Node v22.23.2，npm 10.9.8，源码 HEAD `02eeae3`（后续 `2d4a6b7` 仅新增部署工作流，不改变应用源码）。
+- 自动化命令执行环境：Windows + PowerShell 5.1，Node v22.23.2，npm 10.9.8，Final Wave 收口前 HEAD `d85b331`；收口提交与 tag 见第六节。
 
 ---
 
@@ -16,27 +16,28 @@
 
 | 命令 | 退出码 | 关键输出 |
 | --- | --- | --- |
+| `npm run format:check` | **0** | `All matched files use Prettier code style!` |
 | `npm run lint` | **0** | ESLint 无告警、无错误（无输出即通过） |
-| `npm run test -- --run` | **0** | `Test Files 21 passed (21)`；`Tests 137 passed (137)`；Duration 5.86s |
-| `npm run check:data` | **0** | `data layout: sharded (5 files); list=500 stations, details=500 entries`；`[OK] 500 stations, 8 assertions passed` |
-| `npm run build` | **0** | 86 modules transformed；built in 1.85s；dist 30 个文件、合计 **2,556,782 B** |
-| `npm run check:a11y`（附加） | **0** | `37 icon-only button(s) scanned across 109 buttons, all have an accessible name` |
+| `npm run test -- --run` | **0** | `Test Files 23 passed (23)`；`Tests 152 passed (152)`；Duration 6.00s |
+| `npm run check:data` | **0** | `data layout: sharded (5 files); list=500 stations, details=500 entries`；`[OK] 500 stations, 9 assertions passed` |
+| `npm run check:a11y` | **0** | `37 icon-only button(s) scanned across 109 buttons, all have an accessible name` |
+| `npm run build` | **0** | 86 modules transformed；built in 1.80s；dist 30 个文件、合计 **2,575,553 B** |
 
-原始输出保存在 `.omo/evidence/task-30-lint2.log`、`task-30-vitest.log`、`task-30-check-data.log`、`task-30-build.log`、`task-30-a11y.log`。
+历史原始输出保存在 `.omo/evidence/task-30-lint2.log`、`task-30-vitest.log`、`task-30-check-data.log`、`task-30-build.log`、`task-30-a11y.log`（对应早期 21/137 运行）；上表为 Final Wave 收口时重新实测的最终数字。
 
-补充说明：`npm run test -- --run` 首次执行时，PowerShell 将输出重定向到日志文件的过程中遇到一次 Windows 文件占用错误，shell 退出码为 1；但 Vitest 自身汇总仍为 21/137 全通过。随后原样重跑，退出码 0、结果一致。此处如实记录该次重试，它属于本地日志重定向的基础设施问题，不是测试用例失败。
+补充说明：早期一次 `npm run test -- --run` 在 PowerShell 将输出重定向到日志文件时遇到 Windows 文件占用错误，shell 退出码为 1；但 Vitest 汇总仍为 21/137 全通过，重跑后退出码 0。该问题属于本地日志重定向的基础设施问题，不是测试用例失败；最终 23/152 收口运行一次通过，未再出现。
 
 ### 构建产物要点（v12）
 
 | 文件 | 字节 | 说明 |
 | --- | --- | --- |
-| `assets/index-C0aqKA8Y.js` | 158,509 | 应用入口 chunk（gzip 40.28 kB） |
-| `assets/vendor-vue-DG3S4Wqb.js` | 103,784 | Vue / Pinia / Router vendor chunk（gzip 40.59 kB） |
-| `assets/index-BmcZBf8u.css` | 175,373 | 主样式（gzip 42.12 kB） |
+| `assets/index-Bq-Csnc_.js` | 159,411 | 应用入口 chunk（gzip 40.62 kB） |
+| `assets/vendor-vue-BQL1d0Ib.js` | 104,084 | Vue / Pinia / Router vendor chunk（gzip 40.71 kB） |
+| `assets/index-D9okizqq.css` | 175,431 | 主样式（gzip 42.13 kB） |
 | `assets/logo-C9KChHPi.webp` | 4,386 | 品牌 Logo（原 PNG 3,929,078 B） |
-| `data/station_list.json` | 246,499 | 500 站列表 |
+| `data/station_list.json` | 264,006 | 500 站列表（含 connectorTypes 筛选元数据） |
 | `data/details/part-01..05.json` | 301,767–313,867 / 片 | 详情分片，每片 100 站 |
-| **dist 合计** | **2,556,782** | 30 个文件 |
+| **dist 合计** | **2,575,553** | 30 个文件 |
 
 ---
 
@@ -44,14 +45,14 @@
 
 | 指标 | 基线（T1，`d75c2d5`） | v12（当前） | 变化 |
 | --- | --- | --- | --- |
-| `station_list.json` | 986,523 B | 246,499 B | **-75.0%** |
+| `station_list.json` | 986,523 B | 264,006 B | **-73.2%** |
 | 详情数据 | 6,217,664 B（单文件） | 1,533,753 B（5 分片，单片 ≤ 313,867 B） | **-75.3%** |
-| 入口 JS（index + vendor） | 344,533 B | 262,293 B（158,509 + 103,784） | **-23.9%** |
-| 主 CSS | 173,007 B | 175,373 B | +1.4%（新增 a11y/面板样式） |
+| 入口 JS（index + vendor） | 344,533 B | 263,495 B（159,411 + 104,084） | **-23.5%** |
+| 主 CSS | 173,007 B | 175,431 B | +1.4%（新增 a11y/面板样式） |
 | Logo 资产 | 3,929,078 B（PNG） | 4,386 B（WebP） | **-99.9%** |
-| dist 总体积 | 11,895,688 B（9 文件） | 2,556,782 B（30 文件） | **-78.5%** |
+| dist 总体积 | 11,895,688 B（9 文件） | 2,575,553 B（30 文件） | **-78.3%** |
 
-数据体积下降来自“数据规模由 2000 站追加改为 500 站重置，并把详情拆成 5 个分片”；入口 JS 下降来自 vendor 分包与组件按需加载；CSS 略增属于可接受范围。
+数据体积下降来自“数据规模由 2000 站追加改为 500 站重置，并把详情拆成 5 个分片”；列表为支持品牌/接口筛选补充 `connectorTypes`，`station_list.json` 由早期 v12 的 246,499 B 增至 264,006 B，但仍较 T1 基线下降 73.2%。入口 JS 下降来自 vendor 分包与组件按需加载；CSS 略增属于可接受范围。
 
 ---
 
@@ -62,7 +63,7 @@
 | # | 原用例 | v12 验证方式 | 结论 |
 | --- | --- | --- | --- |
 | 1 | 地图加载（合肥区域） | 需真实高德 key + 浏览器 | **待真实 key 验证**（步骤见 README）；浏览器未执行 |
-| 2 | 数据加载（原 15 站） | `npm run check:data`：500 站 / 500 详情 / 8 项断言 | **通过**（数据层） |
+| 2 | 数据加载（原 15 站） | `npm run check:data`：500 站 / 500 详情 / 9 项断言 | **通过**（数据层） |
 | 3 | 充电桩 SVG 图标显示 | `src/__tests__/map-markers.spec.js` 校验标记渲染契约；视觉呈现需浏览器 | 逻辑层**通过**；视觉**未执行**（用户禁止打开网页） |
 | 4 | 图标颜色区分（绿/黄/红/灰） | `map-markers.spec.js` 覆盖状态到颜色的映射；实际像素需浏览器 | 逻辑层**通过**；视觉**未执行** |
 | 5 | 聚合功能 | `map-markers.spec.js` 覆盖聚合数据与降级路径 | 逻辑层**通过**；浏览器**未执行** |
@@ -78,7 +79,7 @@
 
 | 项目 | 状态 | 原因 / 替代证据 |
 | --- | --- | --- |
-| `npm run preview` 冒烟（HTTP 200、首屏传输体积） | **未执行** | 用户明令禁止打开网页验证；构建产物与 `check:data` 已覆盖静态完整性 |
+| `npm run preview` 冒烟（HTTP 200、首屏传输体积） | **已执行（HTTP-only）** | T31 已执行 HTTP-only preview 冒烟（无浏览器）：`/`、`station_list`、`part-01` 均 200；浏览器视觉/截图仍未执行（用户禁止） |
 | 390×844 手机视口截图 / 视觉比对 | **未执行** | 同上；移动端断点逻辑由 `viewport-debounce.spec.js` 单测覆盖，但不等于视觉验收 |
 | 键盘走查（Tab 顺序、Esc、焦点陷阱、焦点可见） | **未执行** | 同上；`panel-shell.spec.js` 与 `toast-a11y.spec.js` 仅验证属性/行为契约，不替代真实键盘操作 |
 | Lighthouse（LCP/TBT） | **未执行** | 需要浏览器；非本计划门槛 |
@@ -90,6 +91,26 @@
 ## 五、待真机验证项（继承 T26）
 
 - **(P2, 未验证) iOS Safari 刘海机型底部安全区**：桌面 Chromium 中 `env(safe-area-inset-bottom)` 恒为 `0px`，本地无法验证实际留白。需真机确认：①主 CTA「查看站点列表」、②站点列表底部「加载更多」、③导航中 NavigationBar 按钮组，均与 home 指示条留有间距且不被误触/遮挡；④地址栏收起/展开时页面高度随 `100dvh` 平滑变化、底部无裁切。验证通过前不得视为已通过。详见 `.omo/evidence/task-26-optimize-chargingmap.md` §6。
+
+---
+
+## 六、Final Wave 修复复验
+
+Final Wave 在收口前修复了支付、筛选、可访问性与 CI 四组问题，测试规模由 21 文件 / 137 用例增至 **23 文件 / 152 用例**（净增 15 条：新增 `payment-success.spec.js` 3 条、`safe-area.spec.js` 2 条；`payment-settlement.spec.js` +4、`stations-filter.spec.js` +5、`station-list-card.spec.js` +1）。
+
+| 修复项 | 覆盖用例 / 证据 | 结果 |
+| --- | --- | --- |
+| 0 元实付 | `payment-success.spec.js`、`payment-settlement.spec.js`：应付 ¥0.00 可正常完成支付，不再被正数金额校验拦截 | **通过** |
+| 优惠券有效期与门槛 | `user-coupon-math.spec.js`、`payment-settlement.spec.js`：过期券、未达 `minSpend` 的券不可抵扣 | **通过** |
+| 非法/null 价格 | `payment-settlement.spec.js`：null / NaN / 负数价格拒绝结算 | **通过** |
+| 品牌/接口筛选真实生效 | `stations-filter.spec.js`（+5）+ `check:data`（500 站）：列表行包含 `connectorTypes`，品牌与接口条件参与过滤，不再被静默忽略 | **通过** |
+| 面板底部安全区 | `safe-area.spec.js`（2 条静态契约）：面板底部使用 `env(safe-area-inset-bottom)` | **通过（静态契约）**；真机仍见第五节 |
+| 列表卡键盘操作 | `station-list-card.spec.js`（+1）：Enter / Space 打开站点、焦点可见 | **通过** |
+| 搜索可访问名 / 分享降级 | `a11y-controls.spec.js`、`station-list-card.spec.js`：搜索框有 `aria-label`；剪贴板不可用时分享降级提示 | **通过** |
+| CI 门禁 | `.github/workflows/ci.yml`：新增 `format:check`、`check:a11y`，Pages 权限分层 | **结构检查通过**；线上 Actions 未运行（本轮未 push） |
+| 格式基线 | `npm run format` 实际改动 9 个历史源码/测试文件；`format:check` exit 0；测试 fixture 中 `0.87` 改为 `1.23`，`git grep "0\.87" -- src` 零命中 | **通过** |
+
+本轮未做浏览器视觉/截图复验（用户禁止）；上表“通过”均指自动化测试、静态契约或命令退出码，不替代真机与视觉验收。
 
 ---
 
@@ -256,4 +277,4 @@ new AMap.MarkerCluster(map, points, {
 
 ## 附录 B：v11 变更索引（无独立测试报告）
 
-v11 的修复项记录在 README「更新日志 → v11 Bug 修复 / v11 代码优化」，本报告不再重复。当前 v12 的 137 个用例覆盖了其中可回归的部分（充电后台继续、功率筛选、通知角标、可用桩合并、搜索范围、钱包交易类型）。
+v11 的修复项记录在 README「更新日志 → v11 Bug 修复 / v11 代码优化」，本报告不再重复。当前 v12 的 152 个用例覆盖了其中可回归的部分（充电后台继续、功率筛选、通知角标、可用桩合并、搜索范围、钱包交易类型）。

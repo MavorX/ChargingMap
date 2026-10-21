@@ -136,14 +136,23 @@ class MapManager {
     header.append(title, statusBadge)
 
     const body = el('div', 'padding:14px 16px;')
-    const grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;')
+    const grid = el(
+      'div',
+      'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;'
+    )
 
     const quickBox = el(
       'div',
       'background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px;text-align:center;'
     )
-    quickBox.append(el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', '快充'))
-    const quickValue = el('div', 'color:#15803D;font-size:16px;font-weight:800;', station.quickAvailableNum)
+    quickBox.append(
+      el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', '快充')
+    )
+    const quickValue = el(
+      'div',
+      'color:#15803D;font-size:16px;font-weight:800;',
+      station.quickAvailableNum
+    )
     quickValue.append(
       el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.quickChargeNum}`)
     )
@@ -153,9 +162,17 @@ class MapManager {
       'div',
       'background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;text-align:center;'
     )
-    slowBox.append(el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', '慢充'))
-    const slowValue = el('div', 'color:#2563EB;font-size:16px;font-weight:800;', station.slowAvailableNum)
-    slowValue.append(el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.slowChargeNum}`))
+    slowBox.append(
+      el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', '慢充')
+    )
+    const slowValue = el(
+      'div',
+      'color:#2563EB;font-size:16px;font-weight:800;',
+      station.slowAvailableNum
+    )
+    slowValue.append(
+      el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.slowChargeNum}`)
+    )
     slowBox.append(slowValue)
 
     grid.append(quickBox, slowBox)
@@ -235,7 +252,10 @@ class MapManager {
     navBtn.addEventListener('mouseleave', () => {
       navBtn.style.transform = 'scale(1)'
     })
-    footerRight.append(el('span', 'color:#3B82F6;font-size:12px;font-weight:600;', `¥${price}/度`), navBtn)
+    footerRight.append(
+      el('span', 'color:#3B82F6;font-size:12px;font-weight:600;', `¥${price}/度`),
+      navBtn
+    )
 
     footer.append(footerLeft, footerRight)
     body.append(footer)

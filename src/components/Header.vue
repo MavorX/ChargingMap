@@ -4,11 +4,7 @@
       <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center justify-between">
           <div class="group flex cursor-pointer items-center space-x-3" @click="handleLogoClick">
-            <img
-              :src="logoUrl"
-              alt="大众学院"
-              class="h-10 w-10 rounded-lg object-contain"
-            />
+            <img :src="logoUrl" alt="大众学院" class="h-10 w-10 rounded-lg object-contain" />
             <div
               class="relative flex h-10 w-10 transform items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-400 via-primary-600 to-accent-600 shadow-glow-primary transition-all duration-300 group-hover:scale-105"
             >

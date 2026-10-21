@@ -128,10 +128,7 @@ describe('MapManager markers', () => {
     const manager = await loadManager()
     manager.setMap(makeMap())
 
-    const stations = [
-      makeStation('HF000001', 117.1, 31.8),
-      makeStation('HF000002', 117.2, 31.9)
-    ]
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
     manager.setStations(stations)
 
     manager.updateMarkers(stations)
@@ -172,10 +169,7 @@ describe('MapManager markers', () => {
     const map = makeMap()
     manager.setMap(map)
 
-    const stations = [
-      makeStation('HF000001', 117.1, 31.8),
-      makeStation('HF000002', 117.2, 31.9)
-    ]
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
     manager.setStations(stations)
 
     expect(() => manager.updateMarkers(stations)).not.toThrow()

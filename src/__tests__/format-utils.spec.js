@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { formatDistance, formatPrice, formatDuration, formatPower } from '../utils/format'
-import {
-  connectorStatus,
-  periodDotClass,
-  stationStatus
-} from '../utils/stationStatus'
+import { connectorStatus, periodDotClass, stationStatus } from '../utils/stationStatus'
 import { useAvailableConnectors } from '../composables/useAvailableConnectors'
 
 describe('formatDistance', () => {
@@ -29,13 +25,13 @@ describe('formatDistance', () => {
 
 describe('formatPrice', () => {
   it('keeps two decimals and the RMB symbol', () => {
-    expect(formatPrice(0.87)).toBe('¥0.87')
+    expect(formatPrice(1.23)).toBe('¥1.23')
     expect(formatPrice(12)).toBe('¥12.00')
     expect(formatPrice(12.345)).toBe('¥12.35')
   })
 
   it('can omit the symbol when the template already renders ¥', () => {
-    expect(formatPrice(0.87, { withSymbol: false })).toBe('0.87')
+    expect(formatPrice(1.23, { withSymbol: false })).toBe('1.23')
   })
 
   it('returns an em dash for missing or invalid values', () => {

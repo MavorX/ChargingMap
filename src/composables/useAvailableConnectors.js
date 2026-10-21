@@ -12,8 +12,10 @@ import { computed, unref } from 'vue'
 export function useAvailableConnectors(station) {
   return computed(() => {
     const current = unref(station)
-    const fast = current?.details?.fastConnectors?.filter((connector) => connector.status === 1) || []
-    const slow = current?.details?.slowConnectors?.filter((connector) => connector.status === 1) || []
+    const fast =
+      current?.details?.fastConnectors?.filter((connector) => connector.status === 1) || []
+    const slow =
+      current?.details?.slowConnectors?.filter((connector) => connector.status === 1) || []
     return [...fast, ...slow]
   })
 }

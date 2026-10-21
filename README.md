@@ -219,7 +219,7 @@ vwcharging/
     │       ├── reservation.js        # 预约记录
     │       ├── user.js               # 用户、车辆、通知、钱包、主题
     │       └── ui.js                 # activePanel 单源面板编排
-    └── __tests__/                    # 21 个 spec 文件（137 用例）
+    └── __tests__/                    # 23 个 spec 文件（152 用例）
 ```
 
 ## 架构设计
@@ -415,13 +415,14 @@ git checkout <sha> -- "大众学院logo.png"
 
 ### v12 质量与交付（2026-10）
 
-- **质量网** — 引入 Vitest（21 个测试文件 / 137 个用例），覆盖筛选、计价、支付结算、地图生命周期、面板编排、可访问性等核心契约；新增 `npm run check:data` 数据校验与 `npm run check:a11y` 按钮可访问名扫描
+- **质量网** — 引入 Vitest（23 个测试文件 / 152 个用例），覆盖筛选、计价、支付结算、地图生命周期、面板编排、可访问性等核心契约；新增 `npm run check:data` 数据校验与 `npm run check:a11y` 按钮可访问名扫描；CI 固定执行 `format:check` 与 `check:a11y` 门禁
 - **数据分片** — 详情从 6.2MB 单文件拆为 `public/data/details/part-01..05.json`（每片 100 站），按 stationId 推导分片并做 Promise 级缓存；生成器改为确定性输出，默认 500 站，`--count` / `--seed` 带范围校验，重复运行逐字节一致
 - **演示数据开关** — 新增 `VITE_DEMO`，默认空态；开启后从 `src/mocks/userDemo.js` 载入演示记录，站点统一引用 `HF000001`
 - **地图运行时** — 抽出 `amapLoader` 统一加载 SDK、插件与 securityJsCode；地图实例生命周期可测试化，脚本或密钥不可用时显示降级面板与配置指引
 - **组件合一** — 新增 `PanelShell`、`StarRating`、`ToggleSwitch`、`StationListCard`、`StationListControls` 与 `useStationList` / `useAvailableConnectors`，收敛列表、详情、面板的重复实现
 - **可访问性** — 图标按钮补齐可访问名，面板统一 `role="dialog"`、焦点陷阱与 Esc 关闭，Toast 增加 live region；扫描范围内 37 个 icon-only 按钮全部有可访问名
-- **资源体积** — 3.75MB PNG Logo 换为 4.4KB WebP，补齐 favicon；详情分片与 vendor 分包后，入口 JS（index + vendor-vue）由 344.5KB 降至 262.3KB（约 -23.9%），dist 总体积约 2.56MB
+- **资源体积** — 3.75MB PNG Logo 换为 4.4KB WebP，补齐 favicon；详情分片与 vendor 分包后，入口 JS（index + vendor-vue）由 344,533 B 降至 263,495 B（约 -23.5%），dist 总体积 2,575,553 B（约 2.58MB，30 个文件）
+- **v12 收口修复** — 品牌/接口筛选真实生效（列表补齐 connectorTypes）；0 元实付、优惠券有效期与满减门槛严格校验，非法/null 价格拒绝结算；面板底部 safe-area 适配；列表卡支持键盘操作、搜索框补可访问名；分享链接真实复制并在剪贴板不可用时降级；CI 增加格式与 a11y 门禁
 - **构建与部署** — 支持 `VITE_BASE` 子路径构建，prebuild 校验缺失 key 与非法 base；新增手动触发的 GitHub Pages 工作流（密钥三级回退 + SPA 404 回退）与安全章节
 
 ### v11 Bug 修复
