@@ -174,3 +174,7 @@ new AMap.MarkerCluster(map, points, {
 - 充电桩列表（含功率、接口类型、状态）
 - 用户评价
 - 站点指引
+
+## 待真机验证项（2026-10-21，T26 安全区 / dvh）
+
+- **(P2, 未验证) iOS Safari 刘海机型底部安全区**：桌面 Chromium 中 `env(safe-area-inset-bottom)` 恒为 `0px`，本地无法验证实际留白。需真机确认：①主 CTA「查看站点列表」、②站点列表底部「加载更多」、③导航中 NavigationBar 按钮组，均与 home 指示条留有间距且不被误触/遮挡；④地址栏收起/展开时页面高度随 `100dvh` 平滑变化、底部无裁切。验证通过前不得视为已通过。详见 `.omo/evidence/task-26-optimize-chargingmap.md` §6。
