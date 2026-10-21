@@ -242,7 +242,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, inject } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
 import { useStationsStore } from '../../store/modules/stations'
 
@@ -255,11 +255,32 @@ const chargingData = computed(() => chargingStore.chargingData)
 const currentStation = computed(() => stationsStore.currentStation)
 const targetBattery = computed(() => chargingStore.settings.targetBattery)
 
+const SETTLE_EPSILON = 0.05
+const SETTLE_FRAMES = 60
+
 const displayedSpeed = ref(0)
 let rafId = null
 let lastTime = 0
+let settledFrames = 0
+
+const stopAnimation = () => {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+}
+
+const startAnimation = () => {
+  if (rafId !== null || document.hidden) return
+  lastTime = 0
+  settledFrames = 0
+  rafId = requestAnimationFrame(animateLoop)
+}
 
 const animateLoop = (timestamp) => {
+  rafId = null
+  if (document.hidden) return
+
   if (!lastTime) lastTime = timestamp
   const delta = (timestamp - lastTime) / 1000
   lastTime = timestamp
@@ -267,26 +288,44 @@ const animateLoop = (timestamp) => {
   const targetSpeed = chargingData.value.speed
   const diff = targetSpeed - displayedSpeed.value
 
-  if (Math.abs(diff) > 0.05) {
-    const lerpFactor = 1 - Math.pow(0.03, delta)
-    displayedSpeed.value += diff * lerpFactor
-  } else {
-    displayedSpeed.value = targetSpeed
+  if (Math.abs(diff) > SETTLE_EPSILON) {
+    displayedSpeed.value += diff * (1 - Math.pow(0.03, delta))
+    settledFrames = 0
+    rafId = requestAnimationFrame(animateLoop)
+    return
   }
 
-  rafId = requestAnimationFrame(animateLoop)
+  displayedSpeed.value = targetSpeed
+  settledFrames += 1
+  if (settledFrames < SETTLE_FRAMES) {
+    rafId = requestAnimationFrame(animateLoop)
+  }
 }
+
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    stopAnimation()
+  } else {
+    startAnimation()
+  }
+}
+
+watch(
+  () => chargingData.value.speed,
+  () => {
+    startAnimation()
+  }
+)
 
 onMounted(() => {
   displayedSpeed.value = chargingData.value.speed
-  rafId = requestAnimationFrame(animateLoop)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  startAnimation()
 })
 
 onUnmounted(() => {
-  if (rafId) {
-    cancelAnimationFrame(rafId)
-    rafId = null
-  }
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  stopAnimation()
 })
 
 const circumference = 2 * Math.PI * 85

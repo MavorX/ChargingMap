@@ -536,6 +536,7 @@ const handleBreakpointChange = (event) => {
 }
 
 onMounted(() => {
+  chargingStore.loadSettings()
   window.addEventListener('headerEvent', handleHeaderEvent)
   window.addEventListener('routeResult', handleRouteResult)
   window.addEventListener('mapClickClose', handleMapClick)
