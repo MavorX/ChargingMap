@@ -302,7 +302,7 @@ const closeStationDetail = () => {
 }
 
 // Non-panel state: layout + last receipt amount stay local to the view.
-const lastPaidAmount = ref(0)
+const lastPaidAmount = ref(null)
 const desktopSidebarOpen = ref(false)
 
 const selectStationFromSidebar = (station) => {
@@ -355,7 +355,8 @@ const onChargingComplete = () => {
 }
 
 const onPaymentSuccess = (receipt) => {
-  lastPaidAmount.value = receipt?.finalAmount ?? 0
+  const amount = receipt?.finalAmount
+  lastPaidAmount.value = typeof amount === 'number' && Number.isFinite(amount) ? amount : null
   uiStore.open('paymentSuccess', { reset: true })
 }
 

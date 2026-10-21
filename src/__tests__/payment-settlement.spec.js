@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { SERVICE_FEE_RATE, useChargingStore } from '../store/modules/charging'
+import {
+  SERVICE_FEE_RATE,
+  isCouponUsable,
+  useChargingStore
+} from '../store/modules/charging'
 import { useStationsStore } from '../store/modules/stations'
 import { useUserStore } from '../store/modules/user'
 
@@ -59,7 +63,7 @@ const setup = () => {
   userStore.walletTransactions = []
   userStore.notifications = []
 
-  return { chargingStore, userStore }
+  return { chargingStore, stationsStore, userStore }
 }
 
 const snapshot = (userStore) => ({
@@ -125,5 +129,85 @@ describe('chargingStore.settlePayment', () => {
 
     expect(() => chargingStore.settlePayment({ couponId })).toThrow(/优惠券/)
     expect(snapshot(userStore)).toEqual(before)
+  })
+
+  it('settles a free coupon at zero without charging the wallet', () => {
+    const { chargingStore, userStore } = setup()
+    userStore.coupons.push({
+      id: 'cp-zero',
+      title: '全额免费券',
+      type: 'free',
+      value: 999,
+      minSpend: 0,
+      used: false
+    })
+    const balanceBefore = userStore.userInfo.balance
+
+    const receipt = chargingStore.settlePayment({ couponId: 'cp-zero', method: 'wallet' })
+
+    expect(receipt.finalAmount).toBe(0)
+    expect(userStore.userInfo.balance).toBe(balanceBefore)
+    expect(userStore.chargingHistory[0].cost).toBe(0)
+    expect(userStore.walletTransactions[0].amount).toBeCloseTo(0, 2)
+    expect(userStore.coupons.find((coupon) => coupon.id === 'cp-zero').used).toBe(true)
+  })
+
+  it('rejects a null current price without writing balance, history or coupons', () => {
+    const { chargingStore, stationsStore, userStore } = setup()
+    stationsStore.currentStation.currentPrice = null
+    const before = snapshot(userStore)
+
+    expect(() => chargingStore.settlePayment({ couponId: 'cp-discount' })).toThrow(
+      '当前没有可结算的充电站点'
+    )
+    expect(snapshot(userStore)).toEqual(before)
+  })
+
+  it('treats an expired coupon as unusable and rejects settlement before any write', () => {
+    const { chargingStore, userStore } = setup()
+    userStore.coupons.push({
+      id: 'cp-expired',
+      title: '过期券',
+      type: 'discount',
+      value: 5,
+      minSpend: 0,
+      expiryDate: '2020-01-01',
+      used: false
+    })
+    const before = snapshot(userStore)
+
+    expect(isCouponUsable(userStore.coupons.at(-1), 110)).toBe(false)
+    expect(() => chargingStore.settlePayment({ couponId: 'cp-expired' })).toThrow(
+      '优惠券已过期或未满足使用条件'
+    )
+    expect(snapshot(userStore)).toEqual(before)
+  })
+
+  it('enforces the minimum spend at both sides of the threshold', () => {
+    const coupon = {
+      id: 'cp-min-spend',
+      title: '满50减5元',
+      type: 'discount',
+      value: 5,
+      minSpend: 50,
+      used: false
+    }
+    const { chargingStore, userStore } = setup()
+    userStore.coupons.push({ ...coupon })
+    chargingStore.chargingData.energy = 10
+    const before = snapshot(userStore)
+
+    expect(isCouponUsable(coupon, 11)).toBe(false)
+    expect(() => chargingStore.settlePayment({ couponId: 'cp-min-spend' })).toThrow(
+      '优惠券已过期或未满足使用条件'
+    )
+    expect(snapshot(userStore)).toEqual(before)
+
+    chargingStore.chargingData.energy = 100
+    expect(isCouponUsable(coupon, 110)).toBe(true)
+
+    const receipt = chargingStore.settlePayment({ couponId: 'cp-min-spend' })
+    expect(receipt.couponDiscount).toBe(5)
+    expect(receipt.finalAmount).toBe(105)
   })
 })

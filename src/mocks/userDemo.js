@@ -84,7 +84,7 @@ export const demoCoupons = [
     type: 'discount',
     value: 5,
     minSpend: 50,
-    expiryDate: '2025-12-30',
+    expiryDate: '2027-12-31',
     used: false
   },
   {
@@ -95,7 +95,7 @@ export const demoCoupons = [
     value: 20,
     percent: 80,
     minSpend: 0,
-    expiryDate: '2025-06-30',
+    expiryDate: '2027-12-31',
     used: false
   },
   {
@@ -106,7 +106,7 @@ export const demoCoupons = [
     value: 15,
     freeMinutes: 30,
     minSpend: 0,
-    expiryDate: '2025-05-15',
+    expiryDate: '2027-12-31',
     used: false
   }
 ]

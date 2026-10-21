@@ -10,10 +10,22 @@ const toAmount = (value) => {
   return Number.isFinite(number) ? number : 0
 }
 
-// minSpend is deliberately not enforced: v10 already ignored it and honoring it
-// here would change the payable amount for existing coupons.
-const couponDiscountFor = (coupon, totalAmount) => {
-  if (!coupon) return 0
+// Single source of truth for coupon availability: used, expired and below the
+// minimum spend are all unusable. Invalid expiry dates stay permissive so legacy
+// coupons without a trustworthy date do not silently disappear.
+export const isCouponUsable = (coupon, totalAmount, now = new Date()) => {
+  if (!coupon || coupon.used) return false
+
+  if (coupon.expiryDate) {
+    const expiry = new Date(`${coupon.expiryDate}T23:59:59`)
+    if (!Number.isNaN(expiry.getTime()) && expiry < now) return false
+  }
+
+  return toAmount(totalAmount) >= toAmount(coupon.minSpend)
+}
+
+const couponDiscountFor = (coupon, totalAmount, now = new Date()) => {
+  if (!isCouponUsable(coupon, totalAmount, now)) return 0
   if (coupon.type === 'percent') {
     return Math.min(
       Math.round(totalAmount * (1 - toAmount(coupon.percent) / 100) * 100) / 100,
@@ -172,7 +184,11 @@ export const useChargingStore = defineStore('charging', {
       const userStore = useUserStore()
       const station = stationsStore.currentStation
 
-      if (!station || !Number.isFinite(Number(station.currentPrice))) {
+      if (
+        !station ||
+        typeof station.currentPrice !== 'number' ||
+        !Number.isFinite(station.currentPrice)
+      ) {
         throw new Error('当前没有可结算的充电站点')
       }
 
@@ -183,11 +199,16 @@ export const useChargingStore = defineStore('charging', {
         throw new Error('优惠券不存在或已使用')
       }
 
-      const { chargeCost, serviceFee, couponDiscount, finalAmount } = calculatePaymentAmounts({
-        energy: this.chargingData.energy,
-        price: station.currentPrice,
-        coupon
-      })
+      const { chargeCost, serviceFee, totalAmount, couponDiscount, finalAmount } =
+        calculatePaymentAmounts({
+          energy: this.chargingData.energy,
+          price: station.currentPrice,
+          coupon
+        })
+
+      if (coupon && !isCouponUsable(coupon, totalAmount)) {
+        throw new Error('优惠券已过期或未满足使用条件')
+      }
       const paidAt = new Date()
 
       if (coupon) userStore.useCoupon(coupon.id)

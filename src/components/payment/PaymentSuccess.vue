@@ -55,15 +55,12 @@ defineEmits(['close'])
 const props = defineProps({
   amount: {
     type: Number,
-    default: 0
+    default: null
   }
 })
 
 const chargingStore = useChargingStore()
 const chargingData = computed(() => chargingStore.chargingData)
 
-const paidAmount = computed(() => {
-  if (props.amount > 0) return props.amount
-  return chargingStore.quotePayment().finalAmount
-})
+const paidAmount = computed(() => props.amount ?? chargingStore.quotePayment().finalAmount)
 </script>

@@ -285,7 +285,11 @@
 import PanelShell from '../common/PanelShell.vue'
 import { ref, computed, inject } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
-import { calculatePaymentAmounts, useChargingStore } from '../../store/modules/charging'
+import {
+  calculatePaymentAmounts,
+  isCouponUsable,
+  useChargingStore
+} from '../../store/modules/charging'
 import { useUserStore } from '../../store/modules/user'
 import { processPayment } from '../../services/api'
 import { formatDuration, formatPrice } from '../../utils/format'
@@ -322,8 +326,9 @@ const totalAmount = computed(() => amounts.value.chargeCost + amounts.value.serv
 const finalAmount = computed(() => amounts.value.finalAmount)
 
 const coupons = computed(() => {
+  const { totalAmount: payableTotal } = chargingStore.quotePayment()
   return userStore.coupons
-    .filter((c) => !c.used)
+    .filter((c) => !c.used && isCouponUsable(c, payableTotal))
     .map((c) => {
       const { couponDiscount } = calculatePaymentAmounts({
         energy: chargingData.value.energy,
