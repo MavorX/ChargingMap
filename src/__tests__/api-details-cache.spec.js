@@ -48,6 +48,14 @@ describe('api loadStationDetail shard cache', () => {
     expect(fetchMock).toHaveBeenCalledWith('/ChargingMap/data/station_list.json')
   })
 
+  it('rejects when the station list response is not ok', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(notFoundResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    const { loadStationsList } = await import('../services/api')
+
+    await expect(loadStationsList()).rejects.toThrow('站点列表加载失败')
+  })
+
   it('loads detail shards through BASE_URL for subpath deployments', async () => {
     vi.stubEnv('BASE_URL', '/ChargingMap/')
     const fetchMock = shardFetch()

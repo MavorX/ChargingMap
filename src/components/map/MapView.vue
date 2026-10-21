@@ -1,5 +1,26 @@
 <template>
   <div class="relative h-full w-full">
+    <div
+      v-if="stationsStore.error"
+      class="absolute left-1/2 top-4 z-20 w-[min(92%,28rem)] -translate-x-1/2"
+      role="alert"
+    >
+      <div
+        class="glass-card flex items-center gap-3 border border-danger-200 p-3 shadow-soft-lg dark:border-danger-800/60"
+      >
+        <i class="fa fa-exclamation-circle text-lg text-danger-500" aria-hidden="true"></i>
+        <p class="flex-1 text-sm font-medium text-surface-800 dark:text-surface-100">
+          {{ stationsStore.error }}
+        </p>
+        <button
+          class="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="stationsStore.isLoading"
+          @click="loadStations"
+        >
+          重试
+        </button>
+      </div>
+    </div>
     <div id="map-container" class="h-full w-full"></div>
   </div>
 </template>
@@ -95,6 +116,9 @@ const loadStations = async () => {
   setLoading(true)
   try {
     await stationsStore.loadStations()
+    // The store records the failure in `error` (shown as the retry banner);
+    // do not treat an empty/failed result as a successful refresh.
+    if (stationsStore.error) return
     mapManager.setStations(stationsStore.stations)
     onMapViewportChange()
   } catch (err) {

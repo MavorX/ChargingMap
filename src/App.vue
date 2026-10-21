@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { ref, provide, onMounted, watch } from 'vue'
+import { ref, provide, onMounted, onUnmounted, watch } from 'vue'
 import { useUserStore } from './store/modules/user'
 import Header from './components/Header.vue'
 import Loading from './components/common/Loading.vue'
@@ -49,7 +49,17 @@ provide('setLoading', (value) => {
   isLoading.value = value
 })
 
+const handleAppToast = (event) => {
+  const { message, type } = event.detail || {}
+  if (message) showToastMessage(message, type || 'error')
+}
+
 onMounted(() => {
+  window.addEventListener('appToast', handleAppToast)
   userStore.loadTheme()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('appToast', handleAppToast)
 })
 </script>

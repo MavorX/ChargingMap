@@ -31,6 +31,28 @@
       </div>
 
       <div v-if="station" class="flex-1 overflow-y-auto p-5">
+        <div
+          v-if="stationsStore.detailsError"
+          class="mb-4 rounded-xl border border-danger-200 bg-danger-50 p-4 dark:border-danger-800/60 dark:bg-danger-900/20"
+          role="alert"
+        >
+          <div class="flex items-center gap-3">
+            <i class="fa fa-exclamation-triangle text-lg text-danger-500" aria-hidden="true"></i>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-surface-800 dark:text-surface-100">
+                {{ stationsStore.detailsError }}
+              </p>
+              <p class="mt-0.5 text-xs text-surface-500 dark:text-surface-400">请检查网络后重试</p>
+            </div>
+            <button
+              class="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="isRetryingDetails"
+              @click="retryDetails"
+            >
+              重试
+            </button>
+          </div>
+        </div>
         <div class="premium-card animate-in mb-6 p-5">
           <div class="mb-4 flex items-start">
             <div
@@ -519,13 +541,24 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 
 const _emit = defineEmits(['close', 'start-reservation', 'start-charging', 'navigate'])
 const stationsStore = useStationsStore()
 const showToast = inject('showToast')
 const station = computed(() => stationsStore.currentStation)
+const isRetryingDetails = ref(false)
+
+const retryDetails = async () => {
+  if (!station.value || isRetryingDetails.value) return
+  isRetryingDetails.value = true
+  try {
+    await stationsStore.loadStationDetails(station.value.stationId)
+  } finally {
+    isRetryingDetails.value = false
+  }
+}
 
 const toggleFavorite = () => {
   if (station.value) {

@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { loadStationsList, loadStationDetail } from '../../services/api'
 
+const notifyError = (message) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('appToast', { detail: { message, type: 'error' } }))
+  }
+}
+
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -34,6 +40,7 @@ export const useStationsStore = defineStore('stations', {
     searchQuery: '',
     isLoading: false,
     error: null,
+    detailsError: null,
     viewportBounds: null,
     listPage: 1,
     listPageSize: 20
@@ -69,8 +76,9 @@ export const useStationsStore = defineStore('stations', {
         this.stations.sort((a, b) => a.distance - b.distance)
         this.loadFavoriteStations()
       } catch (err) {
-        this.error = err.message
+        this.error = '站点数据加载失败'
         console.error('加载站点数据失败:', err)
+        notifyError(this.error)
       } finally {
         this.isLoading = false
       }
@@ -81,8 +89,11 @@ export const useStationsStore = defineStore('stations', {
       if (!station) return null
 
       if (station.detailsLoaded && station.details) {
+        this.detailsError = null
         return station.details
       }
+
+      this.detailsError = null
 
       try {
         const details = await loadStationDetail(stationId)
@@ -91,7 +102,9 @@ export const useStationsStore = defineStore('stations', {
         station.currentPrice = this.getCurrentPrice(details.periodPrices)
         return details
       } catch (err) {
+        this.detailsError = '站点详情加载失败'
         console.error('加载站点详情失败:', err)
+        notifyError(this.detailsError)
         return null
       }
     },
@@ -116,6 +129,7 @@ export const useStationsStore = defineStore('stations', {
 
     async setCurrentStation(station) {
       this.currentStation = station
+      this.detailsError = null
       if (station && !station.detailsLoaded) {
         await this.loadStationDetails(station.stationId)
       }

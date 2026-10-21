@@ -6,11 +6,10 @@ export const loadStationsList = async () => {
   try {
     const response = await fetch(dataUrl('data/station_list.json'))
     if (!response.ok) throw new Error('站点列表加载失败')
-    const data = await response.json()
-    return data
+    return await response.json()
   } catch (err) {
-    console.error('加载站点列表失败:', err)
-    return []
+    console.error('加载站点列表失败:', { url: dataUrl('data/station_list.json'), err })
+    throw err
   }
 }
 
