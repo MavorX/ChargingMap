@@ -143,8 +143,8 @@
                 class="status-badge-warning text-[10px]"
                 >可预约</span
               >
-              <span class="status-badge text-[11px]" :class="getStationStatusClass(station)">{{
-                getStationStatusText(station)
+              <span class="status-badge text-[11px]" :class="stationStatus(station).tone">{{
+                stationStatus(station).text
               }}</span>
             </div>
           </div>
@@ -193,7 +193,7 @@
               <div class="min-w-0">
                 <p class="text-[9px] font-medium uppercase tracking-wide text-surface-500">电价</p>
                 <p class="text-xs font-bold text-warning-600">
-                  ¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—' }}
+                  {{ formatPrice(station.currentPrice) }}
                 </p>
               </div>
             </div>
@@ -221,11 +221,7 @@
               class="flex items-center text-sm font-bold text-primary-600 transition-transform duration-200 group-hover:translate-x-1 dark:text-primary-400"
             >
               <i class="fa fa-location-arrow mr-1.5 text-xs" aria-hidden="true"></i>
-              {{
-                Number.isFinite(station.distance)
-                  ? (station.distance / 1000).toFixed(1) + ' km'
-                  : '—'
-              }}
+              {{ formatDistance(station.distance) }}
               <i
                 class="fa fa-chevron-right ml-1.5 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 aria-hidden="true"
@@ -251,6 +247,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDistance, formatPrice } from '../../utils/format'
+import { stationStatus } from '../../utils/stationStatus'
 
 const emit = defineEmits(['close', 'show-filter'])
 
@@ -304,25 +302,5 @@ const resetFilters = () => {
 const selectStation = (station) => {
   stationsStore.setCurrentStation(station)
   emit('close')
-}
-
-const getStationStatusClass = (station) => {
-  if (station.openStatus === 0) {
-    return 'bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return 'status-badge-success'
-  }
-  return 'status-badge-danger'
-}
-
-const getStationStatusText = (station) => {
-  if (station.openStatus === 0) {
-    return '维护中'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return '有可用'
-  }
-  return '已满'
 }
 </script>

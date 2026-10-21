@@ -90,8 +90,8 @@
               class="status-badge-warning text-[9px]"
               >可预约</span
             >
-            <span class="status-badge text-[10px]" :class="getStationStatusClass(station)">{{
-              getStationStatusText(station)
+            <span class="status-badge text-[10px]" :class="stationStatus(station).tone">{{
+              stationStatus(station).text
             }}</span>
           </div>
         </div>
@@ -118,7 +118,7 @@
           >
             <i class="fa fa-rmb text-[10px] text-warning-500" aria-hidden="true"></i>
             <span class="text-xs font-bold text-warning-600"
-              >¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—' }}</span
+              >{{ formatPrice(station.currentPrice) }}</span
             >
           </div>
         </div>
@@ -144,7 +144,7 @@
           >
             <i class="fa fa-location-arrow mr-1 text-[10px]" aria-hidden="true"></i>
             {{
-              Number.isFinite(station.distance) ? (station.distance / 1000).toFixed(1) + ' km' : '—'
+              formatDistance(station.distance)
             }}
           </div>
         </div>
@@ -166,6 +166,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDistance, formatPrice } from '../../utils/format'
+import { stationStatus } from '../../utils/stationStatus'
 
 defineEmits(['select-station'])
 
@@ -213,25 +215,5 @@ const loadMore = () => {
 
 const resetFilters = () => {
   stationsStore.resetFilters()
-}
-
-const getStationStatusClass = (station) => {
-  if (station.openStatus === 0) {
-    return 'bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return 'status-badge-success'
-  }
-  return 'status-badge-danger'
-}
-
-const getStationStatusText = (station) => {
-  if (station.openStatus === 0) {
-    return '维护中'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return '有可用'
-  }
-  return '已满'
 }
 </script>

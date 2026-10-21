@@ -301,12 +301,12 @@
           >
             <span class="text-sm font-medium text-surface-600 dark:text-surface-400">当前电价</span>
             <span class="text-base font-bold text-primary-600"
-              >¥{{ currentStation?.currentPrice.toFixed(2) }}/度</span
+              >{{ formatPrice(currentStation?.currentPrice) }}/度</span
             >
           </div>
           <div class="flex items-center justify-between pt-2">
             <span class="text-base font-bold text-surface-900 dark:text-surface-100">预计费用</span>
-            <span class="gradient-text text-2xl font-black">¥{{ estimatedCost.toFixed(2) }}</span>
+            <span class="gradient-text text-2xl font-black">{{ formatPrice(estimatedCost) }}</span>
           </div>
         </div>
       </div>
@@ -337,6 +337,8 @@ import { ref, computed, inject, watch, watchEffect } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 import { useReservationStore } from '../../store/modules/reservation'
 import { useUserStore } from '../../store/modules/user'
+import { useAvailableConnectors } from '../../composables/useAvailableConnectors'
+import { formatPrice } from '../../utils/format'
 
 const emit = defineEmits(['close', 'reservation-success'])
 const stationsStore = useStationsStore()
@@ -348,11 +350,7 @@ const setLoading = inject('setLoading')
 const currentStation = computed(() => stationsStore.currentStation)
 const vehicles = computed(() => userStore.vehicles)
 
-const availableConnectors = computed(() => {
-  const fast = currentStation.value?.details?.fastConnectors?.filter((c) => c.status === 1) || []
-  const slow = currentStation.value?.details?.slowConnectors?.filter((c) => c.status === 1) || []
-  return [...fast, ...slow]
-})
+const availableConnectors = useAvailableConnectors(currentStation)
 
 const selectedConnector = ref('')
 const selectedDate = ref('')

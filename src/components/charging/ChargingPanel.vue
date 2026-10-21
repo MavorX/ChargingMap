@@ -110,7 +110,7 @@
                 充电时长
               </p>
               <p class="text-2xl font-black text-surface-900 dark:text-surface-100">
-                {{ formatTime(chargingData.duration) }}
+                {{ formatDuration(chargingData.duration, 'hms') }}
               </p>
             </div>
 
@@ -147,7 +147,7 @@
                 预计费用
               </p>
               <p class="text-2xl font-black text-warning-600">
-                ¥{{ chargingData.cost.toFixed(2) }}
+                {{ formatPrice(chargingData.cost) }}
               </p>
             </div>
           </div>
@@ -163,7 +163,7 @@
                 <span class="font-bold text-surface-800 dark:text-surface-200">充电功率</span>
               </div>
               <span class="gradient-text text-2xl font-black"
-                >{{ displayedSpeed.toFixed(1) }} kW</span
+                >{{ formatPower(displayedSpeed) }}</span
               >
             </div>
 
@@ -245,6 +245,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, inject } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDuration, formatPower, formatPrice } from '../../utils/format'
 
 const emit = defineEmits(['close'])
 const chargingStore = useChargingStore()
@@ -341,17 +342,6 @@ const estimatedTimeRemaining = computed(() => {
   if (minutes < 60) return `${minutes}分钟`
   return `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`
 })
-
-const formatTime = (seconds) => {
-  const h = Math.floor(seconds / 3600)
-    .toString()
-    .padStart(2, '0')
-  const m = Math.floor((seconds % 3600) / 60)
-    .toString()
-    .padStart(2, '0')
-  const s = (seconds % 60).toString().padStart(2, '0')
-  return `${h}:${m}:${s}`
-}
 
 const stopCharging = () => {
   chargingStore.stopCharging()

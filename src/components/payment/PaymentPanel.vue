@@ -57,7 +57,7 @@
                 >
               </div>
               <span class="font-bold text-surface-900 dark:text-surface-100">{{
-                formatDuration(chargingData.duration)
+                formatDuration(chargingData.duration, 'hm-verbose')
               }}</span>
             </div>
             <div
@@ -81,7 +81,7 @@
                 <span class="text-sm font-medium text-surface-600 dark:text-surface-400">电价</span>
               </div>
               <span class="font-bold text-surface-900 dark:text-surface-100"
-                >¥{{ currentStation?.currentPrice.toFixed(2) }}/度</span
+                >{{ formatPrice(currentStation?.currentPrice) }}/度</span
               >
             </div>
             <div
@@ -94,12 +94,12 @@
                 >
               </div>
               <span class="font-bold text-surface-900 dark:text-surface-100"
-                >¥{{ serviceFee.toFixed(2) }}</span
+                >{{ formatPrice(serviceFee) }}</span
               >
             </div>
             <div class="flex items-center justify-between pt-3">
               <span class="text-base font-bold text-surface-900 dark:text-surface-100">合计</span>
-              <span class="gradient-text text-2xl font-black">¥{{ totalAmount.toFixed(2) }}</span>
+              <span class="gradient-text text-2xl font-black">{{ formatPrice(totalAmount) }}</span>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@
               </div>
               <div class="flex items-center space-x-2">
                 <span v-if="selectedCoupon" class="text-sm font-black text-danger-500"
-                  >-¥{{ selectedCoupon.discount.toFixed(2) }}</span
+                  >-{{ formatPrice(selectedCoupon.discount) }}</span
                 >
                 <i
                   class="fa fa-chevron-down text-surface-400 transition-transform duration-300"
@@ -164,7 +164,7 @@
                     </p>
                   </div>
                   <span class="text-lg font-black text-danger-500"
-                    >-¥{{ coupon.discount.toFixed(2) }}</span
+                    >-{{ formatPrice(coupon.discount) }}</span
                   >
                 </div>
               </div>
@@ -234,7 +234,7 @@
           >
             <span class="text-sm font-medium text-surface-600 dark:text-surface-400">充电费用</span>
             <span class="font-bold text-surface-900 dark:text-surface-100"
-              >¥{{ chargeCost.toFixed(2) }}</span
+              >{{ formatPrice(chargeCost) }}</span
             >
           </div>
           <div
@@ -242,7 +242,7 @@
           >
             <span class="text-sm font-medium text-surface-600 dark:text-surface-400">服务费</span>
             <span class="font-bold text-surface-900 dark:text-surface-100"
-              >¥{{ serviceFee.toFixed(2) }}</span
+              >{{ formatPrice(serviceFee) }}</span
             >
           </div>
           <div
@@ -253,12 +253,12 @@
               >优惠券抵扣</span
             >
             <span class="font-bold text-danger-500"
-              >-¥{{ selectedCoupon.discount.toFixed(2) }}</span
+              >-{{ formatPrice(selectedCoupon.discount) }}</span
             >
           </div>
           <div class="flex items-center justify-between pt-3">
             <span class="text-base font-bold text-surface-900 dark:text-surface-100">实付金额</span>
-            <span class="gradient-text text-3xl font-black">¥{{ finalAmount.toFixed(2) }}</span>
+            <span class="gradient-text text-3xl font-black">{{ formatPrice(finalAmount) }}</span>
           </div>
         </div>
       </div>
@@ -280,7 +280,7 @@
               class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
             ></div>
             <i v-else class="fa fa-shield text-lg" aria-hidden="true"></i>
-            <span>{{ isPaying ? '支付中...' : `确认支付 ¥${finalAmount.toFixed(2)}` }}</span>
+            <span>{{ isPaying ? '支付中...' : `确认支付 ${formatPrice(finalAmount)}` }}</span>
           </span>
         </button>
       </div>
@@ -294,6 +294,7 @@ import { useStationsStore } from '../../store/modules/stations'
 import { useChargingStore } from '../../store/modules/charging'
 import { useUserStore } from '../../store/modules/user'
 import { processPayment } from '../../services/api'
+import { formatDuration, formatPrice } from '../../utils/format'
 
 const emit = defineEmits(['close', 'payment-success'])
 const stationsStore = useStationsStore()
@@ -374,7 +375,7 @@ const paymentMethods = computed(() => [
   {
     id: 'wallet',
     name: '钱包余额',
-    desc: `余额 ¥${userStore.userInfo.balance.toFixed(2)}`,
+    desc: `余额 ${formatPrice(userStore.userInfo.balance)}`,
     icon: 'fa fa-credit-card text-primary-500 text-lg',
     bgClass: 'bg-primary-100 dark:bg-primary-900/30'
   }
@@ -388,13 +389,6 @@ const selectCoupon = (coupon) => {
 const clearCoupon = () => {
   selectedCoupon.value = null
   showCouponList.value = false
-}
-
-const formatDuration = (seconds) => {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) return `${h}小时${m}分钟`
-  return `${m}分钟`
 }
 
 const handlePayment = async () => {

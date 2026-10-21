@@ -85,8 +85,7 @@
               距离
             </p>
             <p class="gradient-text text-lg font-bold">
-              {{ Number.isFinite(station.distance) ? (station.distance / 1000).toFixed(1) : '—'
-              }}<span
+              {{ formatDistance(station.distance, { withUnit: false }) }}<span
                 v-if="Number.isFinite(station.distance)"
                 class="ml-0.5 text-[10px] font-normal text-surface-500"
                 >km</span
@@ -172,7 +171,7 @@
                 当前电价
               </p>
               <p class="text-sm font-bold text-primary-600">
-                ¥{{ station.currentPrice != null ? station.currentPrice.toFixed(2) : '—'
+                {{ formatPrice(station.currentPrice)
                 }}<span class="text-[10px] font-normal text-surface-400">/度</span>
               </p>
             </div>
@@ -197,8 +196,8 @@
               </p>
               <span
                 class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
-                :class="getStationStatusClass(station)"
-                >{{ getStationStatusText(station) }}</span
+                :class="stationStatus(station).tone"
+                >{{ stationStatus(station).text }}</span
               >
             </div>
           </div>
@@ -287,11 +286,11 @@
               <div class="flex min-w-0 flex-1 items-center">
                 <div
                   class="mr-3 flex h-10 w-10 items-center justify-center rounded-lg shadow-inner-soft transition-transform duration-300 group-hover:scale-110"
-                  :class="getConnectorBgClass(connector.status)"
+                  :class="connectorStatus(connector.status).bgClass"
                 >
                   <i
                     class="fa fa-bolt text-sm"
-                    :class="getConnectorIconClass(connector.status)"
+                    :class="connectorStatus(connector.status).iconClass"
                     aria-hidden="true"
                   ></i>
                 </div>
@@ -308,8 +307,8 @@
               </div>
               <span
                 class="ml-2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold"
-                :class="getConnectorStatusClass(connector.status)"
-                >{{ getConnectorStatusText(connector.status) }}</span
+                :class="connectorStatus(connector.status).badgeClass"
+                >{{ connectorStatus(connector.status).text }}</span
               >
             </div>
           </div>
@@ -343,11 +342,11 @@
               <div class="flex min-w-0 flex-1 items-center">
                 <div
                   class="mr-3 flex h-10 w-10 items-center justify-center rounded-lg shadow-inner-soft transition-transform duration-300 group-hover:scale-110"
-                  :class="getConnectorBgClass(connector.status)"
+                  :class="connectorStatus(connector.status).bgClass"
                 >
                   <i
                     class="fa fa-plug text-sm"
-                    :class="getConnectorIconClass(connector.status)"
+                    :class="connectorStatus(connector.status).iconClass"
                     aria-hidden="true"
                   ></i>
                 </div>
@@ -364,8 +363,8 @@
               </div>
               <span
                 class="ml-2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold"
-                :class="getConnectorStatusClass(connector.status)"
-                >{{ getConnectorStatusText(connector.status) }}</span
+                :class="connectorStatus(connector.status).badgeClass"
+                >{{ connectorStatus(connector.status).text }}</span
               >
             </div>
           </div>
@@ -390,7 +389,7 @@
             <div class="flex items-center">
               <div
                 class="mr-2 h-2 w-2 rounded-full transition-transform duration-300 group-hover:scale-125"
-                :class="getPeriodDotClass(index)"
+                :class="periodDotClass(index)"
               ></div>
               <span class="text-xs font-medium text-surface-700 dark:text-surface-300"
                 >{{ period.startTime }}~{{ period.endTime }}</span
@@ -526,6 +525,8 @@
 <script setup>
 import { computed, inject, ref } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDistance, formatPrice } from '../../utils/format'
+import { connectorStatus, periodDotClass, stationStatus } from '../../utils/stationStatus'
 
 const _emit = defineEmits(['close', 'start-reservation', 'start-charging', 'navigate'])
 const stationsStore = useStationsStore()
@@ -562,80 +563,5 @@ const shareStation = () => {
   } else {
     showToast('分享链接已复制到剪贴板', 'success')
   }
-}
-
-const getStationStatusClass = (station) => {
-  if (station.openStatus === 0) {
-    return 'bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return 'status-badge-success'
-  }
-  return 'status-badge-danger'
-}
-
-const getStationStatusText = (station) => {
-  if (station.openStatus === 0) {
-    return '维护中'
-  }
-  if (station.quickAvailableNum > 0 || station.slowAvailableNum > 0) {
-    return '有可用'
-  }
-  return '已满'
-}
-
-const getConnectorStatusClass = (status) => {
-  switch (status) {
-    case 1:
-      return 'status-badge-success'
-    case 3:
-      return 'status-badge-danger'
-    default:
-      return 'bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400'
-  }
-}
-
-const getConnectorStatusText = (status) => {
-  switch (status) {
-    case 1:
-      return '可用'
-    case 3:
-      return '使用中'
-    default:
-      return '维护中'
-  }
-}
-
-const getConnectorBgClass = (status) => {
-  switch (status) {
-    case 1:
-      return 'bg-secondary-100 dark:bg-secondary-900/30'
-    case 3:
-      return 'bg-danger-100 dark:bg-danger-900/30'
-    default:
-      return 'bg-surface-200 dark:bg-surface-700'
-  }
-}
-
-const getConnectorIconClass = (status) => {
-  switch (status) {
-    case 1:
-      return 'text-secondary-500'
-    case 3:
-      return 'text-danger-500'
-    default:
-      return 'text-surface-400'
-  }
-}
-
-const getPeriodDotClass = (index) => {
-  const colors = [
-    'bg-primary-400',
-    'bg-warning-400',
-    'bg-danger-400',
-    'bg-orange-400',
-    'bg-accent-400'
-  ]
-  return colors[index % colors.length]
 }
 </script>

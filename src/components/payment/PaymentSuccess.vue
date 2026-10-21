@@ -21,12 +21,12 @@
       <div class="flex justify-between text-sm">
         <span class="text-surface-500 dark:text-surface-400">充电时长</span>
         <span class="font-bold text-surface-800 dark:text-surface-200">{{
-          formatDuration(chargingData.duration)
+          formatDuration(chargingData.duration, 'hm-verbose')
         }}</span>
       </div>
       <div class="flex justify-between border-t border-surface-100 pt-3 dark:border-surface-700/50">
         <span class="font-bold text-surface-900 dark:text-surface-100">支付金额</span>
-        <span class="gradient-text text-xl font-black">¥{{ paidAmount.toFixed(2) }}</span>
+        <span class="gradient-text text-xl font-black">{{ formatPrice(paidAmount) }}</span>
       </div>
     </div>
     <button
@@ -45,6 +45,7 @@
 import { computed } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDuration, formatPrice } from '../../utils/format'
 
 defineEmits(['close'])
 
@@ -66,11 +67,4 @@ const paidAmount = computed(() => {
   const serviceFee = chargeCost * 0.1
   return chargeCost + serviceFee
 })
-
-const formatDuration = (seconds) => {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) return `${h}小时${m}分钟`
-  return `${m}分钟`
-}
 </script>

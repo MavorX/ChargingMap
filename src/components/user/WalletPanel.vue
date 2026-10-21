@@ -20,7 +20,7 @@
           <div class="absolute bottom-0 left-0 h-24 w-24 rounded-tr-full bg-white/5"></div>
           <p class="relative z-10 mb-1 text-sm text-white/70">账户余额</p>
           <p class="relative z-10 text-3xl font-black text-white">
-            ¥{{ userInfo.balance.toFixed(2) }}
+            {{ formatPrice(userInfo.balance) }}
           </p>
           <div class="relative z-10 mt-4 flex items-center border-t border-white/20 pt-4">
             <div class="flex-1">
@@ -102,9 +102,9 @@
                   tx.amount >= 0 ? 'text-secondary-500' : 'text-surface-800 dark:text-surface-200'
                 "
               >
-                {{ tx.amount >= 0 ? '+' : '' }}¥{{ Math.abs(tx.amount).toFixed(2) }}
+                {{ tx.amount >= 0 ? '+' : '' }}{{ formatPrice(Math.abs(tx.amount)) }}
               </p>
-              <p class="text-[10px] text-surface-400">余额 ¥{{ tx.balance.toFixed(2) }}</p>
+              <p class="text-[10px] text-surface-400">余额 {{ formatPrice(tx.balance) }}</p>
             </div>
           </div>
         </div>
@@ -173,7 +173,7 @@
           >
             <h3 class="mb-2 text-lg font-bold text-surface-900 dark:text-surface-100">提现</h3>
             <p class="mb-4 text-sm text-surface-500 dark:text-surface-400">
-              可提现余额：¥{{ userInfo.balance.toFixed(2) }}
+              可提现余额：{{ formatPrice(userInfo.balance) }}
             </p>
             <div class="mb-4">
               <input
@@ -209,6 +209,7 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { useUserStore } from '../../store/modules/user'
+import { formatPrice } from '../../utils/format'
 
 defineEmits(['close'])
 
@@ -267,7 +268,7 @@ const handleRecharge = () => {
     amount,
     balance: userStore.userInfo.balance + amount
   })
-  showToast(`成功充值¥${amount.toFixed(2)}`, 'success')
+  showToast(`成功充值${formatPrice(amount)}`, 'success')
   showRechargeModal.value = false
   customAmount.value = null
   selectedRechargeAmount.value = 50
@@ -288,7 +289,7 @@ const handleWithdraw = () => {
     amount,
     balance: userStore.userInfo.balance + amount
   })
-  showToast(`成功提现 ¥${Math.abs(amount).toFixed(2)}`, 'success')
+  showToast(`成功提现 ${formatPrice(Math.abs(amount))}`, 'success')
   showWithdrawModal.value = false
   withdrawAmount.value = null
 }

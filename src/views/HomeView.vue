@@ -240,6 +240,7 @@ import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
 import { useUserStore } from '../store/modules/user'
 import mapManager from '../services/mapService'
+import { formatDuration, formatPrice } from '../utils/format'
 import MapView from '../components/map/MapView.vue'
 import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
@@ -357,10 +358,7 @@ const onPaymentSuccess = (paidAmount) => {
     userStore.addChargingHistory({
       stationName: station.stationName,
       stationAddress: station.address,
-      duration:
-        chargingData.duration >= 3600
-          ? `${Math.floor(chargingData.duration / 3600)}小时${Math.floor((chargingData.duration % 3600) / 60)}分钟`
-          : `${Math.floor(chargingData.duration / 60)}分钟`,
+      duration: formatDuration(chargingData.duration, 'hm-verbose'),
       energy: `${chargingData.energy.toFixed(1)} kWh`,
       cost: actualPaid,
       vehicleModel: userStore.vehicles.length > 0 ? userStore.vehicles[0].model : '未知车型',
@@ -378,7 +376,7 @@ const onPaymentSuccess = (paidAmount) => {
 
     userStore.addNotification({
       title: '充电完成通知',
-      content: `您在${station.stationName}的充电已完成，充电${chargingData.energy.toFixed(1)}度，费用¥${actualPaid.toFixed(2)}。`
+      content: `您在${station.stationName}的充电已完成，充电${chargingData.energy.toFixed(1)}度，费用${formatPrice(actualPaid)}。`
     })
   }
 }
@@ -465,8 +463,7 @@ const handleRouteResult = (event) => {
   if (error) {
     showToast(error, 'error')
   } else if (distance && duration) {
-    const durationText =
-      duration >= 60 ? `${Math.floor(duration / 60)}小时${duration % 60}分钟` : `${duration}分钟`
+    const durationText = formatDuration(duration * 60, 'hm-verbose')
     stationsStore.startNavigation({ distance, duration, station })
     showToast(`导航路线：${distance}公里，约${durationText}`, 'success')
   }

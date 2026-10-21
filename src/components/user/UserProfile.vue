@@ -64,7 +64,7 @@
               <i class="fa fa-wallet text-base text-white" aria-hidden="true"></i>
             </div>
             <p class="gradient-text text-lg font-black leading-tight">
-              ¥{{ userInfo.balance.toFixed(2) }}
+              {{ formatPrice(userInfo.balance) }}
             </p>
             <p class="mt-1 text-[10px] font-medium uppercase tracking-wide text-surface-500">
               钱包余额
@@ -172,7 +172,7 @@
               </div>
               <div class="flex items-center space-x-2">
                 <span class="text-sm font-bold text-surface-600 dark:text-surface-300"
-                  >¥{{ userInfo.balance.toFixed(2) }}</span
+                  >{{ formatPrice(userInfo.balance) }}</span
                 >
                 <i
                   class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
@@ -318,6 +318,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '../../store/modules/user'
+import { formatPrice } from '../../utils/format'
 import { useStationsStore } from '../../store/modules/stations'
 
 const _emit = defineEmits([

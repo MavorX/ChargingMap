@@ -45,6 +45,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { formatDuration } from '../../utils/format'
 
 defineEmits(['cancel'])
 
@@ -53,13 +54,7 @@ const routeInfo = computed(() => stationsStore.routeInfo)
 
 const durationText = computed(() => {
   const duration = routeInfo.value?.duration
-  if (!duration) return '0分钟'
-  if (duration >= 60) {
-    const hours = Math.floor(duration / 60)
-    const mins = duration % 60
-    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`
-  }
-  return `${duration}分钟`
+  return formatDuration((duration || 0) * 60, 'hm')
 })
 </script>
 

@@ -42,7 +42,7 @@
             <div class="flex items-center">
               <i class="fa fa-yen mr-1.5 text-xs text-warning-500" aria-hidden="true"></i>
               <span class="text-xs text-surface-600 dark:text-surface-300"
-                >总计 ¥{{ totalCost.toFixed(2) }}</span
+                >总计 {{ formatPrice(totalCost) }}</span
               >
             </div>
           </div>
@@ -107,7 +107,7 @@
                       : 'text-surface-800 dark:text-surface-200'
                   "
                 >
-                  {{ record.status === 'refunded' ? '+' : '-' }}¥{{ record.cost.toFixed(2) }}
+                  {{ record.status === 'refunded' ? '+' : '-' }}{{ formatPrice(record.cost) }}
                 </p>
                 <p class="text-[10px] text-surface-400">
                   {{ record.energy }} · {{ record.vehicleModel }}
@@ -137,6 +137,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '../../store/modules/user'
+import { formatPrice } from '../../utils/format'
 
 defineEmits(['close'])
 
