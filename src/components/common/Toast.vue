@@ -2,10 +2,17 @@
   <Transition name="toast-premium">
     <div
       v-if="show"
+      :role="isError ? 'alert' : 'status'"
+      :aria-live="isError ? undefined : 'polite'"
+      :aria-atomic="isError ? undefined : 'true'"
       :class="[
         'fixed left-1/2 top-20 z-[70] flex min-w-[300px] max-w-[90vw] -translate-x-1/2 transform items-center space-x-3.5 rounded-2xl border px-6 py-4 shadow-xl backdrop-blur-xl',
         toastContainerClass
       ]"
+      @mouseenter="handlePause"
+      @mouseleave="handleResume"
+      @focusin="handlePause"
+      @focusout="handleResume"
     >
       <div
         class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl shadow-md"
@@ -16,6 +23,7 @@
       <p class="flex-1 text-sm font-bold" :class="toastTextClass">{{ message }}</p>
       <button
         class="flex-shrink-0 opacity-60 transition-opacity duration-200 hover:opacity-100"
+        aria-label="关闭提示"
         @click="$emit('update:show', false)"
       >
         <i class="fa fa-times text-xs" :class="toastTextClass" aria-hidden="true"></i>
@@ -25,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 
 const props = defineProps({
   message: {
@@ -39,10 +47,77 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: false
+  },
+  duration: {
+    type: Number,
+    default: 3000
   }
 })
 
-defineEmits(['update:show'])
+const emit = defineEmits(['update:show', 'pause', 'resume'])
+
+const isError = computed(() => props.type === 'error')
+
+// 自动消失计时器：悬停/聚焦时暂停，离开后按剩余时长继续
+let dismissTimer = null
+let remaining = props.duration
+let startedAt = 0
+let pauseDepth = 0
+
+const clearDismissTimer = () => {
+  if (dismissTimer !== null) {
+    clearTimeout(dismissTimer)
+    dismissTimer = null
+  }
+}
+
+const scheduleDismiss = () => {
+  clearDismissTimer()
+  startedAt = Date.now()
+  dismissTimer = setTimeout(() => {
+    dismissTimer = null
+    remaining = 0
+    emit('update:show', false)
+  }, remaining)
+}
+
+const handlePause = () => {
+  if (!props.show) return
+  pauseDepth += 1
+  if (pauseDepth > 1 || dismissTimer === null) return
+  remaining = Math.max(0, remaining - (Date.now() - startedAt))
+  clearDismissTimer()
+  emit('pause')
+}
+
+const handleResume = () => {
+  if (pauseDepth === 0) return
+  pauseDepth -= 1
+  if (pauseDepth > 0 || !props.show) return
+  scheduleDismiss()
+  emit('resume')
+}
+
+watch(
+  () => props.show,
+  (visible) => {
+    pauseDepth = 0
+    clearDismissTimer()
+    if (!visible) return
+    remaining = props.duration
+    scheduleDismiss()
+  },
+  { immediate: true }
+)
+
+watch([() => props.message, () => props.type], () => {
+  if (!props.show) return
+  clearDismissTimer()
+  remaining = props.duration
+  if (pauseDepth === 0) scheduleDismiss()
+})
+
+onUnmounted(clearDismissTimer)
 
 const toastConfigMap = {
   error: {

@@ -3,9 +3,24 @@
     <Header />
     <router-view />
     <Loading v-if="isLoading" />
-    <Toast :message="toastMessage" :type="toastType" :show="showToast" />
+    <Toast
+      :message="toastMessage"
+      :type="toastType"
+      :show="showToast"
+      @pause="pauseToastTimer"
+      @resume="resumeToastTimer"
+      @update:show="handleToastVisibility"
+    />
   </div>
 </template>
+
+<script>
+// 模块级定时器状态：连续 toast 时必须先清除旧计时器（审计 C13）
+let toastTimer = null
+let toastRemaining = 3000
+let toastStartedAt = 0
+let toastPauseDepth = 0
+</script>
 
 <script setup>
 import { ref, provide, onMounted, onUnmounted, watch } from 'vue'
@@ -35,13 +50,57 @@ const toastMessage = ref('')
 const toastType = ref('success')
 const showToast = ref(false)
 
+const stopToastTimer = () => {
+  if (toastTimer !== null) {
+    clearTimeout(toastTimer)
+    toastTimer = null
+  }
+}
+
+const scheduleToastTimer = () => {
+  stopToastTimer()
+  toastStartedAt = Date.now()
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+    toastTimer = null
+    toastPauseDepth = 0
+  }, toastRemaining)
+}
+
 const showToastMessage = (message, type = 'success') => {
   toastMessage.value = message
   toastType.value = type
   showToast.value = true
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
+  stopToastTimer()
+  toastRemaining = 3000
+  toastStartedAt = Date.now()
+  // 新 toast 到来时重新计时，旧的计时器已在 stopToastTimer 中清除（C13）
+  if (toastPauseDepth === 0) scheduleToastTimer()
+}
+
+// 悬停/聚焦时暂停自动消失，离开后按剩余时长继续计时
+const pauseToastTimer = () => {
+  if (!showToast.value) return
+  toastPauseDepth += 1
+  if (toastPauseDepth > 1 || toastTimer === null) return
+  const elapsed = Date.now() - toastStartedAt
+  stopToastTimer()
+  toastRemaining = Math.max(0, toastRemaining - elapsed)
+}
+
+const resumeToastTimer = () => {
+  if (toastPauseDepth === 0) return
+  toastPauseDepth -= 1
+  if (toastPauseDepth > 0 || !showToast.value) return
+  scheduleToastTimer()
+}
+
+const handleToastVisibility = (value) => {
+  if (!value) {
+    stopToastTimer()
+    toastPauseDepth = 0
+  }
+  showToast.value = value
 }
 
 provide('showToast', showToastMessage)
@@ -61,5 +120,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('appToast', handleAppToast)
+  stopToastTimer()
 })
 </script>
