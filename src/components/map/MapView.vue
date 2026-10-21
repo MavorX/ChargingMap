@@ -120,21 +120,43 @@ const retryMap = () => {
   initMap()
 }
 
+// One 150ms debounce drives the whole viewport pipeline (bounds + markers).
+// `pendingBounds` marks that the viewport actually moved, so filter/search
+// refreshes reuse the same timer without rewriting identical bounds.
+let viewportTimer = null
+let pendingBounds = false
+
+const flushViewportUpdate = () => {
+  viewportTimer = null
+  if (!map) return
+
+  if (pendingBounds) {
+    pendingBounds = false
+    const bounds = map.getBounds()
+    if (!bounds) return
+
+    const ne = bounds.getNorthEast()
+    const sw = bounds.getSouthWest()
+
+    stationsStore.setViewportBounds({
+      north: ne.lat,
+      south: sw.lat,
+      east: ne.lng,
+      west: sw.lng
+    })
+  }
+
+  mapManager.updateMarkers(stationsStore.viewportStations)
+}
+
+const debouncedUpdateMarkers = () => {
+  if (viewportTimer) clearTimeout(viewportTimer)
+  viewportTimer = setTimeout(flushViewportUpdate, 150)
+}
+
 const onMapViewportChange = () => {
   if (!map) return
-  const bounds = map.getBounds()
-  if (!bounds) return
-
-  const ne = bounds.getNorthEast()
-  const sw = bounds.getSouthWest()
-
-  stationsStore.setViewportBounds({
-    north: ne.lat,
-    south: sw.lat,
-    east: ne.lng,
-    west: sw.lng
-  })
-
+  pendingBounds = true
   debouncedUpdateMarkers()
 }
 
@@ -152,15 +174,6 @@ const doInitialGeolocation = () => {
     .finally(() => {
       setLoading(false)
     })
-}
-
-let updateTimer = null
-const debouncedUpdateMarkers = () => {
-  if (updateTimer) clearTimeout(updateTimer)
-  updateTimer = setTimeout(() => {
-    const viewportStations = stationsStore.viewportStations
-    mapManager.updateMarkers(viewportStations)
-  }, 150)
 }
 
 const loadStations = async () => {
@@ -181,11 +194,12 @@ const loadStations = async () => {
 }
 
 watch(
-  () => stationsStore.filters,
+  // Shallow signature: stringify compares filter values without a deep watcher
+  // traversing the whole object graph on every reactive tick.
+  () => JSON.stringify(stationsStore.filters),
   () => {
     debouncedUpdateMarkers()
-  },
-  { deep: true }
+  }
 )
 
 watch(
@@ -218,7 +232,7 @@ onMounted(() => {
 onUnmounted(() => {
   isUnmounted = true
   window.removeEventListener('stationClick', handleStationClick)
-  if (updateTimer) clearTimeout(updateTimer)
+  if (viewportTimer) clearTimeout(viewportTimer)
   mapManager.destroy()
   if (map) {
     map.destroy()

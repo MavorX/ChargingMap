@@ -520,8 +520,13 @@ const handleZoomOut = () => {
   mapManager.zoomOut()
 }
 
-const handleResize = () => {
-  if (window.innerWidth >= 1024) {
+// Layout breakpoint only needs to react when it is crossed, not on every pixel
+// of a resize (mobile browsers fire continuously while the URL bar collapses).
+const DESKTOP_QUERY = '(min-width: 1024px)'
+let desktopMediaQuery = null
+
+const applyDesktopLayout = (isDesktop) => {
+  if (isDesktop) {
     if (!desktopSidebarOpen.value) {
       desktopSidebarOpen.value = true
     }
@@ -531,6 +536,10 @@ const handleResize = () => {
   }
 }
 
+const handleBreakpointChange = (event) => {
+  applyDesktopLayout(event.matches)
+}
+
 onMounted(() => {
   window.addEventListener('headerEvent', handleHeaderEvent)
   window.addEventListener('routeResult', handleRouteResult)
@@ -538,10 +547,13 @@ onMounted(() => {
   window.addEventListener('navigateToStation', handleNavigateToStation)
   window.addEventListener('toggleFavoriteFromMap', handleToggleFavoriteFromMap)
   window.addEventListener('viewStationDetailFromMap', handleViewStationDetailFromMap)
-  window.addEventListener('resize', handleResize)
 
-  if (window.innerWidth >= 1024) {
-    desktopSidebarOpen.value = true
+  if (typeof window.matchMedia === 'function') {
+    desktopMediaQuery = window.matchMedia(DESKTOP_QUERY)
+    desktopMediaQuery.addEventListener('change', handleBreakpointChange)
+    applyDesktopLayout(desktopMediaQuery.matches)
+  } else {
+    applyDesktopLayout(window.innerWidth >= 1024)
   }
 })
 
@@ -552,7 +564,11 @@ onUnmounted(() => {
   window.removeEventListener('navigateToStation', handleNavigateToStation)
   window.removeEventListener('toggleFavoriteFromMap', handleToggleFavoriteFromMap)
   window.removeEventListener('viewStationDetailFromMap', handleViewStationDetailFromMap)
-  window.removeEventListener('resize', handleResize)
+
+  if (desktopMediaQuery) {
+    desktopMediaQuery.removeEventListener('change', handleBreakpointChange)
+    desktopMediaQuery = null
+  }
 })
 </script>
 
