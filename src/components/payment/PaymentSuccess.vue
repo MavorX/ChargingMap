@@ -1,6 +1,9 @@
 <template>
-  <div
-    class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white p-6 dark:bg-surface-900"
+  <PanelShell
+    title="支付成功"
+    fullscreen
+    content-class="items-center justify-center p-6"
+    @close="$emit('close')"
   >
     <div
       class="mb-6 flex h-24 w-24 animate-scale-in items-center justify-center rounded-2xl bg-gradient-to-br from-secondary-400 to-emerald-500 shadow-xl shadow-secondary-500/30"
@@ -38,10 +41,11 @@
       ></div>
       <span class="relative z-10">返回地图</span>
     </button>
-  </div>
+  </PanelShell>
 </template>
 
 <script setup>
+import PanelShell from '../common/PanelShell.vue'
 import { computed } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'
 import { useStationsStore } from '../../store/modules/stations'
