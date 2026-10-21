@@ -121,13 +121,6 @@ onBeforeUnmount(() => {
   const otherOverlays = Array.from(document.querySelectorAll('.panel-overlay')).filter(
     (overlay) => overlay !== rootRef.value
   )
-  window.__psLog = window.__psLog || []
-  window.__psLog.push({
-    ev: 'beforeUnmount',
-    saved: savedOverflow,
-    others: otherOverlays.length,
-    hasRoot: !!rootRef.value
-  })
   if (otherOverlays.length === 0) {
     document.body.style.overflow = savedOverflow ?? ''
     savedOverflow = null
