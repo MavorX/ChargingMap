@@ -5,7 +5,7 @@
         <div class="flex h-16 items-center justify-between">
           <div class="group flex cursor-pointer items-center space-x-3" @click="handleLogoClick">
             <img
-              src="/大众学院logo.png"
+              :src="logoUrl"
               alt="大众学院"
               class="h-10 w-10 rounded-lg object-contain"
             />
@@ -114,6 +114,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '../store/modules/user'
+import logoUrl from '../assets/logo.webp'
 
 const userStore = useUserStore()
 const unreadNotificationsCount = computed(() => userStore.unreadNotificationsCount)
