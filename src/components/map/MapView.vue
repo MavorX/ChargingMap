@@ -2,7 +2,7 @@
   <div class="relative h-full w-full">
     <div
       v-if="stationsStore.error"
-      class="absolute left-1/2 top-4 z-20 w-[min(92%,28rem)] -translate-x-1/2"
+      class="absolute left-1/2 top-24 z-20 w-[min(92%,28rem)] -translate-x-1/2"
       role="alert"
     >
       <div
