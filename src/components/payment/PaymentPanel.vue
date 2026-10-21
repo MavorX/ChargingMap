@@ -3,7 +3,7 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" @click="$emit('close')">
+      <button class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">确认支付</h2>

@@ -3,7 +3,7 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" @click="$emit('close')">
+      <button class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">设置</h2>
@@ -47,20 +47,17 @@
             >
               <i class="fa fa-bell text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">消息通知</span>
+            <span
+              id="settings-notification-label"
+              class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >消息通知</span
+            >
           </div>
-          <button
-            class="relative h-7 w-12 rounded-full transition-all duration-300"
-            :class="
-              settings.notificationEnabled ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'
-            "
-            @click="toggleSetting('notificationEnabled')"
-          >
-            <div
-              class="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300"
-              :class="settings.notificationEnabled ? 'left-[22px]' : 'left-0.5'"
-            ></div>
-          </button>
+          <ToggleSwitch
+            label-id="settings-notification-label"
+            :model-value="settings.notificationEnabled"
+            @update:model-value="toggleSetting('notificationEnabled')"
+          />
         </div>
 
         <div
@@ -72,20 +69,17 @@
             >
               <i class="fa fa-plug text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">充电提醒</span>
+            <span
+              id="settings-charging-reminder-label"
+              class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >充电提醒</span
+            >
           </div>
-          <button
-            class="relative h-7 w-12 rounded-full transition-all duration-300"
-            :class="
-              settings.chargingReminder ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'
-            "
-            @click="toggleSetting('chargingReminder')"
-          >
-            <div
-              class="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300"
-              :class="settings.chargingReminder ? 'left-[22px]' : 'left-0.5'"
-            ></div>
-          </button>
+          <ToggleSwitch
+            label-id="settings-charging-reminder-label"
+            :model-value="settings.chargingReminder"
+            @update:model-value="toggleSetting('chargingReminder')"
+          />
         </div>
 
         <div
@@ -97,22 +91,17 @@
             >
               <i class="fa fa-tag text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">优惠推送</span>
+            <span
+              id="settings-promotion-label"
+              class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >优惠推送</span
+            >
           </div>
-          <button
-            class="relative h-7 w-12 rounded-full transition-all duration-300"
-            :class="
-              settings.promotionNotification
-                ? 'bg-primary-500'
-                : 'bg-surface-300 dark:bg-surface-600'
-            "
-            @click="toggleSetting('promotionNotification')"
-          >
-            <div
-              class="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300"
-              :class="settings.promotionNotification ? 'left-[22px]' : 'left-0.5'"
-            ></div>
-          </button>
+          <ToggleSwitch
+            label-id="settings-promotion-label"
+            :model-value="settings.promotionNotification"
+            @update:model-value="toggleSetting('promotionNotification')"
+          />
         </div>
       </div>
 
@@ -127,18 +116,17 @@
             >
               <i class="fa fa-credit-card text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">自动支付</span>
+            <span
+              id="settings-auto-pay-label"
+              class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >自动支付</span
+            >
           </div>
-          <button
-            class="relative h-7 w-12 rounded-full transition-all duration-300"
-            :class="settings.autoPay ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'"
-            @click="toggleSetting('autoPay')"
-          >
-            <div
-              class="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300"
-              :class="settings.autoPay ? 'left-[22px]' : 'left-0.5'"
-            ></div>
-          </button>
+          <ToggleSwitch
+            label-id="settings-auto-pay-label"
+            :model-value="settings.autoPay"
+            @update:model-value="toggleSetting('autoPay')"
+          />
         </div>
       </div>
 
@@ -153,18 +141,17 @@
             >
               <i class="fa fa-moon text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">深色模式</span>
+            <span
+              id="settings-dark-mode-label"
+              class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >深色模式</span
+            >
           </div>
-          <button
-            class="relative h-7 w-12 rounded-full transition-all duration-300"
-            :class="isDarkMode ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'"
-            @click="userStore.toggleTheme()"
-          >
-            <div
-              class="absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300"
-              :class="isDarkMode ? 'left-[22px]' : 'left-0.5'"
-            ></div>
-          </button>
+          <ToggleSwitch
+            label-id="settings-dark-mode-label"
+            :model-value="isDarkMode"
+            @update:model-value="userStore.toggleTheme()"
+          />
         </div>
       </div>
 
@@ -289,6 +276,7 @@
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import ToggleSwitch from '../common/ToggleSwitch.vue'
 import { ref, computed, inject } from 'vue'
 import { useUserStore } from '../../store/modules/user'
 

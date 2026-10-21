@@ -12,6 +12,7 @@
           <button
             class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95"
             title="放大地图"
+            aria-label="放大地图"
             @click="handleZoomIn"
           >
             <i
@@ -22,6 +23,7 @@
           <button
             class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95"
             title="缩小地图"
+            aria-label="缩小地图"
             @click="handleZoomOut"
           >
             <i
@@ -32,6 +34,7 @@
           <button
             class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-secondary active:scale-95"
             title="我的车辆"
+            aria-label="我的车辆"
             @click="uiStore.open('vehicle')"
           >
             <i
@@ -91,7 +94,12 @@
                   >
                 </div>
               </div>
-              <button class="icon-button" title="关闭侧边栏" @click="desktopSidebarOpen = false">
+              <button
+                class="icon-button"
+                title="关闭侧边栏"
+                aria-label="关闭侧边栏"
+                @click="desktopSidebarOpen = false"
+              >
                 <i
                   class="fa fa-times text-surface-500 transition-colors duration-200 hover:text-danger-500"
                   aria-hidden="true"
@@ -118,6 +126,7 @@
         v-if="!desktopSidebarOpen && !isNavigating"
         class="glass-card group fixed right-6 top-20 z-40 hidden h-10 w-10 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95 lg:flex"
         title="打开站点列表"
+        aria-label="打开站点列表"
         @click="desktopSidebarOpen = true"
       >
         <i

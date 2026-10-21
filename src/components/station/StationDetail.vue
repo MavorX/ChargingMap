@@ -8,14 +8,18 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" @click="$emit('close')">
+      <button class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="max-w-[60%] truncate text-lg font-bold text-surface-900 dark:text-surface-100">
         {{ station?.stationName }}
       </h2>
       <div class="flex space-x-1.5">
-        <button class="icon-button group relative" @click="toggleFavorite">
+        <button
+          class="icon-button group relative"
+          :aria-label="station?.isFavorite ? '取消收藏' : '收藏站点'"
+          @click="toggleFavorite"
+        >
           <i
             class="fa text-lg transition-all duration-300 group-hover:scale-110"
             :class="
@@ -24,7 +28,7 @@
             aria-hidden="true"
           ></i>
         </button>
-        <button class="icon-button group" @click="shareStation">
+        <button class="icon-button group" aria-label="分享站点" @click="shareStation">
           <i
             class="fa fa-share-alt text-surface-400 transition-all duration-300 group-hover:rotate-12 group-hover:text-primary-500"
             aria-hidden="true"

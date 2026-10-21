@@ -3,7 +3,12 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button id="back-from-vehicle-panel" class="icon-button" @click="handleBack">
+      <button
+        id="back-from-vehicle-panel"
+        class="icon-button"
+        aria-label="返回"
+        @click="handleBack"
+      >
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">{{ formTitle }}</h2>
@@ -89,6 +94,11 @@
                 <button
                   class="icon-button p-2"
                   :title="vehicle.id === defaultVehicleId ? '当前默认' : '设为默认'"
+                  :aria-label="
+                    vehicle.id === defaultVehicleId
+                      ? `当前默认车辆 ${vehicle.model}`
+                      : `设为默认车辆 ${vehicle.model}`
+                  "
                   @click="setDefaultVehicle(vehicle.id)"
                 >
                   <i
@@ -101,7 +111,12 @@
                     aria-hidden="true"
                   ></i>
                 </button>
-                <button class="icon-button group p-2" title="编辑" @click="openEditForm(vehicle)">
+                <button
+                  class="icon-button group p-2"
+                  title="编辑"
+                  :aria-label="`编辑车辆 ${vehicle.model}`"
+                  @click="openEditForm(vehicle)"
+                >
                   <i
                     class="fa fa-pencil text-sm text-surface-400 transition-colors group-hover:text-primary-500"
                     aria-hidden="true"
@@ -110,6 +125,7 @@
                 <button
                   class="icon-button group p-2"
                   title="删除"
+                  :aria-label="`删除车辆 ${vehicle.model}`"
                   @click="confirmRemove(vehicle.id)"
                 >
                   <i

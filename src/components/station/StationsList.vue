@@ -38,7 +38,7 @@
             >{{ activeFilterCount }}</span
           >
         </button>
-        <button id="close-list" class="icon-button" @click="emit('close')">
+        <button id="close-list" class="icon-button" aria-label="关闭列表" @click="emit('close')">
           <i
             class="fa fa-times text-surface-500 transition-colors duration-200 hover:text-danger-500"
             aria-hidden="true"

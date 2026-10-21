@@ -3,7 +3,12 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button id="back-from-vehicle-filter" class="icon-button" @click="$emit('close')">
+      <button
+        id="back-from-vehicle-filter"
+        class="icon-button"
+        aria-label="返回"
+        @click="$emit('close')"
+      >
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">筛选条件</h2>
@@ -55,12 +60,12 @@
           >
             <input
               type="checkbox"
-              class="sr-only"
+              class="peer sr-only"
               :checked="selectedConnectors.includes(connector.value)"
               @change="toggleConnector(connector.value)"
             />
             <div
-              class="mr-2.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors"
+              class="mr-2.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500"
               :class="
                 selectedConnectors.includes(connector.value)
                   ? 'border-primary-500 bg-primary-500'

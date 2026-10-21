@@ -34,6 +34,7 @@
               :key="item.id"
               :class="['icon-button relative', item.id === 'locateUser' && 'text-primary-500']"
               :title="item.label"
+              :aria-label="item.label"
               @click="emitHeaderEvent(item.id)"
             >
               <i :class="item.icon" aria-hidden="true"></i>
@@ -49,6 +50,7 @@
             <button
               class="icon-button group flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 hover:bg-surface-100 dark:hover:bg-surface-800"
               title="切换主题"
+              aria-label="切换主题"
               @click="toggleTheme"
             >
               <i
@@ -66,6 +68,7 @@
             <button
               class="icon-button relative p-2.5"
               title="定位当前位置"
+              aria-label="定位当前位置"
               @click="emitHeaderEvent('locateUser')"
             >
               <i class="fa fa-location-arrow text-primary-500" aria-hidden="true"></i>
@@ -73,6 +76,7 @@
             <button
               class="icon-button relative p-2.5"
               title="通知"
+              aria-label="通知"
               @click="emitHeaderEvent('showNotifications')"
             >
               <i class="fa fa-bell-o text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
@@ -82,7 +86,12 @@
               ></span>
             </button>
 
-            <button class="icon-button p-2.5" title="切换主题" @click="toggleTheme">
+            <button
+              class="icon-button p-2.5"
+              title="切换主题"
+              aria-label="切换主题"
+              @click="toggleTheme"
+            >
               <i class="fa fa-moon-o text-surface-600 dark:hidden" aria-hidden="true"></i>
               <i class="fa fa-sun-o hidden text-warning-400 dark:block" aria-hidden="true"></i>
             </button>
@@ -90,6 +99,7 @@
             <button
               class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-accent-500 shadow-md"
               title="个人中心"
+              aria-label="个人中心"
               @click="emitHeaderEvent('showUserProfile')"
             >
               <i class="fa fa-user text-xs text-white" aria-hidden="true"></i>

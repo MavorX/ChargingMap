@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "check:data": "node scripts/validate-data.mjs",
+    "check:a11y": "node scripts/check-a11y.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{vue,js}\"",

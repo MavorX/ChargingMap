@@ -5,7 +5,12 @@
     >
       <div class="w-10"></div>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">我的账户</h2>
-      <button id="close-profile" class="icon-button" @click="$emit('close')">
+      <button
+        id="close-profile"
+        class="icon-button"
+        aria-label="关闭个人中心"
+        @click="$emit('close')"
+      >
         <i
           class="fa fa-times text-surface-500 transition-colors duration-200 hover:text-danger-500"
           aria-hidden="true"

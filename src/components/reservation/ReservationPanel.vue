@@ -3,7 +3,7 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" @click="$emit('close')">
+      <button class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">预约充电桩</h2>
@@ -237,6 +237,7 @@
           <div class="flex items-center space-x-4">
             <button
               class="group flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-xl bg-surface-100 shadow-inner-soft transition-all duration-200 hover:bg-surface-200 active:scale-90 dark:bg-surface-800 dark:hover:bg-surface-700"
+              aria-label="减少充电量"
               @click="chargeAmount = Math.max(10, chargeAmount - 10)"
             >
               <i
@@ -256,6 +257,7 @@
 
             <button
               class="group flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-xl bg-surface-100 shadow-inner-soft transition-all duration-200 hover:bg-surface-200 active:scale-90 dark:bg-surface-800 dark:hover:bg-surface-700"
+              aria-label="增加充电量"
               @click="chargeAmount = Math.min(100, chargeAmount + 10)"
             >
               <i

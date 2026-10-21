@@ -3,7 +3,7 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button id="back-from-review" class="icon-button" @click="$emit('close')">
+      <button id="back-from-review" class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">评价充电站</h2>
@@ -15,17 +15,11 @@
         <h3 id="review-station-name" class="mb-4 font-bold text-surface-800 dark:text-surface-200">
           {{ currentStation?.stationName }}
         </h3>
-        <div class="rating-stars mb-2 flex justify-center space-x-3">
-          <span
-            v-for="i in 5"
-            :key="i"
-            class="star cursor-pointer text-3xl transition-transform hover:scale-125"
-            :class="{ active: i <= rating }"
-            @click="rating = i"
-          >
-            <i class="fa fa-star" aria-hidden="true"></i>
-          </span>
-        </div>
+        <StarRating
+          v-model="rating"
+          aria-label="充电站评分"
+          class="rating-stars mb-2 flex justify-center space-x-3"
+        />
         <p class="text-sm font-medium text-surface-500 dark:text-surface-400">
           {{ ratingTexts[rating - 1] }}
         </p>
@@ -60,9 +54,9 @@
                 : 'border-surface-200 hover:border-primary-300 dark:border-surface-700'
             "
           >
-            <input v-model="facilityRatings[key]" type="checkbox" class="sr-only" />
+            <input v-model="facilityRatings[key]" type="checkbox" class="peer sr-only" />
             <div
-              class="mr-2.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors"
+              class="mr-2.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500"
               :class="
                 facilityRatings[key]
                   ? 'border-primary-500 bg-primary-500'
@@ -141,6 +135,7 @@
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import StarRating from '../common/StarRating.vue'
 import { ref, computed, inject, reactive } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 import { submitReview as submitReviewApi } from '../../services/api'

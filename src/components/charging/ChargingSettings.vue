@@ -3,7 +3,7 @@
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" @click="$emit('close')">
+      <button class="icon-button" aria-label="返回" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">充电设置</h2>
@@ -167,20 +167,21 @@
                 <i class="fa fa-bell text-sm text-primary-500" aria-hidden="true"></i>
               </div>
               <div class="min-w-0">
-                <p class="text-sm font-bold text-surface-800 dark:text-surface-200">充电完成通知</p>
+                <p
+                  id="charging-notify-full-label"
+                  class="text-sm font-bold text-surface-800 dark:text-surface-200"
+                >
+                  充电完成通知
+                </p>
                 <p class="text-xs text-surface-500 dark:text-surface-400">达到目标电量时提醒</p>
               </div>
             </div>
-            <button
-              class="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200"
-              :class="settings.notifyFull ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'"
-              @click="settings.notifyFull = !settings.notifyFull"
-            >
-              <span
-                class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200"
-                :class="settings.notifyFull ? 'left-[22px]' : 'left-0.5'"
-              ></span>
-            </button>
+            <ToggleSwitch
+              size="sm"
+              label-id="charging-notify-full-label"
+              :model-value="settings.notifyFull"
+              @update:model-value="settings.notifyFull = !settings.notifyFull"
+            />
           </div>
           <div
             class="flex items-center justify-between rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft dark:from-surface-800 dark:to-surface-900"
@@ -192,20 +193,21 @@
                 <i class="fa fa-rmb text-sm text-warning-500" aria-hidden="true"></i>
               </div>
               <div class="min-w-0">
-                <p class="text-sm font-bold text-surface-800 dark:text-surface-200">费用提醒</p>
+                <p
+                  id="charging-notify-cost-label"
+                  class="text-sm font-bold text-surface-800 dark:text-surface-200"
+                >
+                  费用提醒
+                </p>
                 <p class="text-xs text-surface-500 dark:text-surface-400">超过设定金额时提醒</p>
               </div>
             </div>
-            <button
-              class="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200"
-              :class="settings.notifyCost ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-600'"
-              @click="settings.notifyCost = !settings.notifyCost"
-            >
-              <span
-                class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200"
-                :class="settings.notifyCost ? 'left-[22px]' : 'left-0.5'"
-              ></span>
-            </button>
+            <ToggleSwitch
+              size="sm"
+              label-id="charging-notify-cost-label"
+              :model-value="settings.notifyCost"
+              @update:model-value="settings.notifyCost = !settings.notifyCost"
+            />
           </div>
           <div v-if="settings.notifyCost" class="flex items-center space-x-3 px-4">
             <span class="text-sm text-surface-500">¥</span>
@@ -268,6 +270,7 @@
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import ToggleSwitch from '../common/ToggleSwitch.vue'
 import { ref, computed, inject, reactive, watch } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 import { useChargingStore } from '../../store/modules/charging'
