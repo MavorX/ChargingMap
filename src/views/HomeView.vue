@@ -492,17 +492,12 @@ const handleNavigateToStation = (event) => {
 }
 
 const handleToggleFavoriteFromMap = (event) => {
-  const { stationId, btnElement } = event.detail
+  const { stationId } = event.detail
   const station = stationsStore.stations.find((s) => s.stationId === stationId)
   if (station) {
     const wasFavorite = station.isFavorite
     stationsStore.toggleFavorite(stationId)
-    if (btnElement) {
-      const nowFavorite = !wasFavorite
-      btnElement.style.background = nowFavorite ? '#FEE2E2' : '#F3F4F6'
-      btnElement.style.color = nowFavorite ? '#EF4444' : '#6B7280'
-      btnElement.innerHTML = `<span style="font-size:14px;">${nowFavorite ? '♥' : '♡'}</span><span>${nowFavorite ? '已收藏' : '收藏'}</span>`
-    }
+    mapManager.refreshMarker(stationId)
     showToast(wasFavorite ? '已取消收藏' : '已添加收藏', 'success')
   }
 }

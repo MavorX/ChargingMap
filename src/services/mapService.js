@@ -1,5 +1,14 @@
 const LOCATE_TIMEOUT_MS = 8000
 
+// Small DOM builder: station fields only ever travel through textContent, never
+// through a markup string, so names/addresses cannot inject markup.
+const el = (tag, cssText, text) => {
+  const node = document.createElement(tag)
+  if (cssText) node.style.cssText = cssText
+  if (text != null) node.textContent = String(text)
+  return node
+}
+
 class MapManager {
   constructor() {
     this.map = null
@@ -8,10 +17,12 @@ class MapManager {
     this._geolocation = null
     this._currentInfoWindow = null
     this._infoWindow = null
+    this._activeStationId = null
     this._userLocation = null
     this._driving = null
     this._directMarkers = []
     this._stationIndex = new Map()
+    this._markersByStationId = new Map()
     this._markerSignature = ''
   }
 
@@ -65,72 +76,113 @@ class MapManager {
     const div = document.createElement('div')
     div.style.cssText =
       'cursor:pointer;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));'
-    div.innerHTML = `
-      <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      </div>
-      <div style="margin-top:2px;background:white;border-radius:8px;padding:1px 6px;box-shadow:0 1px 4px rgba(0,0,0,0.15);font-size:10px;font-weight:700;color:${color};white-space:nowrap;">
-        ${statusText}
-      </div>
-      <div style="width:2px;height:6px;background:${color};border-radius:0 0 1px 1px;"></div>
-    `
+
+    const circle = document.createElement('div')
+    circle.style.cssText = `width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);`
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('width', '16')
+    svg.setAttribute('height', '16')
+    svg.setAttribute('viewBox', '0 0 24 24')
+    svg.setAttribute('fill', 'white')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute('d', 'M13 2L3 14h9l-1 8 10-12h-9l1-8z')
+    svg.appendChild(path)
+    circle.appendChild(svg)
+
+    const label = document.createElement('div')
+    label.style.cssText = `margin-top:2px;background:white;border-radius:8px;padding:1px 6px;box-shadow:0 1px 4px rgba(0,0,0,0.15);font-size:10px;font-weight:700;color:${color};white-space:nowrap;`
+    label.textContent = statusText
+
+    const stem = document.createElement('div')
+    stem.style.cssText = `width:2px;height:6px;background:${color};border-radius:0 0 1px 1px;`
+
+    div.appendChild(circle)
+    div.appendChild(label)
+    div.appendChild(stem)
     return div
   }
 
-  createInfoWindow(station) {
+  buildInfoWindowContent(station) {
     const color = this.getStationColor(station)
     const color2 = this.adjustColor(color, -15)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
     const statusText = station.openStatus === 0 ? '维护中' : availableCount === 0 ? '已满' : '空闲'
     const price = station.currentPrice != null ? station.currentPrice.toFixed(2) : '—'
     const isFav = station.isFavorite
-
-    const content = document.createElement('div')
-    content.style.cssText =
-      'background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);min-width:260px;max-width:300px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
-    content.innerHTML = `
-      <div style="background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
-        <h3 style="margin:0;color:white;font-size:15px;font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${station.stationName}</h3>
-        <span style="background:rgba(255,255,255,0.25);color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">${statusText}</span>
-      </div>
-      <div style="padding:14px 16px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px;text-align:center;">
-            <div style="color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;">快充</div>
-            <div style="color:#15803D;font-size:16px;font-weight:800;">${station.quickAvailableNum}<span style="font-size:12px;font-weight:500;color:#6B7280;">/${station.quickChargeNum}</span></div>
-          </div>
-          <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;text-align:center;">
-            <div style="color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;">慢充</div>
-            <div style="color:#2563EB;font-size:16px;font-weight:800;">${station.slowAvailableNum}<span style="font-size:12px;font-weight:500;color:#6B7280;">/${station.slowChargeNum}</span></div>
-          </div>
-        </div>
-        <p style="margin:0 0 10px 0;color:#4B5563;font-size:12px;line-height:1.5;">${station.address}</p>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E5E7EB;">
-          <div style="display:flex;gap:8px;">
-            <div class="info-fav-btn" data-station-id="${station.stationId}" style="display:flex;align-items:center;gap:4px;background:${isFav ? '#FEE2E2' : '#F3F4F6'};color:${isFav ? '#EF4444' : '#6B7280'};padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;">
-              <span style="font-size:14px;">${isFav ? '♥' : '♡'}</span>
-              <span>${isFav ? '已收藏' : '收藏'}</span>
-            </div>
-            <div class="info-detail-btn" data-station-id="${station.stationId}" style="display:flex;align-items:center;gap:4px;background:#EFF6FF;color:#2563EB;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;">
-              <span>详情</span>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="color:#3B82F6;font-size:12px;font-weight:600;">¥${price}/度</span>
-            <div class="info-nav-btn" data-station-id="${station.stationId}" style="background:linear-gradient(135deg,#10B981,#059669);color:white;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;">导航</div>
-          </div>
-        </div>
-      </div>
-    `
-
     const self = this
 
-    const favBtn = content.querySelector('.info-fav-btn')
+    const content = el(
+      'div',
+      'background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);min-width:260px;max-width:300px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
+    )
+
+    const header = el(
+      'div',
+      `background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;justify-content:space-between;align-items:center;`
+    )
+    const title = el(
+      'h3',
+      'margin:0;color:white;font-size:15px;font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+      station.stationName
+    )
+    const statusBadge = el(
+      'span',
+      'background:rgba(255,255,255,0.25);color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;',
+      statusText
+    )
+    header.append(title, statusBadge)
+
+    const body = el('div', 'padding:14px 16px;')
+    const grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;')
+
+    const quickBox = el(
+      'div',
+      'background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px;text-align:center;'
+    )
+    quickBox.append(el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', '快充'))
+    const quickValue = el('div', 'color:#15803D;font-size:16px;font-weight:800;', station.quickAvailableNum)
+    quickValue.append(
+      el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.quickChargeNum}`)
+    )
+    quickBox.append(quickValue)
+
+    const slowBox = el(
+      'div',
+      'background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;text-align:center;'
+    )
+    slowBox.append(el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', '慢充'))
+    const slowValue = el('div', 'color:#2563EB;font-size:16px;font-weight:800;', station.slowAvailableNum)
+    slowValue.append(el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.slowChargeNum}`))
+    slowBox.append(slowValue)
+
+    grid.append(quickBox, slowBox)
+    body.append(
+      grid,
+      el('p', 'margin:0 0 10px 0;color:#4B5563;font-size:12px;line-height:1.5;', station.address)
+    )
+
+    const footer = el(
+      'div',
+      'display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E5E7EB;'
+    )
+    const footerLeft = el('div', 'display:flex;gap:8px;')
+
+    const favBtn = el(
+      'div',
+      `display:flex;align-items:center;gap:4px;background:${isFav ? '#FEE2E2' : '#F3F4F6'};color:${isFav ? '#EF4444' : '#6B7280'};padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;`
+    )
+    favBtn.className = 'info-fav-btn'
+    favBtn.setAttribute('data-station-id', station.stationId)
+    favBtn.append(
+      el('span', 'font-size:14px;', isFav ? '♥' : '♡'),
+      el('span', '', isFav ? '已收藏' : '收藏')
+    )
     favBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       window.dispatchEvent(
         new CustomEvent('toggleFavoriteFromMap', {
-          detail: { stationId: station.stationId, btnElement: favBtn }
+          detail: { stationId: station.stationId }
         })
       )
     })
@@ -141,7 +193,13 @@ class MapManager {
       favBtn.style.transform = 'scale(1)'
     })
 
-    const detailBtn = content.querySelector('.info-detail-btn')
+    const detailBtn = el(
+      'div',
+      'display:flex;align-items:center;gap:4px;background:#EFF6FF;color:#2563EB;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;'
+    )
+    detailBtn.className = 'info-detail-btn'
+    detailBtn.setAttribute('data-station-id', station.stationId)
+    detailBtn.append(el('span', '', '详情'))
     detailBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       self.closeInfoWindow()
@@ -154,7 +212,16 @@ class MapManager {
       detailBtn.style.transform = 'scale(1)'
     })
 
-    const navBtn = content.querySelector('.info-nav-btn')
+    footerLeft.append(favBtn, detailBtn)
+
+    const footerRight = el('div', 'display:flex;align-items:center;gap:8px;')
+    const navBtn = el(
+      'div',
+      'background:linear-gradient(135deg,#10B981,#059669);color:white;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;',
+      '导航'
+    )
+    navBtn.className = 'info-nav-btn'
+    navBtn.setAttribute('data-station-id', station.stationId)
     navBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       self.closeInfoWindow()
@@ -166,17 +233,49 @@ class MapManager {
     navBtn.addEventListener('mouseleave', () => {
       navBtn.style.transform = 'scale(1)'
     })
+    footerRight.append(el('span', 'color:#3B82F6;font-size:12px;font-weight:600;', `¥${price}/度`), navBtn)
 
-    return new AMap.InfoWindow({
-      content: content,
-      offset: new AMap.Pixel(0, -50),
-      isCustom: true
-    })
+    footer.append(footerLeft, footerRight)
+    body.append(footer)
+    content.append(header, body)
+
+    return content
+  }
+
+  _ensureInfoWindow() {
+    if (!this._infoWindow) {
+      this._infoWindow = new AMap.InfoWindow({
+        offset: new AMap.Pixel(0, -50),
+        isCustom: true
+      })
+    }
+    return this._infoWindow
+  }
+
+  _openStationInfoWindow(station, position) {
+    if (!this.map || !station) return
+    const current = this._stationIndex.get(station.stationId) || station
+    const infoWindow = this._ensureInfoWindow()
+    infoWindow.setContent(this.buildInfoWindowContent(current))
+    this._activeStationId = current.stationId
+    this._openInfoWindow(infoWindow, position)
+  }
+
+  refreshMarker(stationId) {
+    const station = this._stationIndex.get(stationId)
+    if (!station) return
+    const marker = this._markersByStationId.get(stationId)
+    if (marker && typeof marker.setContent === 'function') {
+      marker.setContent(this.createStationMarkerContent(station))
+    }
+    if (this._infoWindow && this._activeStationId === stationId) {
+      this._infoWindow.setContent(this.buildInfoWindowContent(station))
+    }
   }
 
   _openInfoWindow(infoWindow, position) {
     if (!this.map) return
-    if (this._currentInfoWindow) {
+    if (this._currentInfoWindow && this._currentInfoWindow !== infoWindow) {
       this._currentInfoWindow.close()
     }
     infoWindow.open(this.map, position)
@@ -189,6 +288,7 @@ class MapManager {
       this._currentInfoWindow.close()
       this._currentInfoWindow = null
     }
+    this._activeStationId = null
   }
 
   _clearDirectMarkers() {
@@ -228,6 +328,7 @@ class MapManager {
 
     if (points.length === 0) {
       this._clearDirectMarkers()
+      this._markersByStationId = new Map()
       if (this.markerClusterer) {
         if (typeof this.markerClusterer.setPoints === 'function') {
           this.markerClusterer.setPoints([])
@@ -240,6 +341,7 @@ class MapManager {
     }
 
     const self = this
+    this._markersByStationId = new Map()
 
     const renderMarker = (context) => {
       const data = context.data
@@ -247,11 +349,10 @@ class MapManager {
       const markerContent = self.createStationMarkerContent(station)
       context.marker.setContent(markerContent)
       context.marker.setOffset(new AMap.Pixel(-18, -50))
-
-      const infoWindow = self.createInfoWindow(station)
+      self._markersByStationId.set(station.stationId, context.marker)
 
       context.marker.on('click', () => {
-        self._openInfoWindow(infoWindow, context.marker.getPosition())
+        self._openStationInfoWindow(station, context.marker.getPosition())
       })
     }
 
@@ -394,8 +495,8 @@ class MapManager {
             title: station.stationName,
             extData: station
           })
-          const infoWindow = self.createInfoWindow(station)
-          marker.on('click', () => self._openInfoWindow(infoWindow, marker.getPosition()))
+          marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
+          self._markersByStationId.set(station.stationId, marker)
           self.map.add(marker)
           self._directMarkers.push(marker)
         })
@@ -438,6 +539,8 @@ class MapManager {
           title: station.stationName,
           extData: station
         })
+        marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
+        self._markersByStationId.set(station.stationId, marker)
         self.map.add(marker)
         self._directMarkers.push(marker)
       })
@@ -733,8 +836,10 @@ class MapManager {
     this._userLocation = null
     this._infoWindow = null
     this._currentInfoWindow = null
+    this._activeStationId = null
     this._driving = null
     this._stationIndex = new Map()
+    this._markersByStationId = new Map()
     this._markerSignature = ''
     this.map = null
     this.stations = []
