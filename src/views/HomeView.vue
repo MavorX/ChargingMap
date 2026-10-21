@@ -99,9 +99,10 @@
               <DesktopStationList @select-station="selectStationFromSidebar" />
             </div>
           </div>
-          <StationDetailInline
+          <StationDetail
             v-else
             key="detail"
+            :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
             @close="closeStationDetail"
             @start-reservation="openReservation"
             @start-charging="openCharging"
@@ -134,6 +135,7 @@
     <Transition name="slide-right">
       <StationDetail
         v-if="currentStation && !desktopSidebarOpen"
+        :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
         @close="closeStationDetail"
         @start-reservation="openReservation"
         @start-charging="openCharging"
@@ -245,7 +247,6 @@ import MapView from '../components/map/MapView.vue'
 import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
 import StationDetail from '../components/station/StationDetail.vue'
-import StationDetailInline from '../components/station/StationDetailInline.vue'
 import DesktopStationList from '../components/station/DesktopStationList.vue'
 import ReservationPanel from '../components/reservation/ReservationPanel.vue'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
