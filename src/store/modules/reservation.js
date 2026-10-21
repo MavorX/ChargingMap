@@ -1,22 +1,11 @@
 import { defineStore } from 'pinia'
+import { demoReservations } from '../../mocks/userDemo'
+
+const isDemoMode = import.meta.env.VITE_DEMO === 'true'
 
 export const useReservationStore = defineStore('reservation', {
   state: () => ({
-    reservations: [
-      {
-        id: '1',
-        stationId: '1',
-        stationName: '城东充电站',
-        stationAddress: '合肥市瑶海区长江东路123号',
-        date: '2025-12-31',
-        timeSlot: '10:00-12:00',
-        connectorId: '1-1',
-        connectorName: '快充1号',
-        vehicleModel: '特斯拉 Model 3',
-        chargeAmount: 50,
-        status: 'upcoming'
-      }
-    ],
+    reservations: isDemoMode ? demoReservations.map((reservation) => ({ ...reservation })) : [],
     currentReservation: null,
     isLoading: false,
     error: null

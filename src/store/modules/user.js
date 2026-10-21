@@ -1,209 +1,60 @@
 import { defineStore } from 'pinia'
+import {
+  demoUserInfo,
+  demoChargingHistory,
+  demoCoupons,
+  demoWalletTransactions,
+  demoNotifications
+} from '../../mocks/userDemo'
+
+const isDemoMode = import.meta.env.VITE_DEMO === 'true'
+
+const cloneRecords = (records) => records.map((record) => ({ ...record }))
+
+const welcomeNotification = {
+  id: 'welcome',
+  title: '欢迎使用 VWer-Charging',
+  content: '开始充电后，充电记录、优惠券、钱包交易与通知将显示在这里。',
+  time: '刚刚',
+  read: true
+}
+
+const createInitialState = () => ({
+  userInfo: isDemoMode
+    ? { ...demoUserInfo }
+    : { name: '电动汽车用户', level: '普通会员', points: 0, balance: 0 },
+  vehicles: [
+    {
+      id: '1',
+      model: 'ID.UNYX 08',
+      brand: 'Volkswagen',
+      connectorType: 'CCS Combo',
+      maxPower: 250
+    },
+    {
+      id: '2',
+      model: 'ID.3',
+      brand: 'Volkswagen',
+      connectorType: 'GB/T',
+      maxPower: 120
+    }
+  ],
+  chargingHistory: isDemoMode ? cloneRecords(demoChargingHistory) : [],
+  coupons: isDemoMode ? cloneRecords(demoCoupons) : [],
+  walletTransactions: isDemoMode ? cloneRecords(demoWalletTransactions) : [],
+  settings: {
+    notificationEnabled: true,
+    chargingReminder: true,
+    promotionNotification: false,
+    autoPay: true,
+    language: 'zh-CN'
+  },
+  notifications: isDemoMode ? cloneRecords(demoNotifications) : [{ ...welcomeNotification }],
+  isDarkMode: false
+})
 
 export const useUserStore = defineStore('user', {
-  state: () => ({
-    userInfo: {
-      name: '电动汽车用户',
-      level: '白银会员',
-      points: 128,
-      balance: 56.8
-    },
-    vehicles: [
-      {
-        id: '1',
-        model: 'ID.UNYX 08',
-        brand: 'Volkswagen',
-        connectorType: 'CCS Combo',
-        maxPower: 250
-      },
-      {
-        id: '2',
-        model: 'ID.3',
-        brand: 'Volkswagen',
-        connectorType: 'GB/T',
-        maxPower: 120
-      }
-    ],
-    chargingHistory: [
-      {
-        id: 'ch1',
-        stationName: '城东快速充电站',
-        stationAddress: '城东新区科技路88号',
-        date: '2025-04-12 14:30',
-        duration: '45分钟',
-        energy: '32.5 kWh',
-        cost: 48.75,
-        vehicleModel: 'Model 3',
-        status: 'completed'
-      },
-      {
-        id: 'ch2',
-        stationName: '中心商业区充电站',
-        stationAddress: '中心大道168号B2停车场',
-        date: '2025-04-10 09:15',
-        duration: '1小时20分钟',
-        energy: '45.0 kWh',
-        cost: 58.5,
-        vehicleModel: '汉EV',
-        status: 'completed'
-      },
-      {
-        id: 'ch3',
-        stationName: '西湖景区超充站',
-        stationAddress: '西湖区龙井路56号',
-        date: '2025-04-08 16:45',
-        duration: '30分钟',
-        energy: '55.0 kWh',
-        cost: 71.5,
-        vehicleModel: 'Model 3',
-        status: 'completed'
-      },
-      {
-        id: 'ch4',
-        stationName: '城南综合充电站',
-        stationAddress: '城南开发区创新路22号',
-        date: '2025-04-05 11:00',
-        duration: '55分钟',
-        energy: '38.2 kWh',
-        cost: 49.66,
-        vehicleModel: '汉EV',
-        status: 'completed'
-      },
-      {
-        id: 'ch5',
-        stationName: '高铁站快充中心',
-        stationAddress: '高铁站东广场地下停车场',
-        date: '2025-04-02 08:20',
-        duration: '35分钟',
-        energy: '42.0 kWh',
-        cost: 52.5,
-        vehicleModel: 'Model 3',
-        status: 'refunded'
-      }
-    ],
-    coupons: [
-      {
-        id: 'cp1',
-        title: '满50减5元',
-        description: '充电消费满50元立减5元',
-        type: 'discount',
-        value: 5,
-        minSpend: 50,
-        expiryDate: '2025-12-30',
-        used: false
-      },
-      {
-        id: 'cp2',
-        title: '新人8折券',
-        description: '充电费用享8折优惠，最高减免20元',
-        type: 'percent',
-        value: 20,
-        percent: 80,
-        minSpend: 0,
-        expiryDate: '2025-06-30',
-        used: false
-      },
-      {
-        id: 'cp3',
-        title: '免费充电券',
-        description: '可免费充电30分钟，限快充桩使用',
-        type: 'free',
-        value: 15,
-        freeMinutes: 30,
-        minSpend: 0,
-        expiryDate: '2025-05-15',
-        used: false
-      }
-    ],
-    walletTransactions: [
-      {
-        id: 'wt1',
-        type: 'recharge',
-        amount: 100.0,
-        description: '钱包充值',
-        date: '2025-04-12 14:00',
-        balance: 156.8
-      },
-      {
-        id: 'wt2',
-        type: 'payment',
-        amount: -48.75,
-        description: '城东快速充电站充电',
-        date: '2025-04-12 15:15',
-        balance: 108.05
-      },
-      {
-        id: 'wt3',
-        type: 'recharge',
-        amount: 50.0,
-        description: '钱包充值',
-        date: '2025-04-10 08:50',
-        balance: 156.8
-      },
-      {
-        id: 'wt4',
-        type: 'payment',
-        amount: -58.5,
-        description: '中心商业区充电站充电',
-        date: '2025-04-10 10:35',
-        balance: 106.8
-      },
-      {
-        id: 'wt5',
-        type: 'refund',
-        amount: 52.5,
-        description: '高铁站快充中心退款',
-        date: '2025-04-03 09:00',
-        balance: 165.3
-      },
-      {
-        id: 'wt6',
-        type: 'payment',
-        amount: -71.5,
-        description: '西湖景区超充站充电',
-        date: '2025-04-08 17:15',
-        balance: 112.8
-      }
-    ],
-    settings: {
-      notificationEnabled: true,
-      chargingReminder: true,
-      promotionNotification: false,
-      autoPay: true,
-      language: 'zh-CN'
-    },
-    notifications: [
-      {
-        id: '1',
-        title: '充电完成通知',
-        content: '您的车辆已完成充电，电量已达到80%，请及时前往拔枪。',
-        time: '10分钟前',
-        read: false
-      },
-      {
-        id: '2',
-        title: '新优惠券到账',
-        content: '您已获得一张"满50减5元"的充电优惠券，有效期至2025-12-30。',
-        time: '昨天',
-        read: false
-      },
-      {
-        id: '3',
-        title: '会员等级提升',
-        content: '恭喜您！您的会员等级已从"青铜会员"提升至"白银会员"，将享受更多优惠。',
-        time: '3天前',
-        read: true
-      },
-      {
-        id: '4',
-        title: '预约即将开始',
-        content: '您预约的"城东充电站"充电服务将在30分钟后开始，请做好准备。',
-        time: '1周前',
-        read: true
-      }
-    ],
-    isDarkMode: false
-  }),
+  state: createInitialState,
 
   actions: {
     toggleTheme() {
