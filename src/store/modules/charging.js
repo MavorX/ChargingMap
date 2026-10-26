@@ -5,6 +5,7 @@ import { formatDuration, formatPrice } from '../../utils/format'
 import { createRecordId } from '../../utils/id'
 import { createSandboxCharger } from '../../services/chargerGateway'
 import { validateChargingSetup, meterAt } from '../../utils/chargingModel'
+import { couponState } from '../../utils/coupons'
 
 export const SERVICE_FEE_RATE = 0.1
 
@@ -17,12 +18,7 @@ const toAmount = (value) => {
 // minimum spend are all unusable. Invalid expiry dates stay permissive so legacy
 // coupons without a trustworthy date do not silently disappear.
 export const isCouponUsable = (coupon, totalAmount, now = new Date()) => {
-  if (!coupon || coupon.used) return false
-
-  if (coupon.expiryDate) {
-    const expiry = new Date(`${coupon.expiryDate}T23:59:59`)
-    if (!Number.isNaN(expiry.getTime()) && expiry < now) return false
-  }
+  if (!coupon || couponState(coupon, now) !== 'available') return false
 
   return toAmount(totalAmount) >= toAmount(coupon.minSpend)
 }

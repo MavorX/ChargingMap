@@ -1,93 +1,91 @@
 <template>
-  <PanelShell title="通知中心" content-id="notifications-panel" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-    >
-      <button
-        id="back-from-notifications"
-        class="icon-button"
-        aria-label="返回"
-        @click="$emit('close')"
-      >
-        <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
-      </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">通知中心</h2>
-      <button
-        class="rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-600 transition-all duration-200 hover:bg-primary-50 active:scale-95 dark:text-primary-400 dark:hover:bg-primary-900/20"
-        :disabled="userStore.unreadNotificationsCount === 0"
-        @click="markAllAsRead"
+  <AccountPanel
+    title="通知中心"
+    :subtitle="`${user.unreadNotificationsCount} 条未读消息`"
+    content-id="notifications-panel"
+    back-id="back-from-notifications"
+    @close="emit('close')"
+  >
+    <template #header-action
+      ><button
+        class="min-h-10 rounded-lg px-2 text-xs font-semibold text-primary-600 disabled:text-surface-400 dark:text-primary-400"
+        :disabled="!user.unreadNotificationsCount"
+        @click="user.markAllNotificationsAsRead()"
       >
         全部已读
+      </button></template
+    >
+    <div class="segmented-control" role="group" aria-label="通知筛选">
+      <button class="segmented-item" :aria-pressed="filter === 'all'" @click="filter = 'all'">
+        全部通知</button
+      ><button
+        class="segmented-item"
+        :aria-pressed="filter === 'unread'"
+        @click="filter = 'unread'"
+      >
+        未读消息
       </button>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
-      <div class="space-y-3">
-        <div
-          v-for="notification in notifications"
-          :key="notification.id"
-          class="group cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft transition-all duration-300 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          :class="!notification.read && 'border-l-4 border-l-primary-500'"
-          role="button"
-          tabindex="0"
-          @click="markAsRead(notification.id)"
-          @keydown.enter.self.prevent="markAsRead(notification.id)"
-          @keydown.space.self.prevent="markAsRead(notification.id)"
-        >
-          <div class="mb-2 flex justify-between">
-            <div class="flex items-center">
-              <div
-                v-if="!notification.read"
-                class="mr-2.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary-500"
-              ></div>
-              <h3
-                class="text-sm font-bold text-surface-800 dark:text-surface-200"
-                :class="{ 'pl-0': notification.read }"
-              >
-                {{ notification.title }}
-              </h3>
-            </div>
-            <span class="ml-3 flex-shrink-0 text-xs text-surface-400">{{ notification.time }}</span>
-          </div>
-          <p
-            class="text-sm leading-relaxed text-surface-600 dark:text-surface-300"
-            :class="{ 'pl-4': !notification.read }"
-          >
-            {{ notification.content }}
-          </p>
+    <article
+      v-for="notification in notifications"
+      :key="notification.id"
+      class="account-card"
+      :class="{ 'border-primary-300 dark:border-primary-700': !notification.read }"
+    >
+      <div class="flex items-start gap-3">
+        <span class="account-icon"
+          ><i
+            :class="notification.read ? 'fa fa-envelope-open-o' : 'fa fa-envelope-o'"
+            aria-hidden="true"
+          ></i
+        ></span>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-sm font-semibold">{{ notification.title }}</h3>
+          <p class="account-caption mt-1">{{ notification.time }}</p>
         </div>
-        <div v-if="notifications.length === 0" class="animate-in py-16 text-center">
-          <div
-            class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800"
-          >
-            <i
-              class="fa fa-bell-o text-3xl text-surface-300 dark:text-surface-600"
-              aria-hidden="true"
-            ></i>
-          </div>
-          <p class="mb-2 font-bold text-surface-800 dark:text-surface-200">暂无通知</p>
-          <p class="text-sm text-surface-500 dark:text-surface-400">您的通知消息将显示在这里</p>
-        </div>
+        <span
+          v-if="!notification.read"
+          class="h-2 w-2 shrink-0 rounded-full bg-primary-500"
+          aria-label="未读"
+        ></span>
       </div>
+      <p class="mt-3 break-words text-sm leading-7 text-surface-600 dark:text-surface-300">
+        {{ notification.content }}
+      </p>
+      <button
+        v-if="!notification.read"
+        class="mt-2 min-h-10 text-xs font-semibold text-primary-600 dark:text-primary-400"
+        :aria-label="`标为已读 ${notification.title}`"
+        @click="user.markNotificationAsRead(notification.id)"
+      >
+        标为已读
+      </button>
+      <p v-else class="account-caption mt-2">已读</p>
+    </article>
+    <div v-if="!notifications.length" class="account-empty">
+      <span class="account-icon"><i class="fa fa-bell-o" aria-hidden="true"></i></span>
+      <h3 class="text-sm font-semibold">{{ filter === 'unread' ? '没有未读消息' : '暂无通知' }}</h3>
+      <p class="account-caption">
+        {{
+          !user.settings.notificationEnabled
+            ? '消息通知已关闭，可在设置中开启。'
+            : '新订单通知会显示在这里。'
+        }}
+      </p>
+      <button v-if="filter === 'unread'" class="action-secondary" @click="filter = 'all'">
+        查看全部通知
+      </button>
     </div>
-  </PanelShell>
+  </AccountPanel>
 </template>
-
 <script setup>
-import PanelShell from '../common/PanelShell.vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import AccountPanel from './AccountPanel.vue'
 import { useUserStore } from '../../store/modules/user'
-
-defineEmits(['close'])
-
-const userStore = useUserStore()
-const notifications = computed(() => userStore.notifications)
-
-const markAsRead = (notificationId) => {
-  userStore.markNotificationAsRead(notificationId)
-}
-
-const markAllAsRead = () => {
-  userStore.markAllNotificationsAsRead()
-}
+const emit = defineEmits(['close'])
+const user = useUserStore(),
+  filter = ref('all')
+const notifications = computed(() =>
+  user.notifications.filter((notification) => filter.value === 'all' || !notification.read)
+)
 </script>

@@ -215,6 +215,7 @@ const requestClose = () => {
 const submitReview = async () => {
   if (isSubmitting.value || !canSubmit.value) return
   isSubmitting.value = true
+  const receipt = chargingStore.lastReceipt
   const stationId = currentStation.value.stationId
   const review = {
     rating: rating.value,
@@ -223,6 +224,10 @@ const submitReview = async () => {
   }
   try {
     const result = await submitReviewApi({ stationId, ...review })
+    if (chargingStore.lastReceipt !== receipt)
+      throw new Error('当前订单已变化，本次评价未提交到其他订单')
+    if (!result?.reviewId || result.success === false)
+      throw new Error('评价未提交成功，请重试；积分尚未发放')
     if (!chargingStore.reviewSubmitted) {
       chargingStore.reviewSubmitted = true
       userStore.addReviewPoints(

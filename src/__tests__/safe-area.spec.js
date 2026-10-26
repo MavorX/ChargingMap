@@ -26,11 +26,17 @@ describe('bottom safe area contract', () => {
     expect(blocks.some((block) => block.includes('env(safe-area-inset-bottom)'))).toBe(true)
   })
 
-  it('keeps every business panel footer on the shared PanelShell container', () => {
+  it('keeps every business panel footer on the shared panel container', () => {
+    const css = read('src/assets/main.css')
+    expect(css, 'the account footer should own its border').toMatch(
+      /\.account-footer\s*\{[^}]*border-t/
+    )
+
     for (const file of PANELS) {
       const source = read(file)
-      expect(source, `${file} should render a border-t footer`).toContain('border-t')
-      expect(source, `${file} should render inside PanelShell`).toContain('PanelShell')
+      const sharedShell = source.includes('AccountPanel') ? 'AccountPanel' : 'PanelShell'
+      expect(source, `${file} should render inside ${sharedShell}`).toContain(sharedShell)
+      expect(source, `${file} should declare a footer`).toMatch(/#footer|border-t/)
     }
   })
 })

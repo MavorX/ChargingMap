@@ -9,6 +9,7 @@ import {
 import { useStationsStore } from '../store/modules/stations'
 import { useUserStore } from '../store/modules/user'
 import { completedOrder } from './helpers/charging'
+import { couponState } from '../utils/coupons'
 
 const STATION = {
   stationId: 's1',
@@ -233,5 +234,15 @@ describe('chargingStore.settlePayment', () => {
     const receipt = chargingStore.settlePayment({ couponId: 'cp-min-spend' })
     expect(receipt.couponDiscount).toBe(5)
     expect(receipt.finalAmount).toBe(105)
+  })
+
+  it('keeps coupon classification and checkout valid through the final millisecond of its date', () => {
+    const coupon = { id: 'last-day', expiryDate: '2026-10-27', minSpend: 1 }
+    const end = new Date('2026-10-27T23:59:59.999')
+    const nextDay = new Date('2026-10-28T00:00:00.000')
+    expect(couponState(coupon, end)).toBe('available')
+    expect(isCouponUsable(coupon, 1, end)).toBe(true)
+    expect(couponState(coupon, nextDay)).toBe('expired')
+    expect(isCouponUsable(coupon, 1, nextDay)).toBe(false)
   })
 })

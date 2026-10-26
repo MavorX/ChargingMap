@@ -101,7 +101,7 @@ export const demoCoupons = [
   {
     id: 'cp3',
     title: '免费充电券',
-    description: '可免费充电30分钟，限快充桩使用',
+    description: '演示费用抵扣券，最高抵扣15元',
     type: 'free',
     value: 15,
     freeMinutes: 30,

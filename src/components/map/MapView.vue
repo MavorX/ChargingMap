@@ -21,7 +21,7 @@
         </button>
       </div>
     </div>
-    <div id="map-container" class="h-full w-full"></div>
+    <div id="map-container" class="relative isolate h-full w-full"></div>
     <div
       v-if="isMapLoading"
       class="absolute inset-0 z-10 flex items-center justify-center"

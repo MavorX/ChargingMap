@@ -93,6 +93,13 @@ describe('MapView viewport pipeline', () => {
     delete globalThis.AMap
   })
 
+  it('keeps SDK controls in a local stacking context below business panels', async () => {
+    const { wrapper } = await mountMapView()
+    expect(wrapper.get('#map-container').classes()).toContain('relative')
+    expect(wrapper.get('#map-container').classes()).toContain('isolate')
+    wrapper.unmount()
+  })
+
   it('collapses three moveend events within 100ms into one bounds + marker update', async () => {
     const { wrapper, setViewportBounds } = await mountMapView()
     const moveend = mapHandlers.get('moveend')

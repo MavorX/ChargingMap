@@ -38,6 +38,127 @@ afterEach(() => {
 })
 
 describe('transaction details', () => {
+  it.each([{ success: false }, null])(
+    'does not reward an unsuccessful review response: %j',
+    async (result) => {
+      const charging = useChargingStore()
+      charging.lastReceipt = { station: { stationId: 's1', stationName: '原订单站点' } }
+      submitReview.mockResolvedValue(result)
+      wrapper = mountPanel(ReviewPanel)
+      await wrapper.get('#review-content').setValue('体验评价')
+      await wrapper.get('#submit-review-btn').trigger('click')
+      await flushPromises()
+      expect(useUserStore().userInfo.points).toBe(0)
+      expect(charging.reviewSubmitted).toBe(false)
+      expect(wrapper.emitted('close')).toBeUndefined()
+      expect(wrapper.get('#submit-review-btn').attributes('disabled')).toBeUndefined()
+    }
+  )
+
+  it('rechecks coupon availability after a pending payment response', async () => {
+    const charging = completedOrder(),
+      user = useUserStore()
+    charging.chargingData.energy = 10
+    user.coupons = [
+      { id: 'c', title: '待使用的券', type: 'discount', value: 2, expiryDate: '2030-12-31' }
+    ]
+    charging.preferredCouponId = 'c'
+    let resolve
+    processPayment.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    wrapper = mountPanel(PaymentPanel)
+    await button(wrapper, '确认支付').trigger('click')
+    user.useCoupon('c')
+    resolve({ success: true })
+    await flushPromises()
+    expect(charging.paymentPending).toBe(true)
+    expect(charging.lastReceipt).toBe(null)
+    expect(user.walletTransactions).toHaveLength(0)
+    expect(user.userInfo.balance).toBe(100)
+    expect(button(wrapper, '选择优惠券')).toBeDefined()
+    expect(button(wrapper, '确认支付').attributes('disabled')).toBeUndefined()
+  })
+  it('does not settle a rejected payment response and leaves retry available', async () => {
+    const charging = completedOrder()
+    charging.chargingData.energy = 10
+    const settle = vi.spyOn(charging, 'settlePayment')
+    processPayment.mockResolvedValue({ success: false })
+    wrapper = mountPanel(PaymentPanel)
+    await button(wrapper, '确认支付').trigger('click')
+    await flushPromises()
+    expect(settle).not.toHaveBeenCalled()
+    expect(charging.paymentPending).toBe(true)
+    expect(button(wrapper, '确认支付').attributes('disabled')).toBeUndefined()
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('支付未成功'), 'error')
+  })
+
+  it('does not apply a late payment response to a different order', async () => {
+    const charging = completedOrder()
+    charging.chargingData.energy = 10
+    let resolve
+    processPayment.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    const settle = vi.spyOn(charging, 'settlePayment')
+    wrapper = mountPanel(PaymentPanel)
+    await button(wrapper, '确认支付').trigger('click')
+    charging.sessionId = 'new-order'
+    resolve({ success: true })
+    await flushPromises()
+    expect(settle).not.toHaveBeenCalled()
+    expect(wrapper.emitted('payment-success')).toBeUndefined()
+    expect(charging.paymentPending).toBe(true)
+  })
+
+  it('matches a preferred coupon only when the current bill meets its conditions', async () => {
+    const charging = completedOrder(),
+      user = useUserStore()
+    user.coupons = [
+      {
+        id: 'preferred',
+        title: '选中的优惠券',
+        type: 'discount',
+        value: 5,
+        minSpend: 50,
+        expiryDate: '2030-12-31'
+      }
+    ]
+    charging.preferredCouponId = 'preferred'
+    charging.chargingData.energy = 10
+    wrapper = mountPanel(PaymentPanel)
+    expect(button(wrapper, '选择优惠券')).toBeDefined()
+    wrapper.unmount()
+    charging.chargingData.energy = 100
+    wrapper = mountPanel(PaymentPanel)
+    expect(button(wrapper, '选中的优惠券')).toBeDefined()
+  })
+
+  it('does not reward a late review response after its order has changed', async () => {
+    const charging = useChargingStore()
+    charging.lastReceipt = { station: { stationId: 's1', stationName: '原订单站点' } }
+    let resolve
+    submitReview.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    wrapper = mountPanel(ReviewPanel)
+    await wrapper.get('#review-content').setValue('体验评价')
+    await wrapper.get('#submit-review-btn').trigger('click')
+    charging.lastReceipt = { station: { stationId: 's2', stationName: '新订单站点' } }
+    resolve({ reviewId: 'late' })
+    await flushPromises()
+    expect(useUserStore().userInfo.points).toBe(0)
+    expect(charging.reviewSubmitted).toBe(false)
+  })
   it('does not silently recharge a preset when the custom value is zero or invalid', async () => {
     wrapper = mountPanel(WalletPanel)
     await button(wrapper, '充值').trigger('click')

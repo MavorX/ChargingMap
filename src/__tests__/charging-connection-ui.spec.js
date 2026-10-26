@@ -31,6 +31,25 @@ afterEach(() => {
 })
 
 describe('human-scale charging demonstration', () => {
+  it('replaces a stale stop confirmation with unplugging when charging ends automatically', async () => {
+    const store = await start({ initialBattery: 79, targetBattery: 80, clockScale: 60 })
+    wrapper = mount(ChargingPanel, {
+      attachTo: document.body,
+      global: { provide: { showToast: vi.fn() }, stubs: { teleport: true } }
+    })
+    await button('结束充电').trigger('click')
+    expect(wrapper.text()).toContain('结束本次充电？')
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(store.phase).toBe('stopping')
+    expect(button('正在停止').attributes('disabled')).toBeDefined()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(store.phase).toBe('awaiting_unplug')
+    expect(wrapper.find('.dialog-overlay').exists()).toBe(false)
+    expect(document.activeElement).toBe(button('已拔枪').element)
+    await button('已拔枪').trigger('click')
+    expect(store.phase).toBe('finished')
+    expect(wrapper.emitted('charging-complete')).toHaveLength(1)
+  })
   it('requires an explicit gun selection and a separate plug confirmation', async () => {
     wrapper = mountSettings()
     const store = useChargingStore()

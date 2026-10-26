@@ -1,157 +1,168 @@
 <template>
-  <PanelShell title="充电记录" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
+  <AccountPanel title="充电记录" subtitle="订单、费用与充电明细" @close="emit('close')">
+    <button
+      v-if="charging.isCharging || charging.paymentPending"
+      class="choice-card"
+      @click="emit('resume-session')"
     >
-      <button class="icon-button" aria-label="返回" @click="$emit('close')">
-        <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
-      </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">充电记录</h2>
-      <div class="w-10"></div>
+      <span class="account-icon"><i class="fa fa-bolt" aria-hidden="true"></i></span
+      ><span class="min-w-0 flex-1"
+        ><strong class="block text-sm">{{
+          charging.isCharging ? '当前正在充电' : '当前订单尚未结算'
+        }}</strong
+        ><span class="account-caption">{{ charging.sessionStation?.stationName }}</span></span
+      ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i>
+    </button>
+    <section class="account-card grid grid-cols-2 gap-4">
+      <div>
+        <p class="account-caption">累计充电</p>
+        <p class="mt-1 text-lg font-bold tabular-nums">
+          {{ totalEnergy }}<span class="ml-1 text-xs font-normal text-surface-500">kWh</span>
+        </p>
+      </div>
+      <div>
+        <p class="account-caption">已完成订单费用</p>
+        <p class="mt-1 break-all text-lg font-bold tabular-nums">{{ formatPrice(totalCost) }}</p>
+      </div>
+    </section>
+    <div class="space-y-3">
+      <input
+        v-model="search"
+        class="input-premium"
+        type="search"
+        aria-label="搜索充电记录"
+        placeholder="搜索站点或车辆"
+      />
+      <div class="segmented-control" role="group" aria-label="订单状态">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          class="segmented-item"
+          :aria-pressed="filter === tab.value"
+          @click="filter = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
+    <button
+      v-for="record in records"
+      :key="record.id"
+      class="account-card w-full text-left transition-colors hover:border-primary-300"
+      @click="selectedId = record.id"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <h3 class="break-words text-sm font-bold">{{ record.stationName }}</h3>
+          <p class="account-caption mt-1">{{ record.date }}</p>
+        </div>
+        <span
+          :class="record.status === 'refunded' ? 'status-badge-warning' : 'status-badge-success'"
+          class="shrink-0"
+          >{{ record.status === 'refunded' ? '已退款' : '已完成' }}</span
+        >
+      </div>
       <div
-        v-if="chargingHistory.length > 0"
-        class="mb-6 rounded-2xl bg-gradient-to-br from-primary-50 to-accent-50 p-5 shadow-soft dark:from-surface-800 dark:to-surface-900"
+        class="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-surface-100 pt-3 dark:border-surface-800"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-surface-500 dark:text-surface-400">累计充电</p>
-            <p class="gradient-text mt-1 text-2xl font-black">
-              {{ totalEnergy }}<span class="ml-1 text-sm font-normal text-surface-500">kWh</span>
-            </p>
-          </div>
-          <div
-            class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-blue-500 shadow-md"
-          >
-            <i class="fa fa-bolt text-2xl text-white" aria-hidden="true"></i>
-          </div>
-        </div>
-        <div
-          class="mt-3 flex items-center space-x-4 border-t border-primary-100 pt-3 dark:border-surface-700/50"
-        >
-          <div class="flex items-center">
-            <i class="fa fa-clock mr-1.5 text-xs text-primary-500" aria-hidden="true"></i>
-            <span class="text-xs text-surface-600 dark:text-surface-300"
-              >{{ chargingHistory.length }}次充电</span
-            >
-          </div>
-          <div class="flex items-center">
-            <i class="fa fa-yen mr-1.5 text-xs text-warning-500" aria-hidden="true"></i>
-            <span class="text-xs text-surface-600 dark:text-surface-300"
-              >总计 {{ formatPrice(totalCost) }}</span
-            >
-          </div>
-        </div>
+        <span class="account-caption"
+          >{{ record.energy }} · {{ record.duration }}<br />{{ record.vehicleModel }}</span
+        ><span class="text-right"
+          ><strong class="block text-sm tabular-nums"
+            >{{ record.status === 'refunded' ? '+' : '−' }}{{ formatPrice(record.cost) }}</strong
+          ><span class="account-caption"
+            >查看明细 <i class="fa fa-angle-right" aria-hidden="true"></i></span
+        ></span>
       </div>
-
-      <div class="space-y-3">
-        <div
-          v-for="record in chargingHistory"
-          :key="record.id"
-          class="rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft transition-all hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-        >
-          <div class="mb-3 flex items-start justify-between">
-            <div class="flex items-center">
-              <div
-                class="mr-3 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-blue-500 shadow-md"
-              >
-                <i class="fa fa-bolt text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-bold text-surface-800 dark:text-surface-200">
-                  {{ record.stationName }}
-                </h3>
-                <p class="mt-0.5 text-xs text-surface-500 dark:text-surface-400">
-                  {{ record.stationAddress }}
-                </p>
-              </div>
-            </div>
-            <span
-              v-if="record.status === 'completed'"
-              class="rounded-full bg-secondary-100 px-2 py-0.5 text-[10px] font-bold text-secondary-600 dark:bg-secondary-900/30 dark:text-secondary-400"
-              >已完成</span
-            >
-            <span
-              v-else-if="record.status === 'refunded'"
-              class="rounded-full bg-warning-100 px-2 py-0.5 text-[10px] font-bold text-warning-600 dark:bg-warning-900/30 dark:text-warning-400"
-              >已退款</span
-            >
-          </div>
-          <div
-            class="flex items-center justify-between border-t border-surface-100 pt-3 dark:border-surface-700/50"
-          >
-            <div class="flex items-center space-x-4">
-              <div class="flex items-center">
-                <i class="fa fa-calendar mr-1.5 text-xs text-surface-400" aria-hidden="true"></i>
-                <span class="text-xs text-surface-500 dark:text-surface-400">{{
-                  record.date
-                }}</span>
-              </div>
-              <div class="flex items-center">
-                <i class="fa fa-clock-o mr-1.5 text-xs text-surface-400" aria-hidden="true"></i>
-                <span class="text-xs text-surface-500 dark:text-surface-400">{{
-                  record.duration
-                }}</span>
-              </div>
-            </div>
-            <div class="text-right">
-              <p
-                class="text-sm font-black"
-                :class="
-                  record.status === 'refunded'
-                    ? 'text-warning-500'
-                    : 'text-surface-800 dark:text-surface-200'
-                "
-              >
-                {{ record.status === 'refunded' ? '+' : '-' }}{{ formatPrice(record.cost) }}
-              </p>
-              <p class="text-[10px] text-surface-400">
-                {{ record.energy }} · {{ record.vehicleModel }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="chargingHistory.length === 0" class="animate-in py-16 text-center">
-        <div
-          class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800"
-        >
-          <i
-            class="fa fa-history text-3xl text-surface-300 dark:text-surface-600"
-            aria-hidden="true"
-          ></i>
-        </div>
-        <p class="mb-2 font-bold text-surface-800 dark:text-surface-200">暂无充电记录</p>
-        <p class="text-sm text-surface-500 dark:text-surface-400">您的充电记录将显示在这里</p>
-      </div>
+    </button>
+    <div v-if="!records.length" class="account-empty">
+      <span class="account-icon"><i class="fa fa-history" aria-hidden="true"></i></span>
+      <h3 class="text-sm font-semibold">
+        {{ user.chargingHistory.length ? '没有匹配的记录' : '暂无充电记录' }}
+      </h3>
+      <p class="account-caption">完成充电与结算后，记录会显示在这里。</p>
+      <button v-if="search || filter !== 'all'" class="action-secondary" @click="clearFilters">
+        清除筛选</button
+      ><button v-else class="action-secondary" @click="emit('explore')">去找充电站</button>
     </div>
-  </PanelShell>
+    <template #dialogs
+      ><DialogModal v-if="selectedRecord" title="充电明细" @close="selectedId = null"
+        ><h3 class="text-base font-semibold">{{ selectedRecord.stationName }}</h3>
+        <p class="account-caption mt-1">{{ selectedRecord.stationAddress }}</p>
+        <dl class="my-5 space-y-3 text-sm">
+          <div
+            v-for="line in detailLines"
+            :key="line.label"
+            class="flex flex-wrap justify-between gap-2"
+          >
+            <dt class="text-surface-500">{{ line.label }}</dt>
+            <dd class="break-words text-right font-semibold">{{ line.value }}</dd>
+          </div>
+        </dl>
+        <button class="action-primary" @click="selectedId = null">关闭明细</button></DialogModal
+      ></template
+    >
+  </AccountPanel>
 </template>
-
 <script setup>
-import PanelShell from '../common/PanelShell.vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import AccountPanel from './AccountPanel.vue'
+import DialogModal from '../common/DialogModal.vue'
 import { useUserStore } from '../../store/modules/user'
+import { useChargingStore } from '../../store/modules/charging'
 import { formatPrice } from '../../utils/format'
-
-defineEmits(['close'])
-
-const userStore = useUserStore()
-const chargingHistory = computed(() => userStore.chargingHistory)
-
-const totalEnergy = computed(() => {
-  return chargingHistory.value
-    .filter((r) => r.status === 'completed')
-    .reduce((sum, r) => sum + parseFloat(r.energy), 0)
-    .toFixed(1)
-})
-
-const totalCost = computed(() => {
-  return chargingHistory.value
-    .filter((r) => r.status === 'completed')
-    .reduce((sum, r) => sum + r.cost, 0)
-})
+const emit = defineEmits(['close', 'explore', 'resume-session'])
+const user = useUserStore(),
+  charging = useChargingStore()
+const filter = ref('all'),
+  search = ref(''),
+  selectedId = ref(null)
+const tabs = [
+  { label: '全部', value: 'all' },
+  { label: '已完成', value: 'completed' },
+  { label: '已退款', value: 'refunded' }
+]
+const clearFilters = () => {
+  search.value = ''
+  filter.value = 'all'
+}
+const records = computed(() =>
+  user.chargingHistory.filter(
+    (record) =>
+      (filter.value === 'all' || record.status === filter.value) &&
+      `${record.stationName} ${record.vehicleModel}`
+        .toLowerCase()
+        .includes(search.value.trim().toLowerCase())
+  )
+)
+const completed = computed(() =>
+  user.chargingHistory.filter((record) => record.status === 'completed')
+)
+const totalEnergy = computed(() =>
+  completed.value.reduce((sum, record) => sum + (parseFloat(record.energy) || 0), 0).toFixed(1)
+)
+const totalCost = computed(() =>
+  completed.value.reduce((sum, record) => sum + (Number(record.cost) || 0), 0)
+)
+const selectedRecord = computed(() =>
+  user.chargingHistory.find((record) => record.id === selectedId.value)
+)
+const detailLines = computed(() =>
+  selectedRecord.value
+    ? [
+        {
+          label: '订单状态',
+          value: selectedRecord.value.status === 'refunded' ? '已退款' : '已完成'
+        },
+        { label: '时间', value: selectedRecord.value.date },
+        { label: '车辆', value: selectedRecord.value.vehicleModel },
+        { label: '充电时长', value: selectedRecord.value.duration },
+        { label: '充入电量', value: selectedRecord.value.energy },
+        {
+          label: selectedRecord.value.status === 'refunded' ? '退款金额' : '实付金额',
+          value: formatPrice(selectedRecord.value.cost)
+        }
+      ]
+    : []
+)
 </script>

@@ -168,12 +168,14 @@ import {
 import { useUserStore } from '../../store/modules/user'
 import { processPayment } from '../../services/api'
 import { formatDuration, formatPrice } from '../../utils/format'
+import { useNow } from '../../composables/useNow'
 
 const emit = defineEmits(['close', 'payment-success'])
 const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
 const userStore = useUserStore()
 const showToast = inject('showToast')
+const now = useNow()
 const currentStation = computed(() => chargingStore.sessionStation || stationsStore.currentStation)
 const chargingData = computed(() => chargingStore.chargingData)
 const isPaying = ref(false)
@@ -197,7 +199,8 @@ const discountFor = (coupon) =>
   }).couponDiscount
 const coupons = computed(() =>
   userStore.coupons.filter(
-    (coupon) => isCouponUsable(coupon, baseAmounts.value.totalAmount) && discountFor(coupon) > 0
+    (coupon) =>
+      isCouponUsable(coupon, baseAmounts.value.totalAmount, now.value) && discountFor(coupon) > 0
   )
 )
 const amounts = computed(() =>
@@ -258,6 +261,7 @@ const handlePayment = async () => {
   const method = selectedPaymentMethod.value
   const couponId = selectedCouponId.value
   const order = {
+    sessionId: chargingStore.sessionId,
     amount: finalAmount.value,
     method,
     couponId,
@@ -266,7 +270,10 @@ const handlePayment = async () => {
   }
   isPaying.value = true
   try {
-    await processPayment(order)
+    const result = await processPayment(order)
+    if (!result?.success) throw new Error('支付未成功，请重试；订单尚未结算')
+    if (chargingStore.sessionId !== order.sessionId)
+      throw new Error('订单状态已变化，请重新打开账单核对')
     const receipt = chargingStore.settlePayment({ couponId, method })
     if (mounted) {
       showToast('演示支付成功', 'success')

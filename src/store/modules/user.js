@@ -93,6 +93,7 @@ export const useUserStore = defineStore('user', {
       this.persistPreferences()
     },
     addReviewPoints(sessionId) {
+      sessionId = String(sessionId || '')
       if (!sessionId || this.pointsRecords.some((record) => record.sessionId === sessionId)) return
       this.userInfo.points += 5
       this.pointsRecords.unshift({
@@ -268,6 +269,13 @@ export const useUserStore = defineStore('user', {
         !Number.isFinite(transaction.amount)
       )
         throw new Error('交易信息无效')
+      if (
+        ['recharge', 'withdraw'].includes(transaction.type) &&
+        (Math.abs(transaction.amount) <= 0 ||
+          Math.abs(transaction.amount) > 100000 ||
+          Math.abs(transaction.amount * 100 - Math.round(transaction.amount * 100)) >= 1e-6)
+      )
+        throw new Error('金额应为 0.01–100000 元，最多两位小数')
       const affectsBalance =
         ['recharge', 'refund', 'withdraw'].includes(transaction.type) ||
         (transaction.type === 'payment' && (!transaction.method || transaction.method === 'wallet'))

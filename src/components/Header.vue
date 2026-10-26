@@ -67,13 +67,14 @@
           <i :class="userStore.isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'" aria-hidden="true"></i>
         </button>
         <button
-          class="icon-button relative text-surface-500"
+          class="icon-button relative"
           aria-label="通知中心"
           :aria-pressed="ui.navigationSection === 'notifications'"
-          :class="{
-            'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300':
-              ui.navigationSection === 'notifications'
-          }"
+          :class="
+            ui.navigationSection === 'notifications'
+              ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+              : 'text-surface-500'
+          "
           title="通知中心"
           @click="emitHeaderEvent('showNotifications')"
         >
@@ -85,13 +86,14 @@
         </button>
         <span class="mx-1 hidden h-6 w-px bg-surface-200 dark:bg-surface-700 sm:block"></span>
         <button
-          class="flex h-10 items-center gap-2 rounded-full bg-surface-100 px-3 text-sm font-medium text-surface-700 transition-colors hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700"
+          class="flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors"
           aria-label="个人中心"
           :aria-pressed="ui.navigationSection === 'account'"
-          :class="{
-            'text-primary-700 ring-2 ring-primary-500/40 dark:text-primary-300':
-              ui.navigationSection === 'account'
-          }"
+          :class="
+            ui.navigationSection === 'account'
+              ? 'bg-primary-50 text-primary-700 ring-2 ring-primary-500/40 dark:bg-primary-900/30 dark:text-primary-300'
+              : 'bg-surface-100 text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700'
+          "
           @click="emitHeaderEvent('showUserProfile')"
         >
           <i class="fa fa-user-o" aria-hidden="true"></i>

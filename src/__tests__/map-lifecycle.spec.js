@@ -173,4 +173,81 @@ describe('MapManager lifecycle', () => {
     expect(map.zoomOut).not.toHaveBeenCalled()
     expect(map.setCenter).not.toHaveBeenCalled()
   })
+
+  it('ignores a late route result after a newer destination has been selected', async () => {
+    const AMap = installAMap()
+    const searches = []
+    AMap.LngLat = class {
+      constructor(lng, lat) {
+        this.lng = lng
+        this.lat = lat
+      }
+    }
+    AMap.Driving = class {
+      constructor() {
+        this.clear = vi.fn()
+        searches.push(this)
+      }
+      search(_start, _end, callback) {
+        this.result = callback
+      }
+    }
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    manager._userLocation = { lng: 117.28, lat: 31.86 }
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    manager.navigateToStation(makeStation('old'))
+    manager.navigateToStation(makeStation('new'))
+    const result = { routes: [{ distance: 1000, time: 120 }] }
+    searches[1].result('complete', result)
+    searches[0].result('complete', result)
+    const routes = dispatch.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event.type === 'routeResult')
+    expect(routes).toHaveLength(1)
+    expect(routes[0].detail.station.stationId).toBe('new')
+    expect(searches[0].clear).toHaveBeenCalled()
+    manager.destroy()
+  })
+
+  it('does not start navigation when its plugin finishes loading after cancellation', async () => {
+    const AMap = installAMap()
+    let pluginReady
+    AMap.plugin.mockImplementation((_plugins, callback) => {
+      pluginReady = callback
+    })
+    AMap.Driving = vi.fn()
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    manager._userLocation = { lng: 117.28, lat: 31.86 }
+    manager.navigateToStation(makeStation('old'))
+    manager.clearRoute()
+    pluginReady()
+    expect(AMap.Driving).not.toHaveBeenCalled()
+    manager.destroy()
+  })
+
+  it.each(['resolve', 'reject'])(
+    'ignores %s from navigation geolocation after map teardown',
+    async (outcome) => {
+      const AMap = installAMap()
+      const manager = await loadManager()
+      manager.setMap(makeMap())
+      let resolve, reject
+      vi.spyOn(manager, 'locateUser').mockImplementation(
+        () =>
+          new Promise((done, fail) => {
+            resolve = done
+            reject = fail
+          })
+      )
+      manager.navigateToStation(makeStation('old'))
+      manager.destroy()
+      if (outcome === 'resolve') resolve({ lng: 117.28, lat: 31.86 })
+      else reject(new Error('late location failure'))
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(AMap.plugin).not.toHaveBeenCalled()
+    }
+  )
 })

@@ -27,6 +27,32 @@ afterEach(() => {
 })
 
 describe('stacked dialogs', () => {
+  it('allows drawer navigation but locks it again for confirmations and busy actions', async () => {
+    const header = document.createElement('header')
+    header.setAttribute('data-panel-navigation', '')
+    header.innerHTML = '<button id="global-favorites">收藏</button>'
+    document.body.append(header)
+    panel = mount(PanelShell, {
+      attachTo: document.body,
+      props: { title: '账户', allowNavigation: true },
+      slots: { default: () => h('button', { id: 'inside-account' }, '账户操作') }
+    })
+    await settle()
+    expect(header.hasAttribute('inert')).toBe(false)
+    header.querySelector('button').focus()
+    expect(document.activeElement.id).toBe('global-favorites')
+    dialog = mount(DialogModal, { attachTo: document.body, props: { title: '确认操作' } })
+    await settle()
+    expect(header.hasAttribute('inert')).toBe(true)
+    dialog.unmount()
+    dialog = null
+    await settle()
+    expect(header.hasAttribute('inert')).toBe(false)
+    await panel.setProps({ busy: true })
+    expect(header.hasAttribute('inert')).toBe(true)
+    await panel.setProps({ busy: false })
+    expect(header.hasAttribute('inert')).toBe(false)
+  })
   it('teleports a nested confirmation outside the drawer and only the top layer closes', async () => {
     panel = mount(PanelShell, {
       attachTo: document.body,

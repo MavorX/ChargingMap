@@ -22,6 +22,7 @@ class MapManager {
     this._activeStationId = null
     this._userLocation = null
     this._driving = null
+    this._routeRevision = 0
     this._directMarkers = []
     this._stationIndex = new Map()
     this._markersByStationId = new Map()
@@ -688,10 +689,14 @@ class MapManager {
     this.closeInfoWindow()
 
     const self = this
+    const map = this.map
+    const revision = this._routeRevision
+    const isCurrent = () => this.map === map && this._routeRevision === revision
     const endLng = station.lng
     const endLat = station.lat
 
     const doDriving = (startLng, startLat) => {
+      if (!isCurrent()) return
       if (import.meta.env.DEV) {
         console.log(
           '[MapManager] Planning route from [',
@@ -705,6 +710,7 @@ class MapManager {
       }
 
       AMap.plugin(['AMap.Driving'], () => {
+        if (!isCurrent()) return
         try {
           const driving = new AMap.Driving({
             map: self.map,
@@ -716,6 +722,10 @@ class MapManager {
             new AMap.LngLat(startLng, startLat),
             new AMap.LngLat(endLng, endLat),
             function (status, result) {
+              if (!isCurrent()) {
+                driving.clear()
+                return
+              }
               if (import.meta.env.DEV) {
                 console.log(
                   '[MapManager] Driving search result:',
@@ -777,6 +787,7 @@ class MapManager {
           doDriving(loc.lng, loc.lat)
         })
         .catch(() => {
+          if (!isCurrent()) return
           const center = this.map.getCenter()
           doDriving(center.lng, center.lat)
         })
@@ -784,7 +795,8 @@ class MapManager {
   }
 
   clearRoute() {
-    if (!this.map) return
+    // Invalidate work that is still locating, loading the plugin or searching.
+    this._routeRevision++
     if (this._driving) {
       this._driving.clear()
       this._driving = null
