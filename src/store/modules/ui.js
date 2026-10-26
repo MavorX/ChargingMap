@@ -15,6 +15,21 @@ export const useUiStore = defineStore('ui', {
     panelHistory: []
   }),
 
+  getters: {
+    navigationSection: (state) => {
+      if (state.activePanel === 'favorites') return 'favorites'
+      if (state.activePanel === 'chargingHistory') return 'history'
+      if (
+        ['userProfile', 'wallet', 'coupons', 'vehicle', 'settings', 'help'].includes(
+          state.activePanel
+        )
+      )
+        return 'account'
+      if (state.activePanel === 'notifications') return 'notifications'
+      return 'explore'
+    }
+  },
+
   actions: {
     open(name, { reset = false } = {}) {
       if (!isValidPanelName(name)) return

@@ -257,6 +257,9 @@
         @show-favorites="uiStore.open('favorites')"
         @show-settings="uiStore.open('settings')"
         @show-help="uiStore.open('help')"
+        @explore="exploreStations"
+        @resume-session="resumeSession"
+        @use-coupon="useCoupon"
       />
     </Transition>
   </main>
@@ -276,6 +279,7 @@ import {
 import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
 import { useUiStore } from '../store/modules/ui'
+import { useUserStore } from '../store/modules/user'
 import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
 import { formatDuration } from '../utils/format'
@@ -312,6 +316,7 @@ const VehicleFilter = defineAsyncComponent(() => import('../components/filter/Ve
 const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
 const uiStore = useUiStore()
+const userStore = useUserStore()
 const showToast = inject('showToast')
 
 const overlayComponents = {
@@ -366,6 +371,27 @@ const handleStartCharging = (options) => {
 const viewFavoriteStation = (station) => {
   uiStore.dismiss()
   selectStationFromSidebar(station)
+}
+const exploreStations = () => {
+  uiStore.dismiss()
+  stationsStore.setCurrentStation(null)
+  if (isDesktop.value) expandSidebar()
+  else uiStore.open('stationsList', { reset: true })
+}
+const useCoupon = (couponId) => {
+  chargingStore.preferredCouponId = couponId
+  if (chargingStore.isCharging || chargingStore.paymentPending) {
+    resumeSession()
+    showToast(
+      chargingStore.isCharging
+        ? '已保留优惠券，结束充电后在账单中核对使用条件'
+        : '请在账单中核对优惠券门槛与实付金额',
+      'info'
+    )
+  } else {
+    exploreStations()
+    showToast('先选择站点充电，结算时会按使用条件匹配这张优惠券', 'info')
+  }
 }
 
 const currentStation = computed(() => stationsStore.currentStation)
@@ -460,7 +486,7 @@ const handleHeaderEvent = (event) => {
   const { type } = event.detail
   const headerPanel = HEADER_PANEL_EVENTS[type]
   if (headerPanel) {
-    uiStore.open(headerPanel)
+    uiStore.open(headerPanel, { reset: true })
     return
   }
   switch (type) {
@@ -572,7 +598,12 @@ watch(
 watch(
   () => chargingStore.isCharging,
   (isCharging, wasCharging) => {
-    if (wasCharging && !isCharging && chargingStore.paymentPending) {
+    if (
+      wasCharging &&
+      !isCharging &&
+      chargingStore.paymentPending &&
+      userStore.settings.chargingReminder
+    ) {
       showToast('充电已停止，请拔枪归位后查看账单', 'info')
     }
   }

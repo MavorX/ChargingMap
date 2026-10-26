@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { createRecordId } from '../../utils/id'
+import { couponState } from '../../utils/coupons'
 import {
   demoUserInfo,
   demoChargingHistory,
@@ -47,11 +48,12 @@ const createInitialState = () => ({
   chargingHistory: isDemoMode ? cloneRecords(demoChargingHistory) : [],
   coupons: isDemoMode ? cloneRecords(demoCoupons) : [],
   walletTransactions: isDemoMode ? cloneRecords(demoWalletTransactions) : [],
+  pointsRecords: [],
   settings: {
     notificationEnabled: true,
     chargingReminder: true,
     promotionNotification: false,
-    autoPay: true,
+    autoPay: false,
     language: 'zh-CN'
   },
   notifications: isDemoMode ? cloneRecords(demoNotifications) : [{ ...welcomeNotification }],
@@ -62,6 +64,46 @@ export const useUserStore = defineStore('user', {
   state: createInitialState,
 
   actions: {
+    loadPreferences() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('chargingPreferences') || 'null')
+        if (!saved || saved.version !== 1) return
+        if (typeof saved.name === 'string' && saved.name.trim() && saved.name.trim().length <= 24)
+          this.userInfo.name = saved.name.trim()
+        for (const key of ['notificationEnabled', 'chargingReminder'])
+          if (typeof saved.settings?.[key] === 'boolean') this.settings[key] = saved.settings[key]
+      } catch {
+        /* Keep defaults when local preferences are invalid. */
+      }
+    },
+    persistPreferences() {
+      try {
+        localStorage.setItem(
+          'chargingPreferences',
+          JSON.stringify({ version: 1, name: this.userInfo.name, settings: this.settings })
+        )
+      } catch {
+        /* Current-page changes remain usable. */
+      }
+    },
+    updateName(value) {
+      const name = String(value || '').trim()
+      if (!name || name.length > 24) throw new Error('昵称需为 1–24 个字符')
+      this.userInfo.name = name
+      this.persistPreferences()
+    },
+    addReviewPoints(sessionId) {
+      if (!sessionId || this.pointsRecords.some((record) => record.sessionId === sessionId)) return
+      this.userInfo.points += 5
+      this.pointsRecords.unshift({
+        id: createRecordId(),
+        sessionId,
+        amount: 5,
+        description: '完成充电评价',
+        time: new Date().toLocaleString('zh-CN')
+      })
+      this.persistSandboxLedger()
+    },
     loadLocalVehicles() {
       try {
         const vehicles = JSON.parse(localStorage.getItem('chargingLocalVehicles') || 'null')
@@ -108,6 +150,8 @@ export const useUserStore = defineStore('user', {
         this.userInfo.points = saved.points
         this.chargingHistory = saved.history.slice(0, 200)
         this.walletTransactions = saved.transactions.slice(0, 200)
+        if (validRecords(saved.pointsRecords))
+          this.pointsRecords = saved.pointsRecords.slice(0, 200)
         if (validRecords(saved.notifications))
           this.notifications = saved.notifications.slice(0, 200)
         if (Array.isArray(saved.usedCoupons))
@@ -126,6 +170,7 @@ export const useUserStore = defineStore('user', {
             version: 1,
             balance: this.userInfo.balance,
             points: this.userInfo.points,
+            pointsRecords: this.pointsRecords.slice(0, 200),
             history: this.chargingHistory.slice(0, 200),
             transactions: this.walletTransactions.slice(0, 200),
             notifications: this.notifications.slice(0, 200),
@@ -172,10 +217,13 @@ export const useUserStore = defineStore('user', {
       if (vehicle) {
         Object.assign(vehicle, updates)
         this.persistVehicles()
+        return true
       }
+      return false
     },
 
     addNotification(notification) {
+      if (!this.settings.notificationEnabled) return
       this.notifications.unshift({
         id: createRecordId(),
         time: new Date().toLocaleString('zh-CN'),
@@ -209,15 +257,39 @@ export const useUserStore = defineStore('user', {
     },
 
     addWalletTransaction(transaction) {
+      if (transaction.operationId) {
+        const previous = this.walletTransactions.find(
+          (tx) => tx.operationId === transaction.operationId
+        )
+        if (previous) return previous
+      }
+      if (
+        !['recharge', 'refund', 'withdraw', 'payment'].includes(transaction.type) ||
+        !Number.isFinite(transaction.amount)
+      )
+        throw new Error('交易信息无效')
       const affectsBalance =
         ['recharge', 'refund', 'withdraw'].includes(transaction.type) ||
         (transaction.type === 'payment' && (!transaction.method || transaction.method === 'wallet'))
       const balanceDelta = affectsBalance ? Number(transaction.amount) || 0 : 0
+      if (
+        ['recharge', 'refund'].includes(transaction.type)
+          ? transaction.amount < 0
+          : transaction.amount > 0
+      )
+        throw new Error('交易金额方向无效')
+      if (this.userInfo.balance + balanceDelta < 0) throw new Error('钱包余额不足')
       if (balanceDelta !== 0) {
         this.userInfo.balance = Math.round((this.userInfo.balance + balanceDelta) * 100) / 100
       }
       this.walletTransactions.unshift({
         id: createRecordId(),
+        description: {
+          recharge: '钱包充值',
+          withdraw: '钱包提现',
+          refund: '订单退款',
+          payment: '充电支付'
+        }[transaction.type],
         ...transaction,
         balance: this.userInfo.balance,
         date: new Date()
@@ -231,10 +303,12 @@ export const useUserStore = defineStore('user', {
           .replace(/\//g, '-')
       })
       this.persistSandboxLedger()
+      return this.walletTransactions[0]
     },
 
     updateSettings(updates) {
       Object.assign(this.settings, updates)
+      this.persistPreferences()
     },
 
     addChargingHistory(record) {
@@ -249,6 +323,8 @@ export const useUserStore = defineStore('user', {
   },
 
   getters: {
+    availableCouponsCount: (state) =>
+      state.coupons.filter((coupon) => couponState(coupon) === 'available').length,
     unreadNotificationsCount: (state) => {
       return state.notifications.filter((n) => !n.read).length
     }

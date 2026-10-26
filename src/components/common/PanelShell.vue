@@ -4,7 +4,7 @@
     class="panel-overlay"
     :class="{ 'panel-fullscreen': fullscreen, 'panel-sheet': placement === 'sheet' }"
     role="dialog"
-    aria-modal="true"
+    :aria-modal="allowNavigation && !busy ? undefined : 'true'"
     :aria-label="title || undefined"
     :aria-busy="busy || undefined"
   >
@@ -26,6 +26,7 @@ import { useDialogFocus } from '../../composables/useDialogFocus'
 
 const props = defineProps({
   busy: { type: Boolean, default: false },
+  allowNavigation: { type: Boolean, default: false },
   placement: { type: String, default: 'drawer' },
   title: {
     type: String,
@@ -52,5 +53,9 @@ const contentRef = ref(null)
 const requestClose = () => {
   if (!props.busy) emit('close')
 }
-useDialogFocus(rootRef, contentRef, { close: requestClose, isBusy: () => props.busy })
+useDialogFocus(rootRef, contentRef, {
+  close: requestClose,
+  isBusy: () => props.busy,
+  allowNavigation: () => props.allowNavigation && !props.busy
+})
 </script>

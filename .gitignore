@@ -40,6 +40,9 @@ coverage/
 *.temp
 .cache/
 
+# Local agent workspace
+.omo/
+
 # OS generated files
 Thumbs.db
 .DS_Store

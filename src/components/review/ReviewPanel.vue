@@ -225,8 +225,9 @@ const submitReview = async () => {
     const result = await submitReviewApi({ stationId, ...review })
     if (!chargingStore.reviewSubmitted) {
       chargingStore.reviewSubmitted = true
-      userStore.userInfo.points += 5
-      userStore.persistSandboxLedger()
+      userStore.addReviewPoints(
+        chargingStore.sessionId || chargingStore.lastReceipt?.paidAt || 'legacy-review'
+      )
       chargingStore.persistSession()
       const station = stationsStore.stations.find((item) => item.stationId === stationId)
       if (station?.details) {

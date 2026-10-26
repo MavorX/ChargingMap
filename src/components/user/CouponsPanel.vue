@@ -1,176 +1,97 @@
 <template>
-  <PanelShell title="优惠券" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-    >
-      <button class="icon-button" aria-label="返回" @click="$emit('close')">
-        <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
+  <AccountPanel title="优惠券" subtitle="核对有效期与消费门槛，结算时抵扣" @close="emit('close')">
+    <div class="segmented-control" role="group" aria-label="优惠券状态">
+      <button
+        v-for="tab in tabs"
+        :key="tab.value"
+        class="segmented-item"
+        :aria-pressed="activeTab === tab.value"
+        @click="activeTab = tab.value"
+      >
+        {{ tab.label }} · {{ tab.count }}
       </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">优惠券</h2>
-      <div class="w-10"></div>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
-      <div class="mb-5 flex space-x-2">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          class="rounded-xl px-4 py-2 text-sm font-bold transition-all duration-300"
-          :class="
-            activeTab === tab.value
-              ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-md'
-              : 'bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300'
-          "
-          @click="activeTab = tab.value"
-        >
-          {{ tab.label }}
-          <span
-            v-if="tab.count > 0"
-            class="ml-1 rounded-full px-1.5 py-0.5 text-[10px]"
-            :class="
-              activeTab === tab.value
-                ? 'bg-white/20'
-                : 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-            "
-          >
-            {{ tab.count }}
-          </span>
-        </button>
-      </div>
-
-      <div class="space-y-3">
+    <div v-for="coupon in filteredCoupons" :key="coupon.id" class="account-card">
+      <div class="flex items-start gap-4">
         <div
-          v-for="coupon in filteredCoupons"
-          :key="coupon.id"
-          class="relative overflow-hidden rounded-2xl shadow-soft transition-all hover:shadow-soft-md"
-          :class="coupon.used ? 'opacity-60' : ''"
+          class="w-20 shrink-0 rounded-xl bg-primary-50 px-2 py-4 text-center text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
         >
-          <div class="flex">
-            <div
-              class="relative flex w-24 flex-shrink-0 flex-col items-center justify-center py-4"
-              :class="
-                coupon.used ? 'bg-surface-200 dark:bg-surface-700' : getCouponBgClass(coupon.type)
-              "
-            >
-              <p
-                class="text-2xl font-black"
-                :class="coupon.used ? 'text-surface-400' : 'text-white'"
-              >
-                <span v-if="coupon.type === 'discount'">¥{{ coupon.value }}</span>
-                <span v-else-if="coupon.type === 'percent'">{{ coupon.percent / 10 }}折</span>
-                <span v-else>{{ coupon.freeMinutes }}分钟</span>
-              </p>
-              <p
-                class="mt-1 text-[10px]"
-                :class="coupon.used ? 'text-surface-400' : 'text-white/80'"
-              >
-                {{
-                  coupon.type === 'discount'
-                    ? '满减券'
-                    : coupon.type === 'percent'
-                      ? '折扣券'
-                      : '免费券'
-                }}
-              </p>
-            </div>
-            <div
-              class="relative flex flex-1 flex-col justify-between bg-white p-4 dark:bg-surface-800"
-              style="border-left: 2px dashed rgba(0, 0, 0, 0.08)"
-            >
-              <div>
-                <h3
-                  class="text-sm font-bold text-surface-800 dark:text-surface-200"
-                  :class="{ 'line-through': coupon.used }"
-                >
-                  {{ coupon.title }}
-                </h3>
-                <p class="mt-1 text-xs text-surface-500 dark:text-surface-400">
-                  {{ coupon.description }}
-                </p>
-              </div>
-              <div class="mt-3 flex items-center justify-between">
-                <span class="text-[10px] text-surface-400">有效期至 {{ coupon.expiryDate }}</span>
-                <button
-                  v-if="!coupon.used && activeTab === 'available'"
-                  class="rounded-lg bg-gradient-to-r from-primary-500 to-accent-500 px-3 py-1 text-xs font-bold text-white shadow-sm transition-all duration-200 hover:shadow-md active:scale-95"
-                  @click="handleUseCoupon(coupon.id)"
-                >
-                  去使用
-                </button>
-                <span v-else-if="coupon.used" class="text-xs font-bold text-surface-400"
-                  >已使用</span
-                >
-              </div>
-            </div>
-          </div>
-          <div v-if="coupon.used" class="absolute right-2 top-2">
-            <div
-              class="flex h-10 w-10 rotate-12 transform items-center justify-center rounded-full bg-surface-300/30 dark:bg-surface-600/30"
-            >
-              <span class="text-[10px] font-bold text-surface-400">已用</span>
-            </div>
-          </div>
+          <strong class="text-xl tabular-nums">{{
+            coupon.type === 'percent' ? `${coupon.percent / 10}折` : `¥${coupon.value}`
+          }}</strong>
+          <p class="mt-1 text-[11px]">{{ coupon.type === 'percent' ? '折扣券' : '抵扣额度' }}</p>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-sm font-bold">{{ coupon.title }}</h3>
+          <p class="account-caption mt-1">{{ coupon.description }}</p>
+          <p class="account-caption mt-2">
+            {{ coupon.minSpend ? `满 ${coupon.minSpend} 元可用` : '无最低消费'
+            }}{{ coupon.type === 'percent' ? ` · 最多抵扣 ${coupon.value} 元` : '' }}
+          </p>
         </div>
       </div>
-
-      <div v-if="filteredCoupons.length === 0" class="animate-in py-16 text-center">
-        <div
-          class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800"
+      <div
+        class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-surface-100 pt-3 dark:border-surface-800"
+      >
+        <span class="account-caption">有效期至 {{ coupon.expiryDate || '未指定' }}</span
+        ><button
+          v-if="couponState(coupon, now) === 'available'"
+          class="action-secondary min-h-10 px-3 py-2 text-xs text-primary-700 dark:text-primary-300"
+          @click="useCoupon(coupon)"
         >
-          <i
-            class="fa fa-ticket text-3xl text-surface-300 dark:text-surface-600"
-            aria-hidden="true"
-          ></i>
-        </div>
-        <p class="mb-2 font-bold text-surface-800 dark:text-surface-200">
-          {{ activeTab === 'available' ? '暂无可用优惠券' : '暂无已使用优惠券' }}
-        </p>
-        <p class="text-sm text-surface-500 dark:text-surface-400">
-          {{ activeTab === 'available' ? '参与活动获取更多优惠' : '使用优惠券后这里会显示记录' }}
-        </p>
+          去使用</button
+        ><span v-else class="account-caption">{{
+          couponState(coupon, now) === 'used' ? '已使用' : '已过期'
+        }}</span>
       </div>
     </div>
-  </PanelShell>
+    <div v-if="!filteredCoupons.length" class="account-empty">
+      <span class="account-icon"><i class="fa fa-ticket" aria-hidden="true"></i></span>
+      <h3 class="text-sm font-semibold">{{ emptyText }}</h3>
+      <p class="account-caption">
+        {{
+          activeTab === 'available' ? '优惠券不是开始充电的必要条件。' : '这里会保留对应的券状态。'
+        }}
+      </p>
+      <button class="action-secondary" @click="emit('explore')">去找充电站</button>
+    </div>
+  </AccountPanel>
 </template>
-
 <script setup>
-import PanelShell from '../common/PanelShell.vue'
-import { ref, computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
+import AccountPanel from './AccountPanel.vue'
 import { useUserStore } from '../../store/modules/user'
-
-defineEmits(['close'])
-
-const userStore = useUserStore()
-const showToast = inject('showToast')
-
+import { couponState } from '../../utils/coupons'
+import { useNow } from '../../composables/useNow'
+const emit = defineEmits(['close', 'use-coupon', 'explore'])
+const user = useUserStore()
+const toast = inject('showToast')
+const now = useNow()
 const activeTab = ref('available')
-
-const coupons = computed(() => userStore.coupons)
-
-const tabs = computed(() => [
-  { label: '可使用', value: 'available', count: coupons.value.filter((c) => !c.used).length },
-  { label: '已使用', value: 'used', count: coupons.value.filter((c) => c.used).length }
-])
-
-const filteredCoupons = computed(() => {
-  if (activeTab.value === 'available') return coupons.value.filter((c) => !c.used)
-  return coupons.value.filter((c) => c.used)
-})
-
-const getCouponBgClass = (type) => {
-  switch (type) {
-    case 'discount':
-      return 'bg-gradient-to-br from-warning-400 to-orange-500'
-    case 'percent':
-      return 'bg-gradient-to-br from-pink-400 to-rose-500'
-    case 'free':
-      return 'bg-gradient-to-br from-secondary-400 to-emerald-500'
-    default:
-      return 'bg-gradient-to-br from-primary-400 to-accent-500'
+const tabs = computed(() =>
+  [
+    { label: '可使用', value: 'available' },
+    { label: '已使用', value: 'used' },
+    { label: '已过期', value: 'expired' }
+  ].map((tab) => ({
+    ...tab,
+    count: user.coupons.filter((coupon) => couponState(coupon, now.value) === tab.value).length
+  }))
+)
+const filteredCoupons = computed(() =>
+  user.coupons.filter((coupon) => couponState(coupon, now.value) === activeTab.value)
+)
+const emptyText = computed(
+  () =>
+    ({ available: '暂无可用优惠券', used: '暂无已使用优惠券', expired: '暂无过期优惠券' })[
+      activeTab.value
+    ]
+)
+const useCoupon = (coupon) => {
+  if (couponState(coupon) !== 'available') {
+    toast('这张优惠券已不可用，请重新选择', 'info')
+    return
   }
-}
-
-const handleUseCoupon = (_couponId) => {
-  showToast('请前往充电站使用此优惠券', 'info')
+  emit('use-coupon', coupon.id)
 }
 </script>

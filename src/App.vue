@@ -53,6 +53,7 @@ const handleAppToast = (event) => {
 onMounted(() => {
   window.addEventListener('appToast', handleAppToast)
   userStore.loadTheme()
+  userStore.loadPreferences()
   userStore.loadLocalVehicles()
   userStore.loadSandboxLedger()
 })

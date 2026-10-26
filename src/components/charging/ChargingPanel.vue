@@ -127,7 +127,12 @@
               : '结束充电'
         }}
       </button>
-      <button v-else-if="store.phase === 'awaiting_unplug'" class="action-primary" @click="unplug">
+      <button
+        v-else-if="store.phase === 'awaiting_unplug'"
+        ref="unplugRef"
+        class="action-primary"
+        @click="unplug"
+      >
         已拔枪，查看账单
       </button>
       <button v-else-if="store.phase === 'interrupted'" class="action-primary" @click="archive">
@@ -171,7 +176,7 @@
   </PanelShell>
 </template>
 <script setup>
-import { computed, inject, ref } from 'vue'
+import { computed, inject, nextTick, ref, watch } from 'vue'
 import PanelShell from '../common/PanelShell.vue'
 import DialogModal from '../common/DialogModal.vue'
 import { useChargingStore } from '../../store/modules/charging'
@@ -183,6 +188,18 @@ const data = computed(() => store.chargingData)
 const circumference = 2 * Math.PI * 88
 const battery = computed(() => Math.max(0, Math.min(100, data.value.battery || 0)))
 const showStopConfirm = ref(false)
+const unplugRef = ref(null)
+// A confirmation is a view of the session, not a frozen copy of its old phase.
+watch(
+  () => [store.phase, store.sessionId],
+  async () => {
+    if (!store.isCharging && showStopConfirm.value) {
+      showStopConfirm.value = false
+      await nextTick()
+      unplugRef.value?.focus({ preventScroll: true })
+    }
+  }
+)
 const phaseLabel = computed(
   () =>
     ({
@@ -205,13 +222,20 @@ const remainingMinutes = computed(() =>
   )
 )
 const requestStop = () => {
+  if (!store.isCharging || store.phase === 'stopping') return
   if (store.phase === 'stop_failed') {
     store.recoverDeviceResponse()
     stop()
   } else showStopConfirm.value = true
 }
 const stop = async () => {
-  if (!store.isCharging || store.phase === 'stopping') return
+  if (!store.isCharging) {
+    showStopConfirm.value = false
+    await nextTick()
+    unplugRef.value?.focus({ preventScroll: true })
+    return
+  }
+  if (store.phase === 'stopping') return
   try {
     await store.stopCharging()
   } catch (error) {

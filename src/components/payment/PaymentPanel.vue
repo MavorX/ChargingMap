@@ -179,7 +179,7 @@ const chargingData = computed(() => chargingStore.chargingData)
 const isPaying = ref(false)
 const showCouponList = ref(false)
 const selectedPaymentMethod = ref('wechat')
-const selectedCouponId = ref(null)
+const selectedCouponId = ref(chargingStore.preferredCouponId)
 const selectedCoupon = computed(
   () => userStore.coupons.find((coupon) => coupon.id === selectedCouponId.value) || null
 )
@@ -229,14 +229,18 @@ const paymentMethods = computed(() => [
     icon: 'fa fa-credit-card text-primary-600'
   }
 ])
-watch([coupons, isPaying], ([available]) => {
-  if (
-    !isPaying.value &&
-    selectedCouponId.value &&
-    !available.some((coupon) => coupon.id === selectedCouponId.value)
-  )
-    selectedCouponId.value = null
-})
+watch(
+  [coupons, isPaying],
+  ([available]) => {
+    if (
+      !isPaying.value &&
+      selectedCouponId.value &&
+      !available.some((coupon) => coupon.id === selectedCouponId.value)
+    )
+      selectedCouponId.value = null
+  },
+  { immediate: true }
+)
 const selectCoupon = (id) => {
   selectedCouponId.value = id
   showCouponList.value = false

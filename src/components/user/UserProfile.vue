@@ -1,318 +1,139 @@
 <template>
-  <PanelShell title="我的账户" content-id="user-profile-panel" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-    >
-      <div class="w-10"></div>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">我的账户</h2>
-      <button
-        id="close-profile"
-        class="icon-button"
-        aria-label="关闭个人中心"
-        @click="$emit('close')"
-      >
-        <i
-          class="fa fa-times text-surface-500 transition-colors duration-200 hover:text-danger-500"
-          aria-hidden="true"
-        ></i>
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
-      <div
-        class="animate-in relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-white to-surface-50 p-6 shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-      >
-        <div
-          class="absolute right-0 top-0 h-40 w-40 rounded-bl-full bg-gradient-to-br from-primary-500/20 via-accent-500/10 to-transparent"
-        ></div>
-        <div
-          class="absolute bottom-0 left-0 h-32 w-32 rounded-tr-full bg-gradient-to-tr from-secondary-500/15 to-transparent"
-        ></div>
-
-        <div class="relative z-10 flex items-center">
-          <div
-            class="group relative mr-5 flex h-[4.5rem] w-[4.5rem] flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary-400 via-primary-600 to-accent-600 shadow-xl shadow-primary-500/30"
-          >
-            <div class="absolute inset-0 bg-gradient-to-tr from-white/25 to-transparent"></div>
-            <i
-              class="fa fa-user relative z-10 text-2xl text-white transition-transform duration-300 group-hover:scale-110"
-              aria-hidden="true"
-            ></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <h3 class="mb-2.5 text-xl font-black text-surface-900 dark:text-surface-100">
-              {{ userInfo.name }}
-            </h3>
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="rounded-full bg-gradient-to-r from-primary-500 to-accent-500 px-3 py-1 text-xs font-bold text-white shadow-md"
-                >{{ userInfo.level }}</span
-              >
-              <span class="text-sm font-medium text-surface-500 dark:text-surface-400"
-                >{{ userInfo.points }} 积分</span
-              >
-            </div>
-          </div>
+  <AccountPanel
+    title="我的账户"
+    subtitle="个人资料与充电服务"
+    content-id="user-profile-panel"
+    back-id="close-profile"
+    back-label="关闭个人中心"
+    @close="emit('close')"
+  >
+    <section class="account-card">
+      <div class="flex items-center gap-4">
+        <span class="account-icon h-14 w-14 text-xl" aria-hidden="true"
+          ><i class="fa fa-user-o"></i
+        ></span>
+        <div class="min-w-0 flex-1">
+          <h3 class="break-words text-lg font-bold">{{ user.userInfo.name }}</h3>
+          <p class="account-caption mt-1">{{ user.userInfo.level }} · 本地演示账户</p>
         </div>
-      </div>
-
-      <div class="animate-in mb-7 grid grid-cols-3 gap-3 delay-100">
         <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-center shadow-soft transition-all duration-300 hover:-translate-y-1 dark:from-surface-800 dark:to-surface-900"
-          @click="$emit('show-wallet')"
+          class="icon-button text-primary-600 dark:text-primary-400"
+          aria-label="编辑个人资料"
+          @click="emit('show-settings')"
         >
-          <div
-            class="mx-auto mb-2.5 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-warning-400 to-orange-500 shadow-md transition-transform duration-300 group-hover:scale-110"
+          <i class="fa fa-pencil" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div
+        class="mt-5 grid grid-cols-3 divide-x divide-surface-200 border-t border-surface-100 pt-4 dark:divide-surface-700 dark:border-surface-800"
+      >
+        <button class="min-w-0 space-y-1 py-2 text-center" @click="emit('show-wallet')">
+          <span class="block break-all text-base font-bold tabular-nums">{{
+            formatPrice(user.userInfo.balance)
+          }}</span
+          ><span class="account-caption">钱包余额</span>
+        </button>
+        <button class="min-w-0 space-y-1 py-2 text-center" @click="emit('show-coupons')">
+          <span class="block text-base font-bold tabular-nums">{{ couponCount }}</span
+          ><span class="account-caption">可用优惠券</span>
+        </button>
+        <button class="min-w-0 space-y-1 py-2 text-center" @click="showPoints = true">
+          <span class="block text-base font-bold tabular-nums">{{ user.userInfo.points }}</span
+          ><span class="account-caption">积分明细</span>
+        </button>
+      </div>
+    </section>
+    <button
+      v-if="charging.isCharging || charging.paymentPending"
+      class="choice-card"
+      @click="emit('resume-session')"
+    >
+      <span class="account-icon"><i class="fa fa-bolt" aria-hidden="true"></i></span
+      ><span class="min-w-0 flex-1"
+        ><strong class="block text-sm">{{
+          charging.isCharging ? '充电进行中' : '有待处理的充电订单'
+        }}</strong
+        ><span class="account-caption">{{ charging.sessionStation?.stationName }}</span></span
+      ><span class="text-xs font-semibold text-primary-600"
+        >查看进度<i class="fa fa-angle-right ml-2" aria-hidden="true"></i
+      ></span>
+    </button>
+    <section>
+      <h3 class="account-heading">我的充电</h3>
+      <div class="account-group">
+        <button
+          v-for="entry in services"
+          :key="entry.label"
+          class="account-row"
+          @click="emit(entry.event)"
+        >
+          <span class="account-icon"><i :class="entry.icon" aria-hidden="true"></i></span
+          ><span class="min-w-0 flex-1"
+            ><strong class="block text-sm">{{ entry.label }}</strong
+            ><span class="account-caption">{{ entry.description }}</span></span
+          ><span
+            v-if="entry.count"
+            class="text-xs font-semibold text-primary-600 dark:text-primary-400"
+            >{{ entry.count }}</span
+          ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i>
+        </button>
+      </div>
+    </section>
+    <section>
+      <h3 class="account-heading">偏好与帮助</h3>
+      <div class="account-group">
+        <button class="account-row" @click="emit('show-settings')">
+          <span class="account-icon"><i class="fa fa-sliders" aria-hidden="true"></i></span
+          ><span class="flex-1 text-sm font-semibold">设置与个人资料</span
+          ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i></button
+        ><button class="account-row" @click="emit('show-help')">
+          <span class="account-icon"
+            ><i class="fa fa-question-circle-o" aria-hidden="true"></i></span
+          ><span class="flex-1 text-sm font-semibold">帮助中心</span
+          ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i>
+        </button>
+      </div>
+    </section>
+    <p class="account-caption text-center">演示账户数据保存在此浏览器，无需登录。</p>
+    <template #dialogs
+      ><DialogModal v-if="showPoints" title="积分明细" @close="showPoints = false"
+        ><p class="account-caption">当前积分</p>
+        <p class="my-2 text-3xl font-bold tabular-nums">{{ user.userInfo.points }}</p>
+        <p class="account-caption mb-4">
+          每笔充电订单完成评价可获得 5 积分，只奖励一次。积分仅供演示，暂无兑换功能。
+        </p>
+        <div v-if="!user.pointsRecords.length" class="info-row text-sm text-surface-500">
+          暂无本地积分变动记录，初始演示积分不计为奖励。
+        </div>
+        <ul v-else class="max-h-60 space-y-3 overflow-y-auto">
+          <li
+            v-for="record in user.pointsRecords"
+            :key="record.id"
+            class="flex items-center justify-between gap-3 border-t border-surface-100 pt-3 dark:border-surface-800"
           >
-            <i class="fa fa-wallet text-base text-white" aria-hidden="true"></i>
-          </div>
-          <p class="gradient-text text-lg font-black leading-tight">
-            {{ formatPrice(userInfo.balance) }}
-          </p>
-          <p class="mt-1 text-[10px] font-medium uppercase tracking-wide text-surface-500">
-            钱包余额
-          </p>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-center shadow-soft transition-all duration-300 hover:-translate-y-1 dark:from-surface-800 dark:to-surface-900"
-          @click="$emit('show-coupons')"
-        >
-          <div
-            class="mx-auto mb-2.5 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-md transition-transform duration-300 group-hover:scale-110"
-          >
-            <i class="fa fa-ticket text-base text-white" aria-hidden="true"></i>
-          </div>
-          <p class="text-lg font-black leading-tight text-warning-600">
-            {{ availableCouponsCount }}
-          </p>
-          <p class="mt-1 text-[10px] font-medium uppercase tracking-wide text-surface-500">
-            优惠券
-          </p>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-center shadow-soft transition-all duration-300 hover:-translate-y-1 dark:from-surface-800 dark:to-surface-900"
-          @click="$emit('show-wallet')"
-        >
-          <div
-            class="mx-auto mb-2.5 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-secondary-400 to-emerald-500 shadow-md transition-transform duration-300 group-hover:scale-110"
-          >
-            <i class="fa fa-star text-base text-white" aria-hidden="true"></i>
-          </div>
-          <p class="text-lg font-black leading-tight text-secondary-600">{{ userInfo.points }}</p>
-          <p class="mt-1 text-[10px] font-medium uppercase tracking-wide text-surface-500">积分</p>
-        </button>
-      </div>
-
-      <div class="animate-in mb-7 space-y-3 delay-200">
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-charging-history')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-blue-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-history text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-bold text-surface-800 dark:text-surface-200">充电记录</span>
+            <div>
+              <p class="text-sm font-semibold">{{ record.description }}</p>
+              <p class="account-caption">{{ record.time }}</p>
             </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-coupons')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-400 to-orange-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-ticket text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <div class="flex min-w-0 items-center space-x-2">
-                <span class="text-sm font-bold text-surface-800 dark:text-surface-200">优惠券</span>
-                <span
-                  class="rounded-full bg-danger-500 px-2 py-0.5 text-[10px] font-bold text-white"
-                  >{{ availableCouponsCount }}张</span
-                >
-              </div>
-            </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-wallet')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-secondary-400 to-teal-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-credit-card text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-bold text-surface-800 dark:text-surface-200">我的钱包</span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span class="text-sm font-bold text-surface-600 dark:text-surface-300">{{
-                formatPrice(userInfo.balance)
-              }}</span>
-              <i
-                class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-                aria-hidden="true"
-              ></i>
-            </div>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-vehicles')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-car text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-bold text-surface-800 dark:text-surface-200">我的车辆</span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-medium text-surface-500">{{ vehicles.length }}辆</span>
-              <i
-                class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-                aria-hidden="true"
-              ></i>
-            </div>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-notifications')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-400 to-purple-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-bell text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <div class="flex min-w-0 items-center space-x-2">
-                <span class="text-sm font-bold text-surface-800 dark:text-surface-200"
-                  >通知中心</span
-                >
-                <span
-                  v-if="unreadNotificationsCount > 0"
-                  class="flex h-5 w-5 items-center justify-center rounded-full bg-danger-500 text-[10px] font-bold text-white"
-                >
-                  {{ unreadNotificationsCount }}
-                </span>
-              </div>
-            </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-favorites')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 to-pink-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-heart text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <div class="flex min-w-0 items-center space-x-2">
-                <span class="text-sm font-bold text-surface-800 dark:text-surface-200"
-                  >我的收藏</span
-                >
-                <span
-                  v-if="favoriteStations.length > 0"
-                  class="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white"
-                  >{{ favoriteStations.length }}个</span
-                >
-              </div>
-            </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-      </div>
-
-      <div class="animate-in space-y-3 delay-300">
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-settings')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-400 to-gray-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-cog text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-bold text-surface-800 dark:text-surface-200">设置</span>
-            </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-
-        <button
-          class="group w-full cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 text-left shadow-soft transition-all duration-300 hover:-translate-x-1 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click.prevent="$emit('show-help')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex min-w-0 flex-1 items-center space-x-4">
-              <div
-                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-question-circle text-sm text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-bold text-surface-800 dark:text-surface-200">帮助中心</span>
-            </div>
-            <i
-              class="fa fa-chevron-right text-surface-400 transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary-500"
-              aria-hidden="true"
-            ></i>
-          </div>
-        </button>
-      </div>
-    </div>
-  </PanelShell>
+            <strong class="text-primary-600">+{{ record.amount }}</strong>
+          </li>
+        </ul>
+        <button class="action-primary mt-5" @click="showPoints = false">知道了</button></DialogModal
+      ></template
+    >
+  </AccountPanel>
 </template>
-
 <script setup>
-import PanelShell from '../common/PanelShell.vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import AccountPanel from './AccountPanel.vue'
+import DialogModal from '../common/DialogModal.vue'
 import { useUserStore } from '../../store/modules/user'
-import { formatPrice } from '../../utils/format'
 import { useStationsStore } from '../../store/modules/stations'
-
-const _emit = defineEmits([
+import { useChargingStore } from '../../store/modules/charging'
+import { couponState } from '../../utils/coupons'
+import { formatPrice } from '../../utils/format'
+import { useNow } from '../../composables/useNow'
+const emit = defineEmits([
   'close',
   'show-notifications',
   'show-vehicles',
@@ -321,14 +142,45 @@ const _emit = defineEmits([
   'show-wallet',
   'show-favorites',
   'show-settings',
-  'show-help'
+  'show-help',
+  'resume-session'
 ])
-
-const userStore = useUserStore()
-const stationsStore = useStationsStore()
-const userInfo = computed(() => userStore.userInfo)
-const vehicles = computed(() => userStore.vehicles)
-const unreadNotificationsCount = computed(() => userStore.unreadNotificationsCount)
-const favoriteStations = computed(() => stationsStore.favoriteStationsList)
-const availableCouponsCount = computed(() => userStore.coupons.filter((c) => !c.used).length)
+const user = useUserStore(),
+  stations = useStationsStore(),
+  charging = useChargingStore()
+const now = useNow()
+const showPoints = ref(false)
+const couponCount = computed(
+  () => user.coupons.filter((coupon) => couponState(coupon, now.value) === 'available').length
+)
+const services = computed(() => [
+  {
+    label: '充电记录',
+    description: '查看已完成订单与充电费用',
+    event: 'show-charging-history',
+    icon: 'fa fa-history',
+    count: user.chargingHistory.length ? `${user.chargingHistory.length} 笔` : ''
+  },
+  {
+    label: '我的车辆',
+    description: '默认车辆、接口与电池规格',
+    event: 'show-vehicles',
+    icon: 'fa fa-car',
+    count: `${user.vehicles.length} 辆`
+  },
+  {
+    label: '我的收藏',
+    description: '快速找到常用充电站',
+    event: 'show-favorites',
+    icon: 'fa fa-heart-o',
+    count: `${stations.favoriteStationsList.length} 个`
+  },
+  {
+    label: '通知中心',
+    description: '订单通知与演示消息',
+    event: 'show-notifications',
+    icon: 'fa fa-bell-o',
+    count: user.unreadNotificationsCount ? `${user.unreadNotificationsCount} 未读` : ''
+  }
+])
 </script>

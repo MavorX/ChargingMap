@@ -112,6 +112,7 @@ export const useChargingStore = defineStore('charging', {
     sessionConnector: null,
     paymentPending: false,
     lastReceipt: null,
+    preferredCouponId: null,
     reviewSubmitted: false,
     chargingData: {
       duration: 0,
@@ -651,6 +652,7 @@ export const useChargingStore = defineStore('charging', {
         method
       }
       this.phase = 'paid'
+      this.preferredCouponId = null
       this.persistSession()
       return this.lastReceipt
     }

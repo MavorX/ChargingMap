@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
 
 const dialogs = []
 const inertElements = new Map()
@@ -21,16 +21,31 @@ const unlockElement = (element) => {
   inertElements.delete(element)
 }
 
-export function useDialogFocus(rootRef, contentRef, { close, isBusy = () => false }) {
+export function useDialogFocus(
+  rootRef,
+  contentRef,
+  { close, isBusy = () => false, allowNavigation = () => false }
+) {
   let entry = null
   let trigger = null
   let locked = []
+  let navigation = []
+  const contains = (element) =>
+    contentRef.value?.contains(element) ||
+    (allowNavigation() && !!element?.closest('[data-panel-navigation]'))
 
   const focusable = () => {
     if (!contentRef.value) return []
     const hasLayout = contentRef.value.getClientRects().length > 0
     return [
-      ...contentRef.value.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')
+      ...contentRef.value.querySelectorAll('button, a[href], input, select, textarea, [tabindex]'),
+      ...(allowNavigation()
+        ? [
+            ...document.querySelectorAll(
+              '[data-panel-navigation] button, [data-panel-navigation] a[href]'
+            )
+          ]
+        : [])
     ].filter(
       (element) =>
         element.tabIndex >= 0 &&
@@ -59,7 +74,7 @@ export function useDialogFocus(rootRef, contentRef, { close, isBusy = () => fals
     const last = elements.at(-1) || contentRef.value
     if (
       !elements.length ||
-      !contentRef.value?.contains(document.activeElement) ||
+      !contains(document.activeElement) ||
       (event.shiftKey ? document.activeElement === first : document.activeElement === last)
     ) {
       event.preventDefault()
@@ -68,11 +83,7 @@ export function useDialogFocus(rootRef, contentRef, { close, isBusy = () => fals
   }
 
   const onFocusin = (event) => {
-    if (
-      isTop() &&
-      !contentRef.value?.contains(event.target) &&
-      !event.target.closest('[data-dialog-exempt]')
-    )
+    if (isTop() && !contains(event.target) && !event.target.closest('[data-dialog-exempt]'))
       focusInside()
   }
 
@@ -93,17 +104,35 @@ export function useDialogFocus(rootRef, contentRef, { close, isBusy = () => fals
           !sibling.matches('[data-dialog-exempt]') &&
           !['SCRIPT', 'STYLE'].includes(sibling.tagName)
         ) {
+          if (sibling.matches('[data-panel-navigation]')) {
+            navigation.push(sibling)
+            if (allowNavigation()) continue
+          }
           lockElement(sibling)
           locked.push(sibling)
         }
       }
       node = node.parentElement
     }
-    entry = { focusInside, contains: (element) => contentRef.value?.contains(element) }
+    entry = { focusInside, contains }
     dialogs.push(entry)
     document.addEventListener('keydown', onKeydown)
     document.addEventListener('focusin', onFocusin)
     focusInside()
+  })
+
+  watch(allowNavigation, (allowed) => {
+    if (!entry) return
+    for (const element of navigation) {
+      const index = locked.indexOf(element)
+      if (allowed && index >= 0) {
+        locked.splice(index, 1)
+        unlockElement(element)
+      } else if (!allowed && index < 0) {
+        lockElement(element)
+        locked.push(element)
+      }
+    }
   })
 
   onBeforeUnmount(() => {
