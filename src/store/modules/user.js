@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { createRecordId } from '../../utils/id'
 import {
   demoUserInfo,
   demoChargingHistory,
@@ -14,7 +15,7 @@ const cloneRecords = (records) => records.map((record) => ({ ...record }))
 const welcomeNotification = {
   id: 'welcome',
   title: '欢迎使用 VWer-Charging',
-  content: '开始充电后，充电记录、优惠券、钱包交易与通知将显示在这里。',
+  content: '欢迎体验找站、导航与充电全流程。站点与充电均为模拟演示，不涉及真实交易。',
   time: '刚刚',
   read: true
 }
@@ -29,14 +30,18 @@ const createInitialState = () => ({
       model: 'ID.UNYX 08',
       brand: 'Volkswagen',
       connectorType: 'CCS Combo',
-      maxPower: 250
+      maxPower: 250,
+      batteryCapacityKwh: 80,
+      isTestVehicle: true
     },
     {
       id: '2',
       model: 'ID.3',
       brand: 'Volkswagen',
       connectorType: 'GB/T',
-      maxPower: 120
+      maxPower: 120,
+      batteryCapacityKwh: 58,
+      isTestVehicle: true
     }
   ],
   chargingHistory: isDemoMode ? cloneRecords(demoChargingHistory) : [],
@@ -57,48 +62,134 @@ export const useUserStore = defineStore('user', {
   state: createInitialState,
 
   actions: {
+    loadLocalVehicles() {
+      try {
+        const vehicles = JSON.parse(localStorage.getItem('chargingLocalVehicles') || 'null')
+        if (Array.isArray(vehicles))
+          this.vehicles = vehicles.filter(
+            (vehicle) =>
+              vehicle &&
+              typeof vehicle.id === 'string' &&
+              typeof vehicle.model === 'string' &&
+              typeof vehicle.brand === 'string' &&
+              ['GB/T', 'CCS Combo', 'CHAdeMO', 'Type 2'].includes(vehicle.connectorType)
+          )
+      } catch {
+        /* Keep the local vehicle form usable when storage is blocked. */
+      }
+    },
+    persistVehicles() {
+      try {
+        localStorage.setItem('chargingLocalVehicles', JSON.stringify(this.vehicles))
+      } catch {
+        /* In-memory edits still work. */
+      }
+    },
+    loadSandboxLedger() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('chargingSandboxLedger') || 'null')
+        const validRecords = (records) =>
+          Array.isArray(records) &&
+          records.every(
+            (record) => record && typeof record === 'object' && typeof record.id === 'string'
+          )
+        if (
+          !saved ||
+          saved.version !== 1 ||
+          !Number.isFinite(saved.balance) ||
+          saved.balance < 0 ||
+          !Number.isFinite(saved.points) ||
+          saved.points < 0 ||
+          !validRecords(saved.history) ||
+          !validRecords(saved.transactions)
+        )
+          return
+        this.userInfo.balance = saved.balance
+        this.userInfo.points = saved.points
+        this.chargingHistory = saved.history.slice(0, 200)
+        this.walletTransactions = saved.transactions.slice(0, 200)
+        if (validRecords(saved.notifications))
+          this.notifications = saved.notifications.slice(0, 200)
+        if (Array.isArray(saved.usedCoupons))
+          this.coupons.forEach((coupon) => {
+            if (saved.usedCoupons.includes(coupon.id)) coupon.used = true
+          })
+      } catch {
+        /* Invalid local test records never prevent a fresh launch. */
+      }
+    },
+    persistSandboxLedger() {
+      try {
+        localStorage.setItem(
+          'chargingSandboxLedger',
+          JSON.stringify({
+            version: 1,
+            balance: this.userInfo.balance,
+            points: this.userInfo.points,
+            history: this.chargingHistory.slice(0, 200),
+            transactions: this.walletTransactions.slice(0, 200),
+            notifications: this.notifications.slice(0, 200),
+            usedCoupons: this.coupons.filter((coupon) => coupon.used).map((coupon) => coupon.id)
+          })
+        )
+      } catch {
+        /* Test records remain in memory. */
+      }
+    },
     toggleTheme() {
       this.isDarkMode = !this.isDarkMode
-      localStorage.setItem('isDarkMode', this.isDarkMode)
+      try {
+        localStorage.setItem('isDarkMode', this.isDarkMode)
+      } catch {
+        /* In-memory theme still works. */
+      }
     },
 
     loadTheme() {
-      const savedTheme = localStorage.getItem('isDarkMode')
-      if (savedTheme !== null) {
-        this.isDarkMode = savedTheme === 'true'
+      try {
+        const savedTheme = localStorage.getItem('isDarkMode')
+        if (savedTheme !== null) this.isDarkMode = savedTheme === 'true'
+      } catch {
+        /* Storage may be blocked by browser privacy settings. */
       }
     },
 
     addVehicle(vehicle) {
       this.vehicles.push({
-        id: Date.now().toString(),
+        id: createRecordId(),
         ...vehicle
       })
+      this.persistVehicles()
     },
 
     removeVehicle(vehicleId) {
       this.vehicles = this.vehicles.filter((v) => v.id !== vehicleId)
+      this.persistVehicles()
     },
 
     updateVehicle(vehicleId, updates) {
       const vehicle = this.vehicles.find((v) => v.id === vehicleId)
       if (vehicle) {
         Object.assign(vehicle, updates)
+        this.persistVehicles()
       }
     },
 
     addNotification(notification) {
       this.notifications.unshift({
-        id: Date.now().toString(),
+        id: createRecordId(),
+        time: new Date().toLocaleString('zh-CN'),
         ...notification,
         read: false
       })
+      this.persistSandboxLedger()
     },
 
     markNotificationAsRead(notificationId) {
       const notification = this.notifications.find((n) => n.id === notificationId)
       if (notification) {
         notification.read = true
+        this.persistSandboxLedger()
       }
     },
 
@@ -106,24 +197,27 @@ export const useUserStore = defineStore('user', {
       this.notifications.forEach((notification) => {
         notification.read = true
       })
+      this.persistSandboxLedger()
     },
 
     useCoupon(couponId) {
       const coupon = this.coupons.find((c) => c.id === couponId)
       if (coupon) {
         coupon.used = true
+        this.persistSandboxLedger()
       }
     },
 
     addWalletTransaction(transaction) {
-      const balanceDelta = ['recharge', 'payment', 'refund', 'withdraw'].includes(transaction.type)
-        ? Number(transaction.amount) || 0
-        : 0
+      const affectsBalance =
+        ['recharge', 'refund', 'withdraw'].includes(transaction.type) ||
+        (transaction.type === 'payment' && (!transaction.method || transaction.method === 'wallet'))
+      const balanceDelta = affectsBalance ? Number(transaction.amount) || 0 : 0
       if (balanceDelta !== 0) {
         this.userInfo.balance = Math.round((this.userInfo.balance + balanceDelta) * 100) / 100
       }
       this.walletTransactions.unshift({
-        id: Date.now().toString(),
+        id: createRecordId(),
         ...transaction,
         balance: this.userInfo.balance,
         date: new Date()
@@ -136,6 +230,7 @@ export const useUserStore = defineStore('user', {
           })
           .replace(/\//g, '-')
       })
+      this.persistSandboxLedger()
     },
 
     updateSettings(updates) {
@@ -144,10 +239,12 @@ export const useUserStore = defineStore('user', {
 
     addChargingHistory(record) {
       this.chargingHistory.unshift({
-        id: Date.now().toString(),
+        id: createRecordId(),
+        date: new Date().toLocaleDateString('zh-CN'),
         ...record,
         status: 'completed'
       })
+      this.persistSandboxLedger()
     }
   },
 

@@ -15,6 +15,7 @@ const settle = async () => {
 
 const mountToast = (props = {}) =>
   mount(Toast, {
+    global: { stubs: { teleport: true } },
     props: { show: true, message: '提示内容', type: 'success', ...props }
   })
 
@@ -23,6 +24,7 @@ const mountApp = () =>
     global: {
       plugins: [createPinia()],
       stubs: {
+        teleport: true,
         Header: true,
         RouterView: true,
         'router-view': true
@@ -167,6 +169,20 @@ describe('Toast 自动消失与暂停', () => {
     await settle()
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 
+    wrapper.unmount()
+  })
+
+  it('restarts the timer even when the next toast has identical text', async () => {
+    const wrapper = mountApp()
+    dispatchToast('同一条提示')
+    await settle()
+    await vi.advanceTimersByTimeAsync(2000)
+    dispatchToast('同一条提示')
+    await settle()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
     wrapper.unmount()
   })
 })

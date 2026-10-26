@@ -37,6 +37,7 @@ function compareDistance(a, b) {
 export const useStationsStore = defineStore('stations', {
   state: () => ({
     stations: [],
+    loadRequestId: 0,
     currentStation: null,
     userLocation: null,
     isNavigating: false,
@@ -61,11 +62,13 @@ export const useStationsStore = defineStore('stations', {
 
   actions: {
     async loadStations() {
+      const requestId = ++this.loadRequestId
       this.isLoading = true
       this.error = null
 
       try {
         const listData = await loadStationsList()
+        if (requestId !== this.loadRequestId) return
 
         this.stations = listData.map((station) => {
           const distance = this.userLocation
@@ -80,6 +83,7 @@ export const useStationsStore = defineStore('stations', {
 
           return {
             ...station,
+            dataSource: 'sandbox',
             currentPrice: Number.isFinite(initialPrice) ? initialPrice : null,
             distance,
             isFavorite: false,
@@ -90,11 +94,13 @@ export const useStationsStore = defineStore('stations', {
         this.stations.sort(compareDistance)
         this.loadFavoriteStations()
       } catch (err) {
+        if (requestId !== this.loadRequestId) return
+        this.stations = []
         this.error = '站点数据加载失败'
         console.error('加载站点数据失败:', err)
         notifyError(this.error)
       } finally {
-        this.isLoading = false
+        if (requestId === this.loadRequestId) this.isLoading = false
       }
     },
 
@@ -184,7 +190,10 @@ export const useStationsStore = defineStore('stations', {
 
     loadFavoriteStations() {
       try {
-        const favoriteStations = JSON.parse(localStorage.getItem('favoriteStations') || '[]')
+        const storedIds = JSON.parse(localStorage.getItem('favoriteStations') || '[]')
+        const favoriteStations = Array.isArray(storedIds)
+          ? storedIds.filter((id) => typeof id === 'string')
+          : []
         this.stations.forEach((station) => {
           station.isFavorite = favoriteStations.includes(station.stationId)
         })
@@ -322,11 +331,12 @@ export const useStationsStore = defineStore('stations', {
           id: s.stationId,
           name: s.stationName,
           address: s.address,
+          dataSource: s.dataSource,
           availableConnectors: s.quickAvailableNum + s.slowAvailableNum,
           totalConnectors: s.quickChargeNum + s.slowChargeNum,
           distance:
             s.distance == null || Number.isNaN(s.distance) ? null : (s.distance / 1000).toFixed(1),
-          power: s.maxPower || 120
+          power: s.maxPower || null
         }))
     },
 

@@ -14,6 +14,7 @@
       <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">通知中心</h2>
       <button
         class="rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-600 transition-all duration-200 hover:bg-primary-50 active:scale-95 dark:text-primary-400 dark:hover:bg-primary-900/20"
+        :disabled="userStore.unreadNotificationsCount === 0"
         @click="markAllAsRead"
       >
         全部已读
@@ -27,7 +28,11 @@
           :key="notification.id"
           class="group cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft transition-all duration-300 hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
           :class="!notification.read && 'border-l-4 border-l-primary-500'"
+          role="button"
+          tabindex="0"
           @click="markAsRead(notification.id)"
+          @keydown.enter.self.prevent="markAsRead(notification.id)"
+          @keydown.space.self.prevent="markAsRead(notification.id)"
         >
           <div class="mb-2 flex justify-between">
             <div class="flex items-center">

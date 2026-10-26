@@ -29,6 +29,8 @@ export const partIdFor = (stationId) => {
 // in-flight fetch.
 const _partCache = new Map()
 
+export const clearStationDetailCache = () => _partCache.clear()
+
 const fetchPart = (partId) => {
   const cached = _partCache.get(partId)
   if (cached) return cached

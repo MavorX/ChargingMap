@@ -36,7 +36,11 @@
           v-for="station in favoriteStations"
           :key="station.id"
           class="cursor-pointer rounded-2xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft transition-all hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
+          role="button"
+          tabindex="0"
           @click="viewStationDetail(station.id)"
+          @keydown.enter.self.prevent="viewStationDetail(station.id)"
+          @keydown.space.self.prevent="viewStationDetail(station.id)"
         >
           <div class="flex items-start justify-between">
             <div class="flex min-w-0 flex-1 items-start">
@@ -71,15 +75,15 @@
           >
             <div class="flex items-center">
               <i class="fa fa-plug mr-1.5 text-xs text-primary-500" aria-hidden="true"></i>
-              <span class="text-xs text-surface-600 dark:text-surface-300"
-                >{{ station.availableConnectors }}/{{ station.totalConnectors }}可用</span
-              >
+              <span class="text-xs text-surface-600 dark:text-surface-300">{{
+                `${station.availableConnectors}/${station.totalConnectors}可用`
+              }}</span>
             </div>
             <div class="flex items-center">
               <i class="fa fa-bolt mr-1.5 text-xs text-secondary-500" aria-hidden="true"></i>
-              <span class="text-xs text-surface-600 dark:text-surface-300"
-                >{{ station.power }}kW</span
-              >
+              <span class="text-xs text-surface-600 dark:text-surface-300">{{
+                station.power ? `${station.power}kW` : '功率待核实'
+              }}</span>
             </div>
             <div class="flex items-center">
               <i class="fa fa-location-arrow mr-1.5 text-xs text-accent-500" aria-hidden="true"></i>
@@ -105,48 +109,43 @@
       </div>
     </div>
 
-    <Transition name="fade">
-      <div
-        v-if="showRemoveConfirm"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showRemoveConfirm = false"
-      >
+    <DialogModal
+      v-if="showRemoveConfirm"
+      title="取消收藏"
+      role="alertdialog"
+      @close="showRemoveConfirm = false"
+    >
+      <div class="mb-5 text-center">
         <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-800"
+          class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-900/30"
         >
-          <div class="mb-5 text-center">
-            <div
-              class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-900/30"
-            >
-              <i class="fa fa-heart-broken text-xl text-rose-500" aria-hidden="true"></i>
-            </div>
-            <h3 class="text-lg font-bold text-surface-900 dark:text-surface-100">取消收藏</h3>
-            <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">
-              确定要取消收藏这个站点吗？
-            </p>
-          </div>
-          <div class="flex space-x-3">
-            <button
-              class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              @click="showRemoveConfirm = false"
-            >
-              再想想
-            </button>
-            <button
-              class="flex-1 rounded-xl bg-rose-500 py-3 font-bold text-white transition-colors duration-200 hover:bg-rose-600 active:scale-95"
-              @click="confirmRemove"
-            >
-              取消收藏
-            </button>
-          </div>
+          <i class="fa fa-heart-broken text-xl text-rose-500" aria-hidden="true"></i>
         </div>
+        <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">
+          确定要取消收藏这个站点吗？
+        </p>
       </div>
-    </Transition>
+      <div class="flex space-x-3">
+        <button
+          class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          @click="showRemoveConfirm = false"
+        >
+          再想想
+        </button>
+        <button
+          class="flex-1 rounded-xl bg-rose-500 py-3 font-bold text-white transition-colors duration-200 hover:bg-rose-600 active:scale-95"
+          @click="confirmRemove"
+        >
+          取消收藏
+        </button>
+      </div>
+    </DialogModal>
   </PanelShell>
 </template>
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import DialogModal from '../common/DialogModal.vue'
 import { ref, computed, inject } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 
@@ -162,8 +161,7 @@ const removingStationId = ref(null)
 const viewStationDetail = (stationId) => {
   const station = stationsStore.stations.find((s) => s.stationId === stationId)
   if (station) {
-    stationsStore.setCurrentStation(station)
-    emit('close')
+    emit('view-station', station)
   }
 }
 
@@ -181,14 +179,3 @@ const confirmRemove = () => {
   removingStationId.value = null
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

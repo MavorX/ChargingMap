@@ -3,141 +3,104 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChargingStore } from '../store/modules/charging'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
+import { installSandbox, start, stop } from './helpers/charging'
 
-describe('charging store interval characterization', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    localStorage.clear()
-    vi.useFakeTimers()
-  })
+beforeEach(() => {
+  setActivePinia(createPinia())
+  localStorage.clear()
+  vi.useFakeTimers()
+  installSandbox()
+})
+afterEach(() => {
+  useChargingStore().suspendSimulator()
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
-  afterEach(() => {
-    const store = useChargingStore()
-    store.stopCharging()
-    vi.useRealTimers()
-    vi.restoreAllMocks()
-  })
-
-  it('increments energy every second after startCharging', () => {
-    const store = useChargingStore()
-    store.startCharging()
-
-    expect(store.isCharging).toBe(true)
+describe('physical sandbox metering', () => {
+  it('meters kW × hours, with no invented initial SOC or random power', async () => {
+    const store = await start()
     expect(store.chargingData.energy).toBe(0)
-
-    vi.advanceTimersByTime(1000)
-    expect(store.chargingData.energy).toBeCloseTo(0.1, 5)
-
-    vi.advanceTimersByTime(2000)
-    expect(store.chargingData.energy).toBeCloseTo(0.3, 5)
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(store.chargingData.energy).toBeCloseTo((60 * 3) / 3600)
     expect(store.chargingData.duration).toBe(3)
-    expect(store.chargingData.cost).toBeCloseTo(0.75, 5)
-    expect(store.chargingData.battery).toBeCloseTo(36.5, 5)
+    expect(store.chargingData.speed).toBe(60)
+    expect(store.chargingData.cost).toBe(0.06)
+    expect(store.chargingData.battery).toBeCloseTo(20 + (0.05 / 60) * 100)
   })
 
-  it('is idempotent: a second startCharging does not duplicate the interval', () => {
-    const store = useChargingStore()
-    store.startCharging()
-    store.startCharging()
-
-    vi.advanceTimersByTime(1000)
-    expect(store.chargingData.energy).toBeCloseTo(0.1, 5)
-
-    vi.advanceTimersByTime(1000)
-    expect(store.chargingData.energy).toBeCloseTo(0.2, 5)
+  it('does not duplicate intervals when start is repeated', async () => {
+    const store = await start()
+    await store.startCharging()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(store.chargingData.energy).toBeCloseTo((60 * 2) / 3600)
     expect(store.chargingData.duration).toBe(2)
   })
 
-  it('stops incrementing energy after stopCharging', () => {
-    const store = useChargingStore()
-    store.startCharging()
-    vi.advanceTimersByTime(2000)
-    expect(store.chargingData.energy).toBeCloseTo(0.2, 5)
-
-    store.stopCharging()
-    vi.advanceTimersByTime(5000)
-
-    expect(store.isCharging).toBe(false)
-    expect(store.chargingData.energy).toBeCloseTo(0.2, 5)
-  })
-
-  it('auto-stops when battery reaches the target percentage', () => {
-    const store = useChargingStore()
-    store.settings.targetBattery = 80
-    store.startCharging()
-
-    // battery starts at 35 and grows by 0.5/s: 89s -> 79.5, 90s -> 80
-    vi.advanceTimersByTime(89000)
+  it('keeps metering until stop acknowledgement, then freezes the meter', async () => {
+    const store = await start()
+    await vi.advanceTimersByTimeAsync(2000)
+    const pending = store.stopCharging()
     expect(store.isCharging).toBe(true)
-
-    vi.advanceTimersByTime(1000)
+    expect(() => store.disconnectPlug()).toThrow('禁止拔枪')
+    await vi.advanceTimersByTimeAsync(500)
+    await pending
+    expect(store.chargingData.energy).toBeCloseTo((60 * 2.5) / 3600)
+    const energy = store.chargingData.energy
+    await vi.advanceTimersByTimeAsync(5000)
     expect(store.isCharging).toBe(false)
-    expect(store.chargingData.battery).toBeCloseTo(80, 5)
-    expect(store.chargingData.energy).toBeCloseTo(9, 5)
+    expect(store.chargingData.energy).toBe(energy)
+    expect(store.phase).toBe('awaiting_unplug')
   })
 
-  it('does not accumulate intervals across repeated start/stop cycles', () => {
-    const store = useChargingStore()
+  it('requests automatic stop at the target and still waits for acknowledgement', async () => {
+    const store = await start({ initialBattery: 79, targetBattery: 80, clockScale: 60 })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(store.phase).toBe('stopping')
+    expect(store.isCharging).toBe(true)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(store.isCharging).toBe(false)
+    expect(store.phase).toBe('awaiting_unplug')
+    expect(store.chargingData.energy).toBeCloseTo(1.5)
+    expect(store.chargingData.battery).toBeCloseTo(81.5)
+  })
 
-    for (let round = 0; round < 3; round += 1) {
-      store.startCharging()
-      vi.advanceTimersByTime(1000)
-      expect(store.chargingData.energy).toBeCloseTo(0.1, 5)
-
-      vi.advanceTimersByTime(1000)
-      expect(store.chargingData.energy).toBeCloseTo(0.2, 5)
-
-      store.stopCharging()
-      vi.advanceTimersByTime(5000)
-      expect(store.chargingData.energy).toBeCloseTo(0.2, 5)
+  it('does not accumulate intervals across paid sessions', async () => {
+    for (let round = 0; round < 3; round++) {
+      const store = await start()
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(store.chargingData.energy).toBeCloseTo((60 * 2) / 3600)
+      await stop()
+      store.disconnectPlug()
+      store.settlePayment()
+      const energy = store.chargingData.energy
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(store.chargingData.energy).toBe(energy)
     }
   })
 
   it('survives corrupted settings JSON and restores defaults', () => {
     localStorage.setItem('chargingSettings', '{not-valid-json')
-    const store = useChargingStore()
-
-    expect(() => store.loadSettings()).not.toThrow()
-    expect(store.settings.targetBattery).toBe(80)
+    expect(() => useChargingStore().loadSettings()).not.toThrow()
+    expect(useChargingStore().settings.targetBattery).toBe(80)
   })
 
-  it('merges partial settings with defaults so targetBattery is never missing', () => {
+  it('merges partial settings with defaults without promising scheduling', () => {
     localStorage.setItem('chargingSettings', JSON.stringify({ notifyFull: false }))
     const store = useChargingStore()
-
     store.loadSettings()
-
     expect(store.settings.targetBattery).toBe(80)
     expect(store.settings.notifyFull).toBe(false)
     expect(store.settings.smartCharge).toBe(false)
   })
 
-  it('keeps charging in the background after the panel unmounts', () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const store = useChargingStore()
-
-    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1)
-    const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => {})
-
-    const wrapper = mount(ChargingPanel, {
-      global: {
-        plugins: [pinia],
-        provide: { showToast: vi.fn() }
-      }
-    })
-
-    store.startCharging()
-    vi.advanceTimersByTime(1000)
-    expect(store.chargingData.energy).toBeCloseTo(0.1, 5)
-
+  it('keeps the sandbox running when its panel closes', async () => {
+    const store = await start()
+    const wrapper = mount(ChargingPanel, { global: { provide: { showToast: vi.fn() } } })
+    await vi.advanceTimersByTimeAsync(1000)
     wrapper.unmount()
-    vi.advanceTimersByTime(2000)
-
+    await vi.advanceTimersByTimeAsync(2000)
     expect(store.isCharging).toBe(true)
-    expect(store.chargingData.energy).toBeCloseTo(0.3, 5)
-
-    rafSpy.mockRestore()
-    cancelSpy.mockRestore()
+    expect(store.chargingData.energy).toBeCloseTo((60 * 3) / 3600)
   })
 })

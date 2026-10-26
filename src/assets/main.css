@@ -195,23 +195,91 @@
   }
 
   .panel-overlay {
-    @apply fixed inset-x-0 bottom-0 top-16 z-modal flex justify-end;
+    @apply fixed inset-x-0 bottom-0 top-16 z-modal flex justify-end overflow-hidden;
   }
 
   .panel-backdrop {
-    @apply absolute inset-0 bg-black/30 dark:bg-black/50 lg:hidden;
+    @apply absolute inset-0 bg-black/25 dark:bg-black/45;
   }
 
   .panel-content {
-    @apply relative flex h-full w-full flex-col overflow-hidden border-l border-surface-200 bg-white shadow-soft-lg dark:border-surface-700 dark:bg-surface-900;
+    @apply relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-l border-surface-200 bg-white shadow-soft-lg dark:border-surface-700 dark:bg-surface-900;
     /* Keep footer CTAs above the iPhone home indicator. env() resolves to 0
        on desktop and on browsers without safe-area support, so the box model
        is unchanged there (border-box is the Tailwind base default). */
     padding-bottom: env(safe-area-inset-bottom);
+    overflow-wrap: anywhere;
   }
 
   .panel-content > .overflow-y-auto {
     min-height: 0;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scroll-padding-block: 1rem;
+  }
+
+  .panel-content > .overflow-y-auto > * {
+    min-width: 0;
+  }
+
+  .panel-sheet {
+    @apply items-end justify-center;
+  }
+
+  .panel-sheet .panel-content {
+    @apply h-auto max-h-[78vh] max-w-lg rounded-t-3xl border-t supports-[height:100dvh]:max-h-[78dvh];
+  }
+
+  .panel-fullscreen .panel-content {
+    width: 100%;
+    max-width: none;
+    overflow-y: auto;
+  }
+
+  .dialog-overlay {
+    @apply fixed inset-0 z-modal flex items-center justify-center overflow-y-auto bg-black/40 p-4 dark:bg-black/60;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    animation: dialogAppear 160ms ease-out;
+  }
+
+  .dialog-content {
+    @apply relative w-full min-w-0 max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-surface-200 bg-white p-5 shadow-soft-lg dark:border-surface-700 dark:bg-surface-900;
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-wrap: anywhere;
+  }
+
+  .choice-card {
+    @apply flex w-full items-center gap-3 rounded-xl border border-surface-200 bg-white p-4 text-left transition-colors hover:border-primary-300 focus-visible:ring-2 focus-visible:ring-primary-500/30 dark:border-surface-700 dark:bg-surface-800/50;
+  }
+
+  .choice-card[aria-checked='true'],
+  .choice-card[aria-pressed='true'] {
+    @apply border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20;
+  }
+
+  .action-primary {
+    @apply inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .session-resume {
+    @apply fixed bottom-24 left-4 z-fab inline-flex max-w-[calc(100vw-6rem)] items-center gap-2 rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm font-semibold text-primary-700 shadow-sm dark:border-primary-800 dark:bg-surface-900 dark:text-primary-300 lg:bottom-auto lg:left-auto lg:right-10 lg:top-44;
+  }
+
+  /* Decoration must not move content into a scroll container's clipped edge. */
+  .panel-content .animate-in {
+    animation: dialogAppear 180ms ease-out both;
+    animation-delay: 0ms !important;
+  }
+
+  .panel-content :is(.premium-card, button):hover {
+    --tw-translate-y: 0px;
+    --tw-scale-x: 1;
+    --tw-scale-y: 1;
+  }
+
+  .panel-content > .glass-effect {
+    @apply border-x-0;
   }
 
   @media (max-width: 640px) {
@@ -270,7 +338,44 @@
   }
 }
 
+@keyframes dialogAppear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The overlay never transforms: only its clipped inner surface slides. */
+.panel-enter-active,
+.panel-leave-active {
+  transition: opacity 180ms ease;
+}
+.panel-enter-active > .panel-content,
+.panel-leave-active > .panel-content {
+  transition: transform 180ms ease;
+}
+.panel-enter-from,
+.panel-leave-to {
+  opacity: 0;
+}
+.panel-enter-from > .panel-content,
+.panel-leave-to > .panel-content {
+  transform: translateX(100%);
+}
+.panel-sheet.panel-enter-from > .panel-content,
+.panel-sheet.panel-leave-to > .panel-content {
+  transform: translateY(100%);
+}
+.panel-leave-active {
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   ::before,
   ::after {

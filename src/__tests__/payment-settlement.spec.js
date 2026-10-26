@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { SERVICE_FEE_RATE, isCouponUsable, useChargingStore } from '../store/modules/charging'
+import {
+  calculatePaymentAmounts,
+  SERVICE_FEE_RATE,
+  isCouponUsable,
+  useChargingStore
+} from '../store/modules/charging'
 import { useStationsStore } from '../store/modules/stations'
 import { useUserStore } from '../store/modules/user'
+import { completedOrder } from './helpers/charging'
 
 const STATION = {
   stationId: 's1',
@@ -46,6 +52,7 @@ const setup = () => {
   const userStore = useUserStore()
 
   stationsStore.currentStation = { ...STATION }
+  completedOrder()
   chargingStore.chargingData = {
     duration: 600,
     energy: 100,
@@ -73,6 +80,27 @@ const snapshot = (userStore) => ({
 describe('chargingStore.settlePayment', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  it('rounds line items to cents so the displayed total matches settlement', () => {
+    expect(calculatePaymentAmounts({ energy: 0.1, price: 1.26 })).toEqual({
+      chargeCost: 0.13,
+      serviceFee: 0.01,
+      totalAmount: 0.14,
+      couponDiscount: 0,
+      finalAmount: 0.14
+    })
+  })
+
+  it('caps discounts at the payable amount and never creates negative line items', () => {
+    const quote = calculatePaymentAmounts({
+      energy: 1,
+      price: 1,
+      coupon: { type: 'free', value: 999 }
+    })
+    expect(quote.couponDiscount).toBe(1.1)
+    expect(quote.finalAmount).toBe(0)
+    expect(calculatePaymentAmounts({ energy: -10, price: 1 }).totalAmount).toBe(0)
   })
 
   it('returns a receipt with a 10% service fee when no coupon is selected', () => {
@@ -149,8 +177,8 @@ describe('chargingStore.settlePayment', () => {
   })
 
   it('rejects a null current price without writing balance, history or coupons', () => {
-    const { chargingStore, stationsStore, userStore } = setup()
-    stationsStore.currentStation.currentPrice = null
+    const { chargingStore, userStore } = setup()
+    chargingStore.sessionStation.currentPrice = null
     const before = snapshot(userStore)
 
     expect(() => chargingStore.settlePayment({ couponId: 'cp-discount' })).toThrow(

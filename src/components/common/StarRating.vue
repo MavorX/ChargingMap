@@ -9,7 +9,7 @@
       :aria-checked="i === modelValue"
       :aria-label="`${i} 星`"
       :tabindex="i === (modelValue || 1) ? 0 : -1"
-      class="star cursor-pointer text-3xl transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      class="star flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-2xl transition-colors hover:bg-warning-50 focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-surface-800"
       :class="{ active: i <= modelValue }"
       @click="select(i)"
       @keydown="onKeydown"

@@ -1,8 +1,8 @@
 <template>
-  <div class="animate-slide-up fixed bottom-0 left-0 right-0 z-header">
+  <div class="absolute bottom-0 left-0 right-0 z-fab">
     <div class="glass-effect border-t border-surface-200/50 dark:border-surface-700/50">
       <div class="px-5 py-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))]">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex min-w-0 flex-1 items-center space-x-4">
             <div
               class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-blue-600 shadow-lg shadow-primary-500/25"
@@ -30,7 +30,7 @@
             </div>
           </div>
           <button
-            class="ml-4 flex-shrink-0 transform rounded-xl bg-gradient-to-r from-danger-500 to-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-danger-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-danger-500/30 active:translate-y-0"
+            class="shrink-0 rounded-xl border border-danger-200 bg-danger-50 px-4 py-2.5 text-sm font-semibold text-danger-700 transition-colors hover:bg-danger-100 dark:border-danger-800 dark:bg-danger-900/30 dark:text-danger-300"
             @click="$emit('cancel')"
           >
             <i class="fa fa-times mr-1.5" aria-hidden="true"></i>
@@ -57,20 +57,3 @@ const durationText = computed(() => {
   return formatDuration((duration || 0) * 60, 'hm')
 })
 </script>
-
-<style scoped>
-.animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-</style>

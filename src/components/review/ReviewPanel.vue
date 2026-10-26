@@ -1,212 +1,254 @@
 <template>
-  <PanelShell title="评价充电站" content-id="review-panel" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-    >
-      <button id="back-from-review" class="icon-button" aria-label="返回" @click="$emit('close')">
-        <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
+  <PanelShell
+    title="评价充电站"
+    content-id="review-panel"
+    :busy="isSubmitting"
+    @close="requestClose"
+  >
+    <div class="glass-effect flex shrink-0 items-center justify-between p-4">
+      <button
+        id="back-from-review"
+        class="icon-button"
+        aria-label="返回"
+        :disabled="isSubmitting"
+        @click="requestClose"
+      >
+        <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">评价充电站</h2>
-      <div class="w-10"></div>
+      <h2 class="text-lg font-bold">评价充电站</h2>
+      <span class="w-10"></span>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
-      <div class="mb-6 text-center">
-        <h3 id="review-station-name" class="mb-4 font-bold text-surface-800 dark:text-surface-200">
+    <div class="flex-1 space-y-5 overflow-y-auto p-5">
+      <div class="text-center">
+        <h3 id="review-station-name" class="mb-4 break-words font-semibold">
           {{ currentStation?.stationName }}
         </h3>
-        <StarRating
-          v-model="rating"
-          aria-label="充电站评分"
-          class="rating-stars mb-2 flex justify-center space-x-3"
-        />
-        <p class="text-sm font-medium text-surface-500 dark:text-surface-400">
-          {{ ratingTexts[rating - 1] }}
-        </p>
+        <fieldset :disabled="isSubmitting">
+          <StarRating
+            v-model="rating"
+            aria-label="充电站评分"
+            class="rating-stars flex justify-center gap-1"
+          />
+        </fieldset>
+        <p class="mt-2 text-sm text-surface-500">{{ ratingTexts[rating - 1] }}</p>
       </div>
-
-      <div class="mb-5">
-        <label class="mb-2 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >评价内容</label
-        >
-        <textarea
-          id="review-content"
-          v-model="reviewContent"
-          rows="4"
-          placeholder="分享您的充电体验..."
-          class="input-premium resize-none"
-        ></textarea>
-        <p class="mt-1.5 text-right text-xs text-surface-400">{{ reviewContent.length }}/200</p>
-      </div>
-
-      <div class="mb-5">
-        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >设施评价</label
-        >
-        <div class="grid grid-cols-2 gap-2.5">
-          <label
-            v-for="(item, key) in facilityOptions"
-            :key="key"
-            class="flex cursor-pointer items-center rounded-xl border-2 p-3.5 transition-all duration-300"
-            :class="
-              facilityRatings[key]
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                : 'border-surface-200 hover:border-primary-300 dark:border-surface-700'
-            "
-          >
-            <input v-model="facilityRatings[key]" type="checkbox" class="peer sr-only" />
-            <div
-              class="mr-2.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500"
-              :class="
-                facilityRatings[key]
-                  ? 'border-primary-500 bg-primary-500'
-                  : 'border-surface-300 dark:border-surface-600'
-              "
-            >
-              <i
-                v-if="facilityRatings[key]"
-                class="fa fa-check text-xs text-white"
-                aria-hidden="true"
-              ></i>
-            </div>
-            <span class="text-sm font-medium text-surface-700 dark:text-surface-300">{{
-              item
-            }}</span>
-          </label>
+      <fieldset class="min-w-0 space-y-5" :disabled="isSubmitting">
+        <div>
+          <label for="review-content" class="mb-2 block text-sm font-semibold">评价内容</label
+          ><textarea
+            id="review-content"
+            v-model="reviewContent"
+            rows="4"
+            maxlength="200"
+            placeholder="分享您的充电体验…"
+            class="input-premium resize-y"
+            aria-describedby="review-count"
+          ></textarea>
+          <p id="review-count" class="mt-2 text-right text-xs text-surface-500">
+            {{ reviewContent.length }}/200
+          </p>
         </div>
-      </div>
-
-      <div class="mb-5">
-        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >上传图片 (可选)</label
-        >
-        <div
-          class="cursor-pointer rounded-2xl border-2 border-dashed border-surface-300 p-6 text-center transition-all duration-300 hover:border-primary-400 hover:bg-primary-50/50 dark:border-surface-600 dark:hover:bg-primary-900/10"
-          @click="triggerFileInput"
-        >
-          <div
-            class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-100 dark:bg-surface-800"
-          >
-            <i class="fa fa-camera text-2xl text-surface-400" aria-hidden="true"></i>
+        <div>
+          <h3 class="mb-3 text-sm font-semibold">设施评价</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <label
+              v-for="(label, key) in facilityOptions"
+              :key="key"
+              class="flex cursor-pointer items-center gap-2 rounded-xl border border-surface-200 p-3 text-xs dark:border-surface-700"
+              ><input
+                v-model="facilityRatings[key]"
+                type="checkbox"
+                class="h-4 w-4 shrink-0 accent-primary-600"
+              />{{ label }}</label
+            >
           </div>
-          <p class="text-sm font-medium text-surface-500 dark:text-surface-400">点击上传图片</p>
+        </div>
+        <div>
+          <h3 class="mb-3 text-sm font-semibold">现场图片（可选）</h3>
+          <button
+            class="w-full rounded-xl border border-dashed border-surface-300 p-4 text-sm text-surface-500 dark:border-surface-600"
+            :disabled="selectedImages.length >= 3"
+            @click="fileInput?.click()"
+          >
+            <i class="fa fa-camera mr-2" aria-hidden="true"></i>添加图片（最多 3 张）
+          </button>
           <input
-            id="review-images"
             ref="fileInput"
             type="file"
             class="hidden"
             multiple
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            aria-label="选择现场图片"
             @change="handleFileChange"
           />
-        </div>
-        <div v-if="selectedImages.length > 0" class="mt-3 flex space-x-2 overflow-x-auto">
-          <div
-            v-for="(img, index) in selectedImages"
-            :key="index"
-            class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-surface-100 dark:bg-surface-800"
-          >
-            <i class="fa fa-image text-surface-400" aria-hidden="true"></i>
+          <p class="mt-2 text-xs leading-6 text-surface-500">
+            每张不超过 5MB。仅作本地演示预览，不会上传到服务器。
+          </p>
+          <div v-if="selectedImages.length" class="mt-3 grid grid-cols-3 gap-2">
+            <div
+              v-for="(image, index) in selectedImages"
+              :key="image.url"
+              class="relative aspect-square min-w-0 overflow-hidden rounded-xl"
+            >
+              <img
+                :src="image.url"
+                :alt="image.file.name"
+                class="h-full w-full object-cover"
+              /><button
+                class="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-lg bg-black/65 text-white"
+                :aria-label="`移除图片 ${index + 1}`"
+                @click="removeImage(index)"
+              >
+                <i class="fa fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </fieldset>
+      <p v-if="chargingStore.reviewSubmitted" class="text-sm text-surface-500" role="status">
+        本次充电已评价，积分已发放。
+      </p>
     </div>
-
-    <div
-      class="glass-effect flex-shrink-0 border-t border-surface-200/50 p-4 dark:border-surface-700/50 lg:p-5"
-    >
+    <div class="glass-effect shrink-0 border-t p-4">
       <button
         id="submit-review-btn"
-        class="group relative w-full transform overflow-hidden rounded-2xl bg-gradient-to-r from-primary-500 to-accent-500 py-4 font-bold text-white shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary-500/35 active:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50"
-        :disabled="!canSubmit"
+        class="action-primary"
+        :disabled="!canSubmit || isSubmitting"
         @click="submitReview"
       >
-        <div
-          class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-        ></div>
-        <span class="relative z-10 flex items-center justify-center space-x-2">
-          <i class="fa fa-paper-plane" aria-hidden="true"></i>
-          <span>提交评价 (获得5积分)</span>
-        </span>
+        <i v-if="isSubmitting" class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i
+        >{{ isSubmitting ? '正在提交…' : '提交评价 · 获得 5 积分' }}
       </button>
     </div>
+    <DialogModal v-if="showDiscard" title="放弃本次评价？" @close="showDiscard = false"
+      ><p class="mb-5 text-sm leading-6 text-surface-500">
+        离开后，尚未提交的文字和图片选择将丢失。
+      </p>
+      <div class="flex gap-3">
+        <button class="action-primary" @click="showDiscard = false">继续编辑</button
+        ><button
+          class="w-full rounded-xl border border-surface-200 text-sm dark:border-surface-700"
+          @click="emit('close')"
+        >
+          放弃评价
+        </button>
+      </div></DialogModal
+    >
   </PanelShell>
 </template>
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import DialogModal from '../common/DialogModal.vue'
 import StarRating from '../common/StarRating.vue'
-import { ref, computed, inject, reactive } from 'vue'
+import { ref, computed, inject, reactive, onBeforeUnmount } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { useChargingStore } from '../../store/modules/charging'
+import { useUserStore } from '../../store/modules/user'
 import { submitReview as submitReviewApi } from '../../services/api'
-
 const emit = defineEmits(['close'])
-
 const stationsStore = useStationsStore()
+const chargingStore = useChargingStore()
+const userStore = useUserStore()
 const showToast = inject('showToast')
-const setLoading = inject('setLoading')
-
-const currentStation = computed(() => stationsStore.currentStation)
+const currentStation = computed(
+  () =>
+    chargingStore.lastReceipt?.station ||
+    chargingStore.sessionStation ||
+    stationsStore.currentStation
+)
 const fileInput = ref(null)
-
 const rating = ref(5)
 const reviewContent = ref('')
 const selectedImages = ref([])
-const facilityRatings = reactive({
-  fast: false,
-  reasonable: false,
-  clean: false,
-  parking: false
-})
-
+const isSubmitting = ref(false)
+const showDiscard = ref(false)
+const facilityRatings = reactive({ fast: false, reasonable: false, clean: false, parking: false })
 const facilityOptions = {
   fast: '充电速度快',
   reasonable: '价格合理',
   clean: '环境整洁',
   parking: '停车方便'
 }
-
 const ratingTexts = ['非常差', '较差', '一般', '较好', '非常好']
-
-const canSubmit = computed(() => {
-  return rating.value >= 1 && reviewContent.value.trim().length > 0
-})
-
-const triggerFileInput = () => {
-  fileInput.value?.click()
+const canSubmit = computed(
+  () =>
+    !!chargingStore.lastReceipt &&
+    !chargingStore.reviewSubmitted &&
+    rating.value >= 1 &&
+    rating.value <= 5 &&
+    reviewContent.value.trim().length > 0 &&
+    reviewContent.value.length <= 200
+)
+const removeImage = (index) => {
+  URL.revokeObjectURL(selectedImages.value[index].url)
+  selectedImages.value.splice(index, 1)
 }
-
 const handleFileChange = (event) => {
-  const files = event.target.files
-  if (files.length > 0) {
-    selectedImages.value = Array.from(files)
-    showToast(`已选择 ${files.length} 张图片`, 'info')
+  let rejected = 0
+  for (const file of event.target.files || []) {
+    if (
+      !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) ||
+      file.size > 5 * 1024 * 1024 ||
+      selectedImages.value.length >= 3
+    ) {
+      rejected++
+      continue
+    }
+    selectedImages.value.push({ file, url: URL.createObjectURL(file) })
   }
+  event.target.value = ''
+  if (rejected) showToast('部分图片未添加：限 3 张 PNG/JPEG/WebP/GIF，每张不超过 5MB', 'warning')
 }
-
+onBeforeUnmount(() => selectedImages.value.forEach((image) => URL.revokeObjectURL(image.url)))
+const requestClose = () => {
+  if (isSubmitting.value) return
+  if (
+    reviewContent.value.trim() ||
+    selectedImages.value.length ||
+    Object.values(facilityRatings).some(Boolean) ||
+    rating.value !== 5
+  )
+    showDiscard.value = true
+  else emit('close')
+}
 const submitReview = async () => {
-  if (!currentStation.value) return
-  if (!reviewContent.value.trim()) {
-    showToast('请填写评价内容', 'error')
-    return
+  if (isSubmitting.value || !canSubmit.value) return
+  isSubmitting.value = true
+  const stationId = currentStation.value.stationId
+  const review = {
+    rating: rating.value,
+    content: reviewContent.value.trim(),
+    facilities: Object.keys(facilityRatings).filter((key) => facilityRatings[key])
   }
-
-  setLoading(true)
   try {
-    await submitReviewApi({
-      stationId: currentStation.value.stationId,
-      rating: rating.value,
-      content: reviewContent.value,
-      facilities: Object.entries(facilityRatings)
-        .filter(([_, value]) => value)
-        .map(([key, _]) => key)
-    })
-    showToast('评价提交成功，感谢您的反馈！', 'success')
+    const result = await submitReviewApi({ stationId, ...review })
+    if (!chargingStore.reviewSubmitted) {
+      chargingStore.reviewSubmitted = true
+      userStore.userInfo.points += 5
+      userStore.persistSandboxLedger()
+      chargingStore.persistSession()
+      const station = stationsStore.stations.find((item) => item.stationId === stationId)
+      if (station?.details) {
+        const reviews = station.details.reviews || []
+        station.details.reviewsCount = (station.details.reviewsCount || reviews.length) + 1
+        station.details.reviews = [
+          {
+            ...review,
+            id: result.reviewId,
+            userName: userStore.userInfo.name,
+            date: new Date().toLocaleDateString('zh-CN')
+          },
+          ...reviews
+        ]
+      }
+    }
+    showToast('评价已提交，获得 5 积分', 'success')
     emit('close')
-  } catch {
-    showToast('评价提交失败，请重试', 'error')
+  } catch (error) {
+    showToast(error.message || '评价提交失败，请重试', 'error')
   } finally {
-    setLoading(false)
+    isSubmitting.value = false
   }
 }
 </script>

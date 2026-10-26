@@ -82,7 +82,9 @@
           ></i>
         </div>
         <p class="mb-1 font-bold text-surface-800 dark:text-surface-200">未找到相关问题</p>
-        <p class="text-sm text-surface-500 dark:text-surface-400">试试其他关键词或联系客服</p>
+        <p class="text-sm text-surface-500 dark:text-surface-400">
+          试试其他关键词；设备与订单问题请联系运营商
+        </p>
       </div>
 
       <div
@@ -94,13 +96,9 @@
           <i class="fa fa-headset text-lg text-white" aria-hidden="true"></i>
         </div>
         <h3 class="mb-1 font-bold text-surface-800 dark:text-surface-200">还有问题？</h3>
-        <p class="mb-3 text-xs text-surface-500 dark:text-surface-400">联系在线客服获取帮助</p>
-        <button
-          class="rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:shadow-lg active:scale-95"
-          @click="showToast('客服功能开发中，请稍后再试', 'info')"
-        >
-          联系客服
-        </button>
+        <p class="text-xs leading-6 text-surface-500 dark:text-surface-400">
+          这是充电服务演示项目，接枪检测、充电、预约和支付均为模拟。体验流程无需真实充电设备。
+        </p>
       </div>
     </div>
   </PanelShell>
@@ -108,11 +106,9 @@
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
-import { ref, computed, inject } from 'vue'
+import { ref, computed } from 'vue'
 
 defineEmits(['close'])
-
-const showToast = inject('showToast')
 
 const searchQuery = ref('')
 const expandedFaq = ref(null)
@@ -138,42 +134,42 @@ const faqs = [
     id: '1',
     question: '如何开始充电？',
     answer:
-      '在地图上找到附近的充电站，点击进入站点详情，选择可用的充电桩，设置充电参数后点击"开始充电"即可。充电完成后系统会自动扣费。',
+      '选择站点后点击“选择充电桩”，明确选择可用桩位、车辆和目标电量。下一步会提示“请插好充电枪”，点击“已插好，开始检测”后，页面演示连接检测、车辆通信和启动过程，完成后进入充电进度。未选桩或未确认接枪不会开始充电。',
     category: '充电'
   },
   {
     id: '2',
     question: '充电需要多长时间？',
     answer:
-      '充电时间取决于车辆电池容量和充电桩功率。快充桩一般30-60分钟可充至80%，慢充桩则需要4-8小时充满。建议充至80%即可，后续充电速度会明显降低。',
+      '演示时长根据车辆容量、起始电量、目标电量及枪车较小功率估算。默认 60× 加速，屏幕上经过 1 秒对应演示充电 1 分钟；可以在充电设置中改为正常速度。示例参数可以调整，预计时间不是现实车辆的充满承诺。',
     category: '充电'
   },
   {
     id: '3',
     question: '充电费用如何计算？',
     answer:
-      '充电费用 = 充电量(kWh) × 电价(元/kWh) + 服务费。不同站点和时段的电价可能不同，具体价格在站点详情页可以查看。会员用户可享受优惠电价。',
+      '演示费用按充电量 × 所选站点电价，再加 10% 服务费计算，账单展示优惠抵扣与实付。浏览其他站点不会改变正在充电订单的费率。所有支付只演示流程，不会实际扣款。',
     category: '支付'
   },
   {
     id: '4',
     question: '如何充值钱包？',
     answer:
-      '进入"我的钱包"页面，点击"充值"按钮，选择充值金额或输入自定义金额，确认后即可完成充值。支持微信、支付宝等多种支付方式。',
+      '钱包是本浏览器内的测试账本，充值只增加虚拟测试余额，不会向微信、支付宝或银行卡收款，不能提现真实资金。清理浏览器数据会丢失测试记录，请勿将其视为真实钱包。',
     category: '支付'
   },
   {
     id: '5',
     question: '如何使用优惠券？',
     answer:
-      '在充电结算时，系统会自动匹配可用的优惠券。您也可以在"优惠券"页面查看和管理您的优惠券，点击"去使用"前往充电站使用。',
+      '订单结束后可在账单中选择未使用、未过期且达到最低消费的演示优惠券，抵扣不会超过应付金额。同一订单重复点击支付也只结算一次，演示券不用于现实消费。',
     category: '支付'
   },
   {
     id: '6',
     question: '如何修改个人信息？',
     answer:
-      '进入"设置"页面，点击头像旁边的"编辑"按钮即可修改昵称。其他个人信息如手机号、邮箱等也可以在设置页面中修改。',
+      '本项目未接入真实账户认证或个人资料服务，不提供手机号、邮箱等线上修改能力。车辆、个人到站备注等只保存在当前浏览器，不会跨设备同步。',
     category: '账户'
   },
   {
@@ -187,7 +183,7 @@ const faqs = [
     id: '8',
     question: '充电中途可以停止吗？',
     answer:
-      '可以。在充电过程中，您可以随时点击"停止充电"按钮结束充电。系统会根据实际充电量进行计费，不会收取额外费用。',
+      '点击“结束充电”并确认后，页面先演示停止输出，再提醒拔枪归位；点击“已拔枪，查看账单”进入结算。返回地图只收起进度页，不会结束充电，可以通过“正在充电 · 查看进度”返回。达到目标电量也会自动进入停止和拔枪步骤。',
     category: '充电'
   },
   {
@@ -201,7 +197,7 @@ const faqs = [
     id: '10',
     question: '充电桩故障怎么办？',
     answer:
-      '如果遇到充电桩故障，请先停止充电操作，然后通过"帮助中心"联系在线客服，或拨打充电桩上的服务电话报修。我们会尽快安排维修。',
+      '如枪头破损、进水、发热异常或冒烟，请停止操作、远离危险并联系运营商；紧急情况按现场急停与救援指引处理。不要强行拔枪，也不要因网页显示停止就认为硬件安全。本项目不能派单维修，设备与费用争议请联系充电桩标注的官方客服。',
     category: '其他'
   }
 ]

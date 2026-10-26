@@ -1,289 +1,164 @@
 <template>
-  <PanelShell title="确认支付" @close="$emit('close')">
-    <div
-      class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-    >
-      <button class="icon-button" aria-label="返回" @click="$emit('close')">
-        <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
+  <PanelShell title="确认支付" :busy="isPaying" @close="emit('close')">
+    <div class="glass-effect flex shrink-0 items-center justify-between p-4">
+      <button class="icon-button" aria-label="返回" :disabled="isPaying" @click="emit('close')">
+        <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">确认支付</h2>
-      <div class="w-10"></div>
+      <h2 class="text-lg font-bold">确认支付</h2>
+      <span class="w-10"></span>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-5">
-      <div class="premium-card animate-in relative mb-6 overflow-hidden p-5">
-        <div
-          class="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-gradient-to-br from-secondary-500/10 to-transparent"
-        ></div>
-        <div class="relative z-10 mb-3 flex items-start justify-between">
-          <div class="flex min-w-0 flex-1 items-start space-x-3">
-            <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-secondary-400 to-emerald-500 shadow-md"
-            >
-              <i class="fa fa-check text-xl text-white" aria-hidden="true"></i>
-            </div>
-            <div class="min-w-0">
-              <h3 class="mb-1 text-base font-bold text-surface-900 dark:text-surface-100">
-                {{ currentStation?.stationName }}
-              </h3>
-              <p class="truncate text-sm text-surface-500 dark:text-surface-400">
-                {{ currentStation?.address }}
-              </p>
-            </div>
-          </div>
-          <span class="status-badge-success text-[11px] font-bold">充电完成</span>
-        </div>
-      </div>
-
-      <div class="animate-in mb-6 delay-100">
-        <h3 class="section-title">
-          <div
-            class="mr-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary-400 to-blue-500 shadow-md"
-          >
-            <i class="fa fa-file-text-o text-xs text-white" aria-hidden="true"></i>
-          </div>
-          充电详情
+    <div class="flex-1 space-y-6 overflow-y-auto p-5">
+      <p class="text-xs text-surface-400">演示结算，不会产生实际扣款</p>
+      <div class="premium-card p-4">
+        <span class="status-badge-success mb-3">充电已完成</span>
+        <h3 class="mb-1 break-words font-bold">
+          {{ currentStation?.stationName || '暂无可结算站点' }}
         </h3>
-        <div class="premium-card space-y-4 p-5">
-          <div
-            class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-          >
-            <div class="flex items-center space-x-2.5">
-              <i class="fa fa-clock-o text-primary-500"></i>
-              <span class="text-sm font-medium text-surface-600 dark:text-surface-400"
-                >充电时长</span
-              >
-            </div>
-            <span class="font-bold text-surface-900 dark:text-surface-100">{{
-              formatDuration(chargingData.duration, 'hm-verbose')
-            }}</span>
-          </div>
-          <div
-            class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-          >
-            <div class="flex items-center space-x-2.5">
-              <i class="fa fa-bolt text-secondary-500"></i>
-              <span class="text-sm font-medium text-surface-600 dark:text-surface-400"
-                >充电电量</span
-              >
-            </div>
-            <span class="font-bold text-surface-900 dark:text-surface-100"
-              >{{ chargingData.energy.toFixed(1) }} kWh</span
-            >
-          </div>
-          <div
-            class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-          >
-            <div class="flex items-center space-x-2.5">
-              <i class="fa fa-rmb text-warning-500"></i>
-              <span class="text-sm font-medium text-surface-600 dark:text-surface-400">电价</span>
-            </div>
-            <span class="font-bold text-surface-900 dark:text-surface-100"
-              >{{ formatPrice(currentStation?.currentPrice) }}/度</span
-            >
-          </div>
-          <div
-            class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-          >
-            <div class="flex items-center space-x-2.5">
-              <i class="fa fa-percent text-accent-500"></i>
-              <span class="text-sm font-medium text-surface-600 dark:text-surface-400"
-                >充电服务费</span
-              >
-            </div>
-            <span class="font-bold text-surface-900 dark:text-surface-100">{{
-              formatPrice(serviceFee)
-            }}</span>
-          </div>
-          <div class="flex items-center justify-between pt-3">
-            <span class="text-base font-bold text-surface-900 dark:text-surface-100">合计</span>
-            <span class="gradient-text text-2xl font-black">{{ formatPrice(totalAmount) }}</span>
-          </div>
-        </div>
+        <p class="break-words text-xs leading-6 text-surface-500 dark:text-surface-400">
+          {{ currentStation?.address }}
+        </p>
       </div>
-
-      <div class="animate-in mb-6 delay-200">
-        <h3 class="section-title">
-          <div
-            class="mr-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-warning-400 to-orange-500 shadow-md"
+      <section>
+        <h3 class="section-title">充电详情</h3>
+        <dl class="premium-card space-y-3 p-4 text-sm">
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt class="text-surface-500">充电时长</dt>
+            <dd>{{ formatDuration(chargingData.duration, 'hm-verbose') }}</dd>
+          </div>
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt class="text-surface-500">充电电量</dt>
+            <dd>{{ chargingData.energy.toFixed(1) }} kWh</dd>
+          </div>
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt class="text-surface-500">电价</dt>
+            <dd>{{ formatPrice(currentStation?.currentPrice) }}/度</dd>
+          </div>
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt class="text-surface-500">充电服务费（10%）</dt>
+            <dd>{{ formatPrice(amounts.serviceFee) }}</dd>
+          </div>
+        </dl>
+      </section>
+      <fieldset :disabled="isPaying" class="min-w-0 space-y-6">
+        <section>
+          <h3 class="section-title">优惠券</h3>
+          <button
+            class="premium-card flex w-full items-center justify-between gap-3 p-4 text-left text-sm"
+            :aria-expanded="showCouponList"
+            aria-controls="payment-coupons"
+            @click="showCouponList = !showCouponList"
           >
-            <i class="fa fa-ticket text-xs text-white" aria-hidden="true"></i>
-          </div>
-          优惠券
-        </h3>
-        <button
-          class="premium-card group w-full p-4 transition-all duration-300 hover:shadow-soft-md"
-          @click="showCouponList = !showCouponList"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-warning-400 to-amber-500 shadow-md transition-transform duration-300 group-hover:scale-105"
-              >
-                <i class="fa fa-ticket text-white" aria-hidden="true"></i>
-              </div>
-              <span class="text-sm font-medium text-surface-800 dark:text-surface-200">{{
-                selectedCoupon ? selectedCoupon.name : '选择优惠券'
-              }}</span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span v-if="selectedCoupon" class="text-sm font-black text-danger-500"
-                >-{{ formatPrice(amounts.couponDiscount) }}</span
-              >
-              <i
-                class="fa fa-chevron-down text-surface-400 transition-transform duration-300"
-                :class="{ 'rotate-180': showCouponList }"
-                aria-hidden="true"
-              ></i>
-            </div>
-          </div>
-        </button>
-
-        <Transition name="slide-up-fade">
-          <div v-if="showCouponList" class="mt-3 space-y-2.5">
-            <div
+            <span class="min-w-0 break-words">{{ selectedCoupon?.title || '选择优惠券' }}</span>
+            <span class="shrink-0 text-primary-600 dark:text-primary-400"
+              >{{
+                selectedCoupon
+                  ? `-${formatPrice(amounts.couponDiscount)}`
+                  : `${coupons.length} 张可用`
+              }}
+              <i class="fa fa-angle-down" aria-hidden="true"></i
+            ></span>
+          </button>
+          <div v-if="showCouponList" id="payment-coupons" class="mt-3 space-y-2">
+            <p v-if="!coupons.length" class="p-3 text-xs text-surface-500" role="status">
+              暂无满足本次订单条件的优惠券
+            </p>
+            <button
               v-for="coupon in coupons"
               :key="coupon.id"
-              class="premium-card group cursor-pointer p-4 transition-all duration-300"
-              :class="
-                selectedCoupon?.id === coupon.id
-                  ? 'ring-2 ring-warning-500 ring-offset-2 dark:ring-offset-surface-900'
-                  : 'hover:-translate-y-0.5 hover:shadow-soft-md'
-              "
-              @click="selectCoupon(coupon)"
+              class="premium-card choice-card"
+              :aria-pressed="selectedCouponId === coupon.id"
+              @click="selectCoupon(coupon.id)"
             >
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="mb-1 text-sm font-bold text-surface-800 dark:text-surface-200">
-                    {{ coupon.name }}
-                  </p>
-                  <p class="text-xs text-surface-500 dark:text-surface-400">
-                    有效期至 {{ coupon.expiry }}
-                  </p>
-                </div>
-                <span class="text-lg font-black text-danger-500"
-                  >-{{ formatPrice(coupon.discount) }}</span
-                >
-              </div>
-            </div>
-            <button
-              class="w-full py-3 text-sm font-medium text-surface-500 transition-colors duration-200 hover:text-primary-500"
-              @click="clearCoupon"
-            >
+              <span class="min-w-0 flex-1"
+                ><span class="block text-sm font-semibold">{{ coupon.title }}</span
+                ><span class="mt-1 block text-xs text-surface-500"
+                  >有效期至 {{ coupon.expiryDate || '长期有效' }}</span
+                ></span
+              >
+              <span class="shrink-0 text-sm font-bold text-primary-600 dark:text-primary-400"
+                >-{{ formatPrice(discountFor(coupon)) }}</span
+              >
+            </button>
+            <button class="min-h-11 w-full text-sm text-surface-500" @click="selectCoupon(null)">
               不使用优惠券
             </button>
           </div>
-        </Transition>
-      </div>
-
-      <div class="animate-in mb-6 delay-300">
-        <h3 class="section-title">
-          <div
-            class="mr-2.5 flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-secondary-400 to-teal-500 shadow-md"
-          >
-            <i class="fa fa-credit-card text-xs text-white" aria-hidden="true"></i>
-          </div>
-          支付方式
-        </h3>
-        <div class="space-y-2.5">
-          <div
-            v-for="(method, index) in paymentMethods"
-            :key="method.id"
-            class="premium-card animate-in group cursor-pointer p-4 transition-all duration-300"
-            :class="
-              selectedPaymentMethod === method.id
-                ? 'shadow-glow-primary ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-surface-900'
-                : 'hover:-translate-y-0.5 hover:shadow-soft-md'
-            "
-            :style="{ animationDelay: `${index * 80}ms` }"
-            @click="selectedPaymentMethod = method.id"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex min-w-0 flex-1 items-center space-x-3">
-                <div
-                  class="flex h-11 w-11 items-center justify-center rounded-xl shadow-md transition-transform duration-300 group-hover:scale-105"
-                  :class="method.bgClass"
-                >
-                  <i :class="method.icon" aria-hidden="true"></i>
-                </div>
-                <div class="min-w-0">
-                  <p class="text-sm font-bold text-surface-800 dark:text-surface-200">
-                    {{ method.name }}
-                  </p>
-                  <p class="truncate text-xs text-surface-500 dark:text-surface-400">
-                    {{ method.desc }}
-                  </p>
-                </div>
-              </div>
-              <div
-                v-if="selectedPaymentMethod === method.id"
-                class="flex h-7 w-7 animate-scale-in items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 shadow-md"
+        </section>
+        <section>
+          <h3 class="section-title">支付方式</h3>
+          <div class="space-y-2" role="group" aria-label="支付方式">
+            <button
+              v-for="method in paymentMethods"
+              :key="method.id"
+              class="choice-card disabled:cursor-not-allowed disabled:opacity-50"
+              :aria-pressed="selectedPaymentMethod === method.id"
+              :disabled="method.id === 'wallet' && insufficientBalance"
+              @click="selectedPaymentMethod = method.id"
+            >
+              <i
+                :class="method.icon"
+                class="w-6 shrink-0 text-center text-lg"
+                aria-hidden="true"
+              ></i>
+              <span class="min-w-0 flex-1"
+                ><span class="block text-sm font-semibold">{{ method.name }}</span
+                ><span
+                  class="mt-1 block break-words text-xs text-surface-500 dark:text-surface-400"
+                  >{{ method.desc }}</span
+                ></span
               >
-                <i class="fa fa-check text-xs text-white" aria-hidden="true"></i>
-              </div>
-            </div>
+              <i
+                v-if="selectedPaymentMethod === method.id"
+                class="fa fa-check shrink-0 text-primary-500"
+                aria-hidden="true"
+              ></i>
+            </button>
           </div>
+        </section>
+      </fieldset>
+      <div class="premium-card space-y-3 p-4 text-sm">
+        <div class="flex justify-between gap-3">
+          <span class="text-surface-500">充电费用</span
+          ><span>{{ formatPrice(amounts.chargeCost) }}</span>
         </div>
-      </div>
-
-      <div class="premium-card animate-in delay-400 space-y-3 p-5">
+        <div class="flex justify-between gap-3">
+          <span class="text-surface-500">服务费</span
+          ><span>{{ formatPrice(amounts.serviceFee) }}</span>
+        </div>
+        <div v-if="selectedCoupon" class="flex justify-between gap-3">
+          <span class="text-surface-500">优惠券抵扣</span
+          ><span>-{{ formatPrice(amounts.couponDiscount) }}</span>
+        </div>
         <div
-          class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-3 dark:border-surface-700"
         >
-          <span class="text-sm font-medium text-surface-600 dark:text-surface-400">充电费用</span>
-          <span class="font-bold text-surface-900 dark:text-surface-100">{{
-            formatPrice(chargeCost)
+          <span class="font-semibold">实付金额</span
+          ><span class="text-2xl font-bold tabular-nums text-primary-600 dark:text-primary-400">{{
+            formatPrice(finalAmount)
           }}</span>
         </div>
-        <div
-          class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-        >
-          <span class="text-sm font-medium text-surface-600 dark:text-surface-400">服务费</span>
-          <span class="font-bold text-surface-900 dark:text-surface-100">{{
-            formatPrice(serviceFee)
-          }}</span>
-        </div>
-        <div
-          v-if="selectedCoupon"
-          class="flex items-center justify-between border-b border-surface-100 pb-3 dark:border-surface-700/50"
-        >
-          <span class="text-sm font-medium text-surface-600 dark:text-surface-400">优惠券抵扣</span>
-          <span class="font-bold text-danger-500">-{{ formatPrice(amounts.couponDiscount) }}</span>
-        </div>
-        <div class="flex items-center justify-between pt-3">
-          <span class="text-base font-bold text-surface-900 dark:text-surface-100">实付金额</span>
-          <span class="gradient-text text-3xl font-black">{{ formatPrice(finalAmount) }}</span>
-        </div>
       </div>
+      <p class="text-xs leading-6 text-surface-500 dark:text-surface-400">
+        当前为演示支付，不会发起真实扣款。关闭面板后，可通过地图上的「去结算」继续。
+      </p>
     </div>
-
-    <div
-      class="glass-effect flex-shrink-0 border-t border-surface-200/50 p-4 dark:border-surface-700/50 lg:p-5"
-    >
+    <div class="glass-effect shrink-0 border-t p-4">
       <button
-        class="group relative w-full transform overflow-hidden rounded-2xl bg-gradient-to-r from-primary-500 via-blue-600 to-indigo-600 py-4 font-bold text-white shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary-500/35 active:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-        :disabled="isPaying"
+        class="action-primary"
+        :disabled="isPaying || !canPay"
+        :aria-busy="isPaying"
         @click="handlePayment"
       >
-        <div
-          class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-        ></div>
-        <span class="relative z-10 flex items-center justify-center space-x-2.5 text-base">
-          <div
-            v-if="isPaying"
-            class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
-          ></div>
-          <i v-else class="fa fa-shield text-lg" aria-hidden="true"></i>
-          <span>{{ isPaying ? '支付中...' : `确认支付 ${formatPrice(finalAmount)}` }}</span>
-        </span>
+        <i v-if="isPaying" class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i
+        >{{ isPaying ? '正在处理，请稍候…' : `确认支付 ${formatPrice(finalAmount)}` }}
       </button>
     </div>
   </PanelShell>
 </template>
 
 <script setup>
+import { ref, computed, inject, watch, onBeforeUnmount } from 'vue'
 import PanelShell from '../common/PanelShell.vue'
-import { ref, computed, inject } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
 import {
   calculatePaymentAmounts,
@@ -299,127 +174,104 @@ const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
 const userStore = useUserStore()
 const showToast = inject('showToast')
-const setLoading = inject('setLoading')
-
-const currentStation = computed(() => stationsStore.currentStation)
+const currentStation = computed(() => chargingStore.sessionStation || stationsStore.currentStation)
 const chargingData = computed(() => chargingStore.chargingData)
-
 const isPaying = ref(false)
 const showCouponList = ref(false)
 const selectedPaymentMethod = ref('wechat')
-const selectedCoupon = ref(null)
-
-const receipt = ref(null)
-
-const preview = computed(() =>
+const selectedCouponId = ref(null)
+const selectedCoupon = computed(
+  () => userStore.coupons.find((coupon) => coupon.id === selectedCouponId.value) || null
+)
+const baseAmounts = computed(() =>
+  calculatePaymentAmounts({
+    energy: chargingData.value.energy,
+    price: currentStation.value?.currentPrice
+  })
+)
+const discountFor = (coupon) =>
+  calculatePaymentAmounts({
+    energy: chargingData.value.energy,
+    price: currentStation.value?.currentPrice,
+    coupon
+  }).couponDiscount
+const coupons = computed(() =>
+  userStore.coupons.filter(
+    (coupon) => isCouponUsable(coupon, baseAmounts.value.totalAmount) && discountFor(coupon) > 0
+  )
+)
+const amounts = computed(() =>
   calculatePaymentAmounts({
     energy: chargingData.value.energy,
     price: currentStation.value?.currentPrice,
     coupon: selectedCoupon.value
   })
 )
-
-const amounts = computed(() => receipt.value || preview.value)
-const chargeCost = computed(() => amounts.value.chargeCost)
-const serviceFee = computed(() => amounts.value.serviceFee)
-const totalAmount = computed(() => amounts.value.chargeCost + amounts.value.serviceFee)
 const finalAmount = computed(() => amounts.value.finalAmount)
-
-const coupons = computed(() => {
-  const { totalAmount: payableTotal } = chargingStore.quotePayment()
-  return userStore.coupons
-    .filter((c) => !c.used && isCouponUsable(c, payableTotal))
-    .map((c) => {
-      const { couponDiscount } = calculatePaymentAmounts({
-        energy: chargingData.value.energy,
-        price: currentStation.value?.currentPrice,
-        coupon: c
-      })
-      return {
-        id: c.id,
-        name: c.title,
-        discount: couponDiscount,
-        expiry: c.expiryDate,
-        type: c.type,
-        value: c.value,
-        percent: c.percent
-      }
-    })
-    .filter((c) => c.discount > 0)
-})
-
+const insufficientBalance = computed(() => finalAmount.value > userStore.userInfo.balance)
+const canPay = computed(
+  () =>
+    !chargingStore.isCharging &&
+    chargingStore.phase === 'finished' &&
+    chargingStore.paymentPending &&
+    !!chargingStore.sessionId &&
+    chargingStore.sessionStation?.dataSource === 'sandbox' &&
+    Number.isFinite(currentStation.value?.currentPrice) &&
+    currentStation.value.currentPrice >= 0
+)
 const paymentMethods = computed(() => [
-  {
-    id: 'wechat',
-    name: '微信支付',
-    desc: '推荐使用',
-    icon: 'fab fa-weixin text-green-500 text-lg',
-    bgClass: 'bg-green-100 dark:bg-green-900/30'
-  },
-  {
-    id: 'alipay',
-    name: '支付宝',
-    desc: '快捷支付',
-    icon: 'fab fa-alipay text-blue-500 text-lg',
-    bgClass: 'bg-blue-100 dark:bg-blue-900/30'
-  },
+  { id: 'wechat', name: '微信支付', desc: '演示支付', icon: 'fab fa-weixin text-secondary-600' },
+  { id: 'alipay', name: '支付宝', desc: '演示支付', icon: 'fab fa-alipay text-primary-600' },
   {
     id: 'wallet',
     name: '钱包余额',
-    desc: `余额 ${formatPrice(userStore.userInfo.balance)}`,
-    icon: 'fa fa-credit-card text-primary-500 text-lg',
-    bgClass: 'bg-primary-100 dark:bg-primary-900/30'
+    desc: `余额 ${formatPrice(userStore.userInfo.balance)}${insufficientBalance.value ? ' · 余额不足' : ''}`,
+    icon: 'fa fa-credit-card text-primary-600'
   }
 ])
-
-const selectCoupon = (coupon) => {
-  selectedCoupon.value = coupon
+watch([coupons, isPaying], ([available]) => {
+  if (
+    !isPaying.value &&
+    selectedCouponId.value &&
+    !available.some((coupon) => coupon.id === selectedCouponId.value)
+  )
+    selectedCouponId.value = null
+})
+const selectCoupon = (id) => {
+  selectedCouponId.value = id
   showCouponList.value = false
 }
-
-const clearCoupon = () => {
-  selectedCoupon.value = null
-  showCouponList.value = false
-}
-
+let mounted = true
+onBeforeUnmount(() => {
+  mounted = false
+})
 const handlePayment = async () => {
-  if (selectedPaymentMethod.value === 'wallet' && finalAmount.value > userStore.userInfo.balance) {
+  if (isPaying.value || !canPay.value) return
+  if (selectedPaymentMethod.value === 'wallet' && insufficientBalance.value) {
     showToast('钱包余额不足，请选择其他支付方式', 'error')
     return
   }
+  const method = selectedPaymentMethod.value
+  const couponId = selectedCouponId.value
+  const order = {
+    amount: finalAmount.value,
+    method,
+    couponId,
+    stationId: currentStation.value.stationId,
+    energy: chargingData.value.energy
+  }
   isPaying.value = true
-  setLoading(true)
   try {
-    await processPayment({
-      amount: finalAmount.value,
-      method: selectedPaymentMethod.value,
-      couponId: selectedCoupon.value?.id || null,
-      stationId: currentStation.value?.stationId,
-      energy: chargingData.value.energy
-    })
-    receipt.value = chargingStore.settlePayment({
-      couponId: selectedCoupon.value?.id || null,
-      method: selectedPaymentMethod.value
-    })
-    showToast('支付成功', 'success')
-    emit('payment-success', receipt.value)
-  } catch {
-    showToast('支付失败，请重试', 'error')
+    await processPayment(order)
+    const receipt = chargingStore.settlePayment({ couponId, method })
+    if (mounted) {
+      showToast('演示支付成功', 'success')
+      emit('payment-success', receipt)
+    }
+  } catch (error) {
+    if (mounted) showToast(error.message || '支付失败，请重试', 'error')
   } finally {
     isPaying.value = false
-    setLoading(false)
   }
 }
 </script>
-
-<style scoped>
-.slide-up-fade-enter-active,
-.slide-up-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.slide-up-fade-enter-from,
-.slide-up-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-</style>

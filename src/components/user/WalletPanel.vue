@@ -16,7 +16,7 @@
       >
         <div class="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-white/10"></div>
         <div class="absolute bottom-0 left-0 h-24 w-24 rounded-tr-full bg-white/5"></div>
-        <p class="relative z-10 mb-1 text-sm text-white/70">账户余额</p>
+        <p class="relative z-10 mb-1 text-sm text-white/70">钱包余额 · 演示</p>
         <p class="relative z-10 text-3xl font-black text-white">
           {{ formatPrice(userInfo.balance) }}
         </p>
@@ -57,7 +57,7 @@
         </button>
         <button
           class="group rounded-2xl bg-gradient-to-br from-white to-surface-50 p-3 text-center shadow-soft transition-all duration-300 hover:-translate-y-1 active:scale-95 dark:from-surface-800 dark:to-surface-900"
-          @click="showToast('账单详情功能开发中', 'info')"
+          @click="showTransactions"
         >
           <div
             class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-400 to-purple-500 shadow-md transition-transform duration-300 group-hover:scale-110"
@@ -68,7 +68,16 @@
         </button>
       </div>
 
-      <h3 class="mb-3 font-bold text-surface-800 dark:text-surface-200">交易记录</h3>
+      <h3
+        ref="transactionsRef"
+        tabindex="-1"
+        class="mb-3 font-bold text-surface-800 dark:text-surface-200"
+      >
+        交易记录
+      </h3>
+      <p v-if="!walletTransactions.length" class="info-row text-sm text-surface-500">
+        暂无交易记录，演示充值或结算后会显示在这里。
+      </p>
       <div class="space-y-2.5">
         <div
           v-for="tx in walletTransactions"
@@ -108,104 +117,91 @@
       </div>
     </div>
 
-    <Transition name="fade">
-      <div
-        v-if="showRechargeModal"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showRechargeModal = false"
-      >
-        <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-800"
+    <DialogModal
+      v-if="showRechargeModal"
+      title="充值金额（演示）"
+      @close="showRechargeModal = false"
+    >
+      <div class="mb-4 grid grid-cols-3 gap-2.5">
+        <button
+          v-for="amount in rechargeAmounts"
+          :key="amount"
+          class="rounded-xl border-2 py-3 text-sm font-bold transition-all duration-300 active:scale-95"
+          :class="
+            !hasCustomAmount && selectedRechargeAmount === amount
+              ? 'border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+              : 'border-surface-200 text-surface-600 hover:border-primary-300 dark:border-surface-700 dark:text-surface-300'
+          "
+          :aria-pressed="!hasCustomAmount && selectedRechargeAmount === amount"
+          @click="selectRechargeAmount(amount)"
         >
-          <h3 class="mb-4 text-lg font-bold text-surface-900 dark:text-surface-100">充值金额</h3>
-          <div class="mb-4 grid grid-cols-3 gap-2.5">
-            <button
-              v-for="amount in rechargeAmounts"
-              :key="amount"
-              class="rounded-xl border-2 py-3 text-sm font-bold transition-all duration-300 active:scale-95"
-              :class="
-                selectedRechargeAmount === amount
-                  ? 'border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
-                  : 'border-surface-200 text-surface-600 hover:border-primary-300 dark:border-surface-700 dark:text-surface-300'
-              "
-              @click="selectedRechargeAmount = amount"
-            >
-              ¥{{ amount }}
-            </button>
-          </div>
-          <div class="mb-4">
-            <input
-              v-model.number="customAmount"
-              type="number"
-              placeholder="自定义金额"
-              class="input-premium"
-              min="1"
-            />
-          </div>
-          <div class="flex space-x-3">
-            <button
-              class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              @click="showRechargeModal = false"
-            >
-              取消
-            </button>
-            <button
-              class="flex-1 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
-              @click="handleRecharge"
-            >
-              确认充值
-            </button>
-          </div>
-        </div>
+          ¥{{ amount }}
+        </button>
       </div>
-    </Transition>
+      <div class="mb-4">
+        <input
+          v-model.number="customAmount"
+          type="number"
+          placeholder="自定义金额"
+          aria-label="自定义充值金额"
+          class="input-premium"
+          min="1"
+          @input="customAmountActive = true"
+        />
+      </div>
+      <div class="flex space-x-3">
+        <button
+          class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          @click="showRechargeModal = false"
+        >
+          取消
+        </button>
+        <button
+          class="flex-1 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+          @click="handleRecharge"
+        >
+          确认充值
+        </button>
+      </div>
+    </DialogModal>
 
-    <Transition name="fade">
-      <div
-        v-if="showWithdrawModal"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showWithdrawModal = false"
-      >
-        <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-800"
-        >
-          <h3 class="mb-2 text-lg font-bold text-surface-900 dark:text-surface-100">提现</h3>
-          <p class="mb-4 text-sm text-surface-500 dark:text-surface-400">
-            可提现余额：{{ formatPrice(userInfo.balance) }}
-          </p>
-          <div class="mb-4">
-            <input
-              v-model.number="withdrawAmount"
-              type="number"
-              placeholder="请输入提现金额"
-              class="input-premium"
-              min="1"
-              :max="userInfo.balance"
-            />
-          </div>
-          <div class="flex space-x-3">
-            <button
-              class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              @click="showWithdrawModal = false"
-            >
-              取消
-            </button>
-            <button
-              class="flex-1 rounded-xl bg-gradient-to-r from-secondary-400 to-emerald-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
-              @click="handleWithdraw"
-            >
-              确认提现
-            </button>
-          </div>
-        </div>
+    <DialogModal v-if="showWithdrawModal" title="提现（演示）" @close="showWithdrawModal = false">
+      <p class="mb-4 text-sm text-surface-500 dark:text-surface-400">
+        可提现余额：{{ formatPrice(userInfo.balance) }}
+      </p>
+      <div class="mb-4">
+        <input
+          v-model.number="withdrawAmount"
+          type="number"
+          placeholder="请输入提现金额"
+          aria-label="提现金额"
+          class="input-premium"
+          min="1"
+          :max="userInfo.balance"
+        />
       </div>
-    </Transition>
+      <div class="flex space-x-3">
+        <button
+          class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          @click="showWithdrawModal = false"
+        >
+          取消
+        </button>
+        <button
+          class="flex-1 rounded-xl bg-gradient-to-r from-secondary-400 to-emerald-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+          @click="handleWithdraw"
+        >
+          确认提现
+        </button>
+      </div>
+    </DialogModal>
   </PanelShell>
 </template>
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
-import { ref, computed, inject } from 'vue'
+import DialogModal from '../common/DialogModal.vue'
+import { ref, computed, inject, watch } from 'vue'
 import { useUserStore } from '../../store/modules/user'
 import { formatPrice } from '../../utils/format'
 
@@ -216,14 +212,51 @@ const showToast = inject('showToast')
 
 const userInfo = computed(() => userStore.userInfo)
 const walletTransactions = computed(() => userStore.walletTransactions)
+const transactionsRef = ref(null)
+const showTransactions = () => {
+  transactionsRef.value?.scrollIntoView({
+    block: 'start',
+    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+  })
+  transactionsRef.value?.focus({ preventScroll: true })
+}
 
 const showRechargeModal = ref(false)
 const showWithdrawModal = ref(false)
 const selectedRechargeAmount = ref(50)
 const customAmount = ref(null)
+const customAmountActive = ref(false)
+const hasCustomAmount = computed(
+  () => customAmountActive.value || (customAmount.value !== null && customAmount.value !== '')
+)
 const withdrawAmount = ref(null)
 
 const rechargeAmounts = [30, 50, 100, 200, 300, 500]
+const selectRechargeAmount = (amount) => {
+  selectedRechargeAmount.value = amount
+  customAmount.value = null
+  customAmountActive.value = false
+}
+
+watch(selectedRechargeAmount, () => {
+  customAmount.value = null
+})
+watch(showRechargeModal, (open) => {
+  if (open) {
+    customAmount.value = null
+    customAmountActive.value = false
+    selectedRechargeAmount.value = 50
+  }
+})
+watch(showWithdrawModal, (open) => {
+  if (open) withdrawAmount.value = null
+})
+const validAmount = (value) =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value > 0 &&
+  value <= 100000 &&
+  Math.abs(value * 100 - Math.round(value * 100)) < 1e-6
 
 const getTransactionIconClass = (type) => {
   switch (type) {
@@ -256,8 +289,8 @@ const getTransactionIcon = (type) => {
 }
 
 const handleRecharge = () => {
-  const amount = customAmount.value || selectedRechargeAmount.value
-  if (!amount || amount <= 0) {
+  const amount = hasCustomAmount.value ? customAmount.value : selectedRechargeAmount.value
+  if (!validAmount(amount)) {
     showToast('请输入有效的充值金额', 'warning')
     return
   }
@@ -272,7 +305,7 @@ const handleRecharge = () => {
 }
 
 const handleWithdraw = () => {
-  if (!withdrawAmount.value || withdrawAmount.value <= 0) {
+  if (!validAmount(withdrawAmount.value)) {
     showToast('请输入有效的提现金额', 'warning')
     return
   }
@@ -290,14 +323,3 @@ const handleWithdraw = () => {
   withdrawAmount.value = null
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

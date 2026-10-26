@@ -68,14 +68,14 @@
             :class="{ 'ring-2 ring-primary-500/30': vehicle.id === defaultVehicleId }"
           >
             <div class="flex items-start justify-between">
-              <div class="flex items-center">
+              <div class="flex min-w-0 flex-1 items-center">
                 <div
                   class="mr-3.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-cyan-500 shadow-md"
                 >
                   <i class="fa fa-car text-lg text-white" aria-hidden="true"></i>
                 </div>
-                <div>
-                  <div class="flex items-center">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-y-1">
                     <h3 class="text-sm font-bold text-surface-800 dark:text-surface-200">
                       {{ vehicle.model }}
                     </h3>
@@ -90,7 +90,7 @@
                   </p>
                 </div>
               </div>
-              <div class="flex items-center space-x-0.5">
+              <div class="flex shrink-0 items-center space-x-0.5">
                 <button
                   class="icon-button p-2"
                   :title="vehicle.id === defaultVehicleId ? '当前默认' : '设为默认'"
@@ -156,7 +156,7 @@
                   aria-hidden="true"
                 ></i>
                 <span class="text-xs text-surface-600 dark:text-surface-300">{{
-                  getChargeTime(vehicle.maxPower)
+                  vehicle.batteryCapacityKwh ? `${vehicle.batteryCapacityKwh} kWh` : '容量未填写'
                 }}</span>
               </div>
             </div>
@@ -240,29 +240,37 @@
         </div>
 
         <div>
+          <label for="vehicle-capacity" class="mb-2 block text-sm font-semibold"
+            >可用电池容量（kWh）</label
+          ><input
+            id="vehicle-capacity"
+            v-model.number="formData.batteryCapacityKwh"
+            type="number"
+            min="1"
+            max="200"
+            class="input-premium"
+            placeholder="用于充电估算，不知道可留空"
+          />
+          <p class="mt-2 text-xs leading-6 text-surface-500">
+            请查看车辆规格或仪表。留空时不会虚构充电量、SOC 或充满时间。
+          </p>
+        </div>
+        <div>
           <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
             >最大充电功率</label
           >
           <div
             class="rounded-2xl bg-gradient-to-br from-white to-surface-50 p-5 shadow-soft dark:from-surface-800 dark:to-surface-900"
           >
-            <div class="mb-3 flex items-center justify-between">
-              <span class="text-sm text-surface-500 dark:text-surface-400">最大功率</span>
-              <span class="gradient-text text-lg font-black">{{ formData.maxPower }}kW</span>
-            </div>
             <input
               v-model.number="formData.maxPower"
-              type="range"
-              min="50"
+              aria-label="车辆最大充电功率 kW"
+              type="number"
+              min="1"
               max="350"
-              step="10"
-              class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-200 accent-primary-500 dark:bg-surface-700"
+              placeholder="填写车辆规格上限，不知道可留空"
+              class="input-premium"
             />
-            <div class="mt-2 flex justify-between text-xs text-surface-400">
-              <span>50kW</span>
-              <span>200kW</span>
-              <span>350kW</span>
-            </div>
           </div>
         </div>
       </div>
@@ -306,48 +314,43 @@
       </div>
     </div>
 
-    <Transition name="fade">
-      <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showDeleteConfirm = false"
-      >
+    <DialogModal
+      v-if="showDeleteConfirm"
+      title="确认删除车辆"
+      role="alertdialog"
+      @close="showDeleteConfirm = false"
+    >
+      <div class="mb-5 text-center">
         <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-800"
+          class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-100 dark:bg-danger-900/30"
         >
-          <div class="mb-5 text-center">
-            <div
-              class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-100 dark:bg-danger-900/30"
-            >
-              <i class="fa fa-exclamation-triangle text-xl text-danger-500" aria-hidden="true"></i>
-            </div>
-            <h3 class="text-lg font-bold text-surface-900 dark:text-surface-100">确认删除</h3>
-            <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">
-              确定要删除这辆车吗？此操作无法撤销。
-            </p>
-          </div>
-          <div class="flex space-x-3">
-            <button
-              class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              @click="showDeleteConfirm = false"
-            >
-              取消
-            </button>
-            <button
-              class="flex-1 rounded-xl bg-danger-500 py-3 font-bold text-white transition-colors duration-200 hover:bg-danger-600 active:scale-95"
-              @click="removeVehicle"
-            >
-              删除
-            </button>
-          </div>
+          <i class="fa fa-exclamation-triangle text-xl text-danger-500" aria-hidden="true"></i>
         </div>
+        <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">
+          确定要删除这辆车吗？此操作无法撤销。
+        </p>
       </div>
-    </Transition>
+      <div class="flex space-x-3">
+        <button
+          class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          @click="showDeleteConfirm = false"
+        >
+          取消
+        </button>
+        <button
+          class="flex-1 rounded-xl bg-danger-500 py-3 font-bold text-white transition-colors duration-200 hover:bg-danger-600 active:scale-95"
+          @click="removeVehicle"
+        >
+          删除
+        </button>
+      </div>
+    </DialogModal>
   </PanelShell>
 </template>
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import DialogModal from '../common/DialogModal.vue'
 import { ref, computed, reactive, inject } from 'vue'
 import { useUserStore } from '../../store/modules/user'
 
@@ -369,7 +372,7 @@ const connectorSummary = computed(() => {
 
 const maxPower = computed(() => {
   if (vehicles.value.length === 0) return 0
-  return Math.max(...vehicles.value.map((v) => v.maxPower))
+  return Math.max(0, ...vehicles.value.map((v) => v.maxPower).filter(Number.isFinite))
 })
 
 const showForm = ref(false)
@@ -394,18 +397,29 @@ const formData = reactive({
   brand: '',
   model: '',
   connectorType: 'CCS Combo',
-  maxPower: 120
+  maxPower: null,
+  batteryCapacityKwh: null
 })
 
 const isFormValid = computed(() => {
-  return formData.brand.trim() && formData.model.trim()
+  return (
+    formData.brand.trim() &&
+    formData.model.trim() &&
+    ([null, ''].includes(formData.maxPower) ||
+      (Number.isFinite(formData.maxPower) && formData.maxPower > 0 && formData.maxPower <= 350)) &&
+    ([null, ''].includes(formData.batteryCapacityKwh) ||
+      (Number.isFinite(formData.batteryCapacityKwh) &&
+        formData.batteryCapacityKwh >= 1 &&
+        formData.batteryCapacityKwh <= 200))
+  )
 })
 
 const resetForm = () => {
   formData.brand = ''
   formData.model = ''
   formData.connectorType = 'CCS Combo'
-  formData.maxPower = 120
+  formData.maxPower = null
+  formData.batteryCapacityKwh = null
 }
 
 const openAddForm = () => {
@@ -422,6 +436,7 @@ const openEditForm = (vehicle) => {
   formData.model = vehicle.model
   formData.connectorType = vehicle.connectorType
   formData.maxPower = vehicle.maxPower
+  formData.batteryCapacityKwh = vehicle.batteryCapacityKwh ?? null
   showForm.value = true
 }
 
@@ -431,7 +446,9 @@ const cancelForm = () => {
 }
 
 const handleBack = () => {
-  if (showForm.value) {
+  if (showDeleteConfirm.value) {
+    showDeleteConfirm.value = false
+  } else if (showForm.value) {
     cancelForm()
   } else {
     emit('close')
@@ -444,7 +461,8 @@ const submitForm = () => {
     brand: formData.brand.trim(),
     model: formData.model.trim(),
     connectorType: formData.connectorType,
-    maxPower: formData.maxPower
+    maxPower: formData.maxPower || null,
+    batteryCapacityKwh: formData.batteryCapacityKwh || null
   }
   if (isEditing.value) {
     userStore.updateVehicle(editingVehicleId.value, data)
@@ -464,6 +482,7 @@ const setDefaultVehicle = (vehicleId) => {
     const idx = userStore.vehicles.indexOf(vehicle)
     userStore.vehicles.splice(idx, 1)
     userStore.vehicles.unshift(vehicle)
+    userStore.persistVehicles()
     showToast('已设为默认车辆', 'success')
   }
 }
@@ -481,22 +500,4 @@ const removeVehicle = () => {
   showDeleteConfirm.value = false
   removingVehicleId.value = null
 }
-
-const getChargeTime = (maxPower) => {
-  if (maxPower >= 200) return '快充约30min'
-  if (maxPower >= 120) return '快充约45min'
-  if (maxPower >= 80) return '约1小时'
-  return '约1.5小时'
-}
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

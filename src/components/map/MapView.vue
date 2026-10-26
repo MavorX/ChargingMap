@@ -195,6 +195,14 @@ const loadStations = async () => {
 }
 
 watch(
+  () => stationsStore.stations,
+  (stations) => {
+    mapManager.setStations(stations)
+    debouncedUpdateMarkers()
+  }
+)
+
+watch(
   // Shallow signature: stringify compares filter values without a deep watcher
   // traversing the whole object graph on every reactive tick.
   () => JSON.stringify(stationsStore.filters),

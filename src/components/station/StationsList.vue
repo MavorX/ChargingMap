@@ -1,10 +1,5 @@
 <template>
-  <div
-    id="stations-list"
-    class="fixed inset-x-0 bottom-0 z-panel flex max-h-[78vh] flex-col overflow-hidden rounded-t-3xl border-t border-surface-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-soft-lg supports-[height:100dvh]:max-h-[78dvh] dark:border-surface-700 dark:bg-surface-900 lg:left-1/2 lg:max-w-lg lg:-translate-x-1/2"
-    role="region"
-    aria-label="站点列表"
-  >
+  <PanelShell title="站点列表" placement="sheet" content-id="stations-list" @close="emit('close')">
     <div
       class="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-surface-300 dark:bg-surface-600"
       aria-hidden="true"
@@ -17,6 +12,7 @@
         <p class="mt-1 text-xs text-surface-500 dark:text-surface-400" aria-live="polite">
           当前视野内 {{ stationsStore.viewportStationCount }} 个站点
         </p>
+        <p class="mt-1 text-[11px] text-surface-400">演示数据</p>
       </div>
       <button
         id="close-list"
@@ -75,22 +71,17 @@
         </button>
       </div>
     </div>
-  </div>
+  </PanelShell>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import PanelShell from '../common/PanelShell.vue'
 import { useStationList } from '../../composables/useStationList'
 import StationListCard from './StationListCard.vue'
 import StationListControls from './StationListControls.vue'
 import StationListState from './StationListState.vue'
 
 const emit = defineEmits(['close', 'show-filter'])
-const handleKeydown = (event) => {
-  if (event.key === 'Escape') emit('close')
-}
-onMounted(() => document.addEventListener('keydown', handleKeydown))
-onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 const {
   stationsStore,
   activeFilterCount,

@@ -159,7 +159,7 @@
       <div class="space-y-2">
         <button
           class="group flex w-full items-center justify-between rounded-xl bg-gradient-to-br from-white to-surface-50 p-4 shadow-soft transition-all hover:shadow-soft-md dark:from-surface-800 dark:to-surface-900"
-          @click="showToast('缓存已清除', 'success')"
+          @click="clearCache"
         >
           <div class="flex items-center">
             <div
@@ -167,7 +167,9 @@
             >
               <i class="fa fa-trash text-xs text-white" aria-hidden="true"></i>
             </div>
-            <span class="text-sm font-bold text-surface-800 dark:text-surface-200">清除缓存</span>
+            <span class="text-sm font-bold text-surface-800 dark:text-surface-200"
+              >清除站点请求缓存</span
+            >
           </div>
           <i
             class="fa fa-chevron-right text-surface-400 transition-colors group-hover:text-primary-500"
@@ -209,76 +211,60 @@
       </div>
     </div>
 
-    <Transition name="fade">
-      <div
-        v-if="showEditNameModal"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showEditNameModal = false"
-      >
-        <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-800"
+    <DialogModal v-if="showEditNameModal" title="修改昵称" @close="showEditNameModal = false">
+      <input
+        v-model="editName"
+        type="text"
+        placeholder="请输入新昵称"
+        aria-label="新昵称"
+        maxlength="24"
+        class="input-premium mb-4"
+        @keydown.enter.prevent="saveName"
+      />
+      <div class="flex space-x-3">
+        <button
+          class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          @click="showEditNameModal = false"
         >
-          <h3 class="mb-4 text-lg font-bold text-surface-900 dark:text-surface-100">修改昵称</h3>
-          <input
-            v-model="editName"
-            type="text"
-            placeholder="请输入新昵称"
-            class="input-premium mb-4"
-          />
-          <div class="flex space-x-3">
-            <button
-              class="flex-1 rounded-xl border-2 border-surface-200 py-3 font-bold text-surface-600 transition-all duration-200 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              @click="showEditNameModal = false"
-            >
-              取消
-            </button>
-            <button
-              class="flex-1 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
-              @click="saveName"
-            >
-              保存
-            </button>
-          </div>
-        </div>
+          取消
+        </button>
+        <button
+          class="flex-1 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 py-3 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+          @click="saveName"
+        >
+          保存
+        </button>
       </div>
-    </Transition>
+    </DialogModal>
 
-    <Transition name="fade">
+    <DialogModal v-if="showAboutModal" title="关于我们" @close="showAboutModal = false">
       <div
-        v-if="showAboutModal"
-        class="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm"
-        @click.self="showAboutModal = false"
+        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 shadow-lg"
       >
-        <div
-          class="w-full max-w-sm animate-scale-in rounded-2xl bg-white p-6 text-center shadow-2xl dark:bg-surface-800"
-        >
-          <div
-            class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 shadow-lg"
-          >
-            <i class="fa fa-bolt text-2xl text-white" aria-hidden="true"></i>
-          </div>
-          <h3 class="text-lg font-bold text-surface-900 dark:text-surface-100">智能充电站</h3>
-          <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">版本 1.0.0</p>
-          <p class="mt-3 text-xs leading-relaxed text-surface-400">
-            为电动汽车用户提供便捷的充电服务，查找附近充电站，一键导航，智能充电，让出行更轻松。
-          </p>
-          <button
-            class="mt-5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 px-6 py-2.5 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
-            @click="showAboutModal = false"
-          >
-            知道了
-          </button>
-        </div>
+        <i class="fa fa-bolt text-2xl text-white" aria-hidden="true"></i>
       </div>
-    </Transition>
+      <h3 class="text-lg font-bold text-surface-900 dark:text-surface-100">智能充电站</h3>
+      <p class="mt-2 text-sm text-surface-500 dark:text-surface-400">版本 1.0.0</p>
+      <p class="mt-3 text-xs leading-relaxed text-surface-400">
+        为电动汽车用户提供便捷的充电服务，查找附近充电站，一键导航，智能充电，让出行更轻松。
+      </p>
+      <button
+        class="mt-5 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 px-6 py-2.5 font-bold text-white transition-all duration-200 hover:shadow-lg active:scale-95"
+        @click="showAboutModal = false"
+      >
+        知道了
+      </button>
+    </DialogModal>
   </PanelShell>
 </template>
 
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import DialogModal from '../common/DialogModal.vue'
 import ToggleSwitch from '../common/ToggleSwitch.vue'
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, watch } from 'vue'
 import { useUserStore } from '../../store/modules/user'
+import { clearStationDetailCache } from '../../services/api'
 
 defineEmits(['close'])
 
@@ -292,6 +278,13 @@ const isDarkMode = computed(() => userStore.isDarkMode)
 const showEditNameModal = ref(false)
 const showAboutModal = ref(false)
 const editName = ref(userInfo.value.name)
+const clearCache = () => {
+  clearStationDetailCache()
+  showToast('站点请求缓存已清除，个人数据不受影响', 'success')
+}
+watch(showEditNameModal, (open) => {
+  if (open) editName.value = userInfo.value.name
+})
 
 const toggleSetting = (key) => {
   const updates = { [key]: !settings.value[key] }
@@ -316,17 +309,6 @@ const saveName = () => {
 }
 
 const handleLogout = () => {
-  showToast('已退出登录', 'info')
+  showToast('当前为本地演示模式，尚未接入账号登录', 'info')
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

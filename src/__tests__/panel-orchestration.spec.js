@@ -139,6 +139,27 @@ describe('ui store activePanel orchestration', () => {
     expect(ui.activePanel).toBe('payment')
     expect(ui.panelHistory).toEqual([])
   })
+
+  it('does not create a history loop when reopening an ancestor panel', () => {
+    const ui = useUiStore()
+    ui.open('userProfile')
+    ui.open('wallet')
+    ui.open('coupons')
+    ui.open('userProfile')
+    expect(ui.panelHistory).toEqual([])
+    ui.close()
+    expect(ui.activePanel).toBeNull()
+  })
+
+  it('drops stale account panels when entering a transactional replacement step', () => {
+    const ui = useUiStore()
+    ui.open('userProfile')
+    ui.open('chargingSettings')
+    ui.replace('charging')
+    expect(ui.panelHistory).toEqual([])
+    ui.close()
+    expect(ui.activePanel).toBeNull()
+  })
 })
 
 describe('HomeView panel smoke', () => {
@@ -195,7 +216,7 @@ describe('HomeView panel smoke', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('routes a payment success close into review, then back to the map', async () => {
+  it('opens review only when explicitly chosen on the payment result', async () => {
     ui.open('paymentSuccess', { reset: true })
     await settle()
 
@@ -206,7 +227,7 @@ describe('HomeView panel smoke', () => {
       { timeout: 2000, interval: 20 }
     )
 
-    wrapper.findComponent(PaymentSuccess).vm.$emit('close')
+    wrapper.findComponent(PaymentSuccess).vm.$emit('review')
     expect(ui.activePanel).toBe('review')
 
     await vi.waitFor(

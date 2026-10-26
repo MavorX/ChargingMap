@@ -24,6 +24,8 @@ export const useUiStore = defineStore('ui', {
       }
       if (reset) {
         this.panelHistory = []
+      } else if (this.panelHistory.includes(name)) {
+        this.panelHistory = this.panelHistory.slice(0, this.panelHistory.indexOf(name))
       } else if (this.activePanel) {
         this.panelHistory.push(this.activePanel)
       }
@@ -35,6 +37,7 @@ export const useUiStore = defineStore('ui', {
     // final panel returns to the map instead of reopening a stale flow step.
     replace(name) {
       if (!isValidPanelName(name)) return
+      this.panelHistory = []
       this.activePanel = name
     },
 

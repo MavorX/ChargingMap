@@ -588,11 +588,12 @@
         <button
           class="rounded-xl border border-surface-200 bg-white font-semibold text-surface-700 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200 dark:hover:bg-surface-800"
           :class="[size.actionPad, size.actionText]"
+          :disabled="!canReserve"
           @click="$emit('start-reservation')"
         >
           <span class="relative z-10 flex items-center justify-center" :class="size.actionInner">
             <i class="fa fa-calendar-check-o" :class="size.actionGlyph" aria-hidden="true"></i>
-            <span>预约充电</span>
+            <span>{{ canReserve ? '预约充电' : '暂不可预约' }}</span>
           </span>
         </button>
         <button
@@ -609,11 +610,14 @@
       <button
         class="w-full rounded-xl bg-primary-600 font-semibold text-white transition-colors hover:bg-primary-700 active:bg-primary-800"
         :class="size.primaryPad"
+        :disabled="!canCharge"
         @click="$emit('start-charging')"
       >
         <span class="relative z-10 flex items-center justify-center" :class="size.primaryInner">
           <i class="fa fa-bolt" :class="size.primaryGlyph" aria-hidden="true"></i>
-          <span>开始充电</span>
+          <span>{{
+            canCharge ? '选择充电桩' : station.detailsLoaded ? '暂无可用充电桩' : '正在加载充电桩'
+          }}</span>
         </span>
       </button>
     </div>
@@ -786,6 +790,17 @@ const _emit = defineEmits(['close', 'start-reservation', 'start-charging', 'navi
 const stationsStore = useStationsStore()
 const showToast = inject('showToast')
 const station = computed(() => stationsStore.currentStation)
+const canCharge = computed(
+  () =>
+    station.value?.openStatus === 1 &&
+    station.value.detailsLoaded &&
+    Number.isFinite(station.value.currentPrice) &&
+    [
+      ...(station.value.details?.fastConnectors || []),
+      ...(station.value.details?.slowConnectors || [])
+    ].some((connector) => connector.status === 1)
+)
+const canReserve = computed(() => canCharge.value && station.value.reservationAvailable)
 const isRetryingDetails = ref(false)
 const isInline = computed(() => {
   if (import.meta.env.DEV && props.variant !== 'sheet' && props.variant !== 'inline') {

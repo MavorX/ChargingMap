@@ -108,7 +108,7 @@
         </div>
 
         <button
-          v-if="!isNavigating && !desktopSidebarOpen"
+          v-if="!isNavigating && !activeOverlay"
           id="toggle-list"
           class="group absolute bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 z-fab -translate-x-1/2 whitespace-nowrap rounded-full px-6 py-3.5 shadow-lg transition-colors lg:hidden"
           :class="
@@ -116,6 +116,8 @@
               ? 'bg-surface-800 dark:bg-surface-700'
               : 'bg-primary-600 hover:bg-primary-700'
           "
+          aria-controls="stations-list"
+          :aria-expanded="uiStore.activePanel === 'stationsList'"
           @click="toggleStationsList"
         >
           <span class="relative z-10 flex items-center space-x-2.5 font-semibold text-white">
@@ -135,142 +137,118 @@
       </div>
 
       <aside
-        v-if="desktopSidebarOpen"
-        class="order-first hidden w-[380px] flex-shrink-0 flex-col overflow-hidden bg-white dark:bg-surface-900 lg:flex xl:w-[400px]"
+        v-if="isDesktop"
+        id="station-explorer"
+        class="order-first hidden flex-shrink-0 flex-col overflow-hidden bg-white dark:bg-surface-900 lg:flex"
+        :class="desktopSidebarOpen ? 'w-[380px] xl:w-[400px]' : 'w-16'"
         aria-label="站点探索"
       >
-        <Transition name="sidebar-switch" mode="out-in">
-          <div v-if="!currentStation" key="list" class="flex h-full min-h-0 flex-col">
-            <div class="flex flex-shrink-0 items-start justify-between px-5 pb-5 pt-3">
-              <div>
+        <div v-if="!desktopSidebarOpen" class="flex flex-col items-center pt-3">
+          <button
+            ref="expandSidebarRef"
+            class="flex min-h-16 w-12 flex-col items-center justify-center gap-2 rounded-xl text-primary-700 transition-colors hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-surface-800"
+            aria-label="展开站点列表"
+            title="展开站点列表"
+            aria-controls="station-explorer-content"
+            :aria-expanded="false"
+            @click="expandSidebar"
+          >
+            <i class="fa fa-angles-right text-base" aria-hidden="true"></i>
+            <span class="text-xs font-semibold">站点</span>
+          </button>
+        </div>
+        <div
+          v-show="desktopSidebarOpen"
+          id="station-explorer-content"
+          class="flex min-h-0 flex-1 flex-col"
+        >
+          <Transition name="sidebar-switch" mode="out-in">
+            <div v-if="!currentStation" key="list" class="flex h-full min-h-0 flex-col">
+              <div class="flex flex-shrink-0 items-start justify-between px-5 pb-5 pt-3">
                 <div>
-                  <p
-                    class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-primary-600 dark:text-primary-400"
-                  >
-                    FIND YOUR NEXT CHARGE
-                  </p>
-                  <h2
-                    class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
-                  >
-                    附近充电站
-                  </h2>
-                  <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400"
-                    >选个好站，轻松出发。</span
-                  >
+                  <div>
+                    <p
+                      class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-primary-600 dark:text-primary-400"
+                    >
+                      FIND YOUR NEXT CHARGE
+                    </p>
+                    <h2
+                      class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
+                    >
+                      附近充电站
+                    </h2>
+                    <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400"
+                      >演示项目 · 站点与充电数据为模拟数据</span
+                    >
+                  </div>
                 </div>
+                <button
+                  ref="collapseSidebarRef"
+                  class="icon-button"
+                  title="收起站点列表"
+                  aria-label="收起站点列表"
+                  aria-controls="station-explorer-content"
+                  :aria-expanded="true"
+                  @click="collapseSidebar"
+                >
+                  <i class="fa fa-angles-left text-surface-500" aria-hidden="true"></i>
+                </button>
               </div>
-              <button
-                class="icon-button"
-                title="关闭侧边栏"
-                aria-label="关闭侧边栏"
-                @click="desktopSidebarOpen = false"
-              >
-                <i
-                  class="fa fa-times text-surface-500 transition-colors duration-200 hover:text-danger-500"
-                  aria-hidden="true"
-                ></i>
-              </button>
+              <div class="min-h-0 flex-1">
+                <DesktopStationList
+                  @select-station="selectStationFromSidebar"
+                  @show-filter="uiStore.open('vehicleFilter')"
+                />
+              </div>
             </div>
-            <div class="min-h-0 flex-1">
-              <DesktopStationList
-                @select-station="selectStationFromSidebar"
-                @show-filter="uiStore.open('vehicleFilter')"
-              />
-            </div>
-          </div>
-          <StationDetail
-            v-else
-            key="detail"
-            :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
-            @close="closeStationDetail"
-            @start-reservation="uiStore.open('reservation')"
-            @start-charging="uiStore.open('chargingSettings')"
-            @navigate="navigateToStation"
-          />
-        </Transition>
+            <StationDetail
+              v-else
+              key="detail"
+              variant="inline"
+              @close="closeStationDetail"
+              @start-reservation="uiStore.open('reservation')"
+              @start-charging="openChargingSettings"
+              @navigate="navigateToStation"
+            />
+          </Transition>
+        </div>
       </aside>
-
-      <button
-        v-if="!desktopSidebarOpen && !isNavigating"
-        class="glass-card group fixed right-6 top-20 z-fab hidden h-10 w-10 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95 lg:flex"
-        title="打开站点列表"
-        aria-label="打开站点列表"
-        @click="desktopSidebarOpen = true"
-      >
-        <i
-          class="fa fa-list text-primary-500 transition-all duration-200 group-hover:scale-110"
-          aria-hidden="true"
-        ></i>
-      </button>
     </div>
 
-    <Transition name="slide-up">
-      <StationsList
-        v-if="uiStore.activePanel === 'stationsList'"
-        @close="uiStore.close()"
+    <button
+      v-if="(chargingStore.isCharging || chargingStore.paymentPending) && !activeOverlay"
+      class="session-resume"
+      @click="resumeSession"
+    >
+      <i
+        :class="chargingStore.isCharging ? 'fa fa-bolt' : 'fa fa-credit-card'"
+        aria-hidden="true"
+      ></i>
+      {{
+        chargingStore.isCharging
+          ? '正在充电 · 查看进度'
+          : ['awaiting_unplug', 'interrupted'].includes(chargingStore.phase)
+            ? '充电已结束 · 完成收尾'
+            : '待支付订单 · 查看账单'
+      }}
+    </button>
+
+    <Transition name="panel" mode="out-in" @before-leave="disableLeavingOverlay">
+      <component
+        :is="overlayComponents[activeOverlay]"
+        v-if="activeOverlay"
+        :key="activeOverlay"
+        v-bind="activeOverlay === 'paymentSuccess' ? { amount: lastPaidAmount } : {}"
+        @close="closeActiveOverlay"
         @show-filter="uiStore.open('vehicleFilter')"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <StationDetail
-        v-if="currentStation && !desktopSidebarOpen"
-        :variant="desktopSidebarOpen ? 'inline' : 'sheet'"
-        @close="closeStationDetail"
         @start-reservation="uiStore.open('reservation')"
-        @start-charging="uiStore.open('chargingSettings')"
-        @navigate="navigateToStation"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <VehicleFilter v-if="uiStore.activePanel === 'vehicleFilter'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <ReservationPanel
-        v-if="uiStore.activePanel === 'reservation'"
-        @close="uiStore.close()"
+        @start-charging="handleStartCharging"
+        @charging-complete="onChargingComplete"
         @reservation-success="onReservationSuccess"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <ChargingSettings
-        v-if="uiStore.activePanel === 'chargingSettings'"
-        @close="uiStore.close()"
-        @start-charging="onChargingSettingsConfirmed"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <ChargingPanel v-if="uiStore.activePanel === 'charging'" @close="onChargingComplete" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <PaymentPanel
-        v-if="uiStore.activePanel === 'payment'"
-        @close="uiStore.close()"
         @payment-success="onPaymentSuccess"
-      />
-    </Transition>
-
-    <Transition name="fade-scale">
-      <PaymentSuccess
-        v-if="uiStore.activePanel === 'paymentSuccess'"
-        :amount="lastPaidAmount"
-        @close="onPaymentSuccessClose"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <ReviewPanel v-if="uiStore.activePanel === 'review'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <UserProfile
-        v-if="uiStore.activePanel === 'userProfile'"
-        @close="uiStore.close()"
+        @review="uiStore.replace('review')"
+        @navigate="navigateToStation"
+        @view-station="viewFavoriteStation"
         @show-notifications="uiStore.open('notifications')"
         @show-vehicles="uiStore.open('vehicle')"
         @show-charging-history="uiStore.open('chargingHistory')"
@@ -281,46 +259,20 @@
         @show-help="uiStore.open('help')"
       />
     </Transition>
-
-    <Transition name="slide-right">
-      <NotificationsPanel v-if="uiStore.activePanel === 'notifications'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <VehiclePanel v-if="uiStore.activePanel === 'vehicle'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <ChargingHistoryPanel
-        v-if="uiStore.activePanel === 'chargingHistory'"
-        @close="uiStore.close()"
-      />
-    </Transition>
-
-    <Transition name="slide-right">
-      <CouponsPanel v-if="uiStore.activePanel === 'coupons'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <WalletPanel v-if="uiStore.activePanel === 'wallet'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <FavoritesPanel v-if="uiStore.activePanel === 'favorites'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <SettingsPanel v-if="uiStore.activePanel === 'settings'" @close="uiStore.close()" />
-    </Transition>
-
-    <Transition name="slide-right">
-      <HelpCenterPanel v-if="uiStore.activePanel === 'help'" @close="uiStore.close()" />
-    </Transition>
   </main>
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  inject,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch
+} from 'vue'
 import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
 import { useUiStore } from '../store/modules/ui'
@@ -362,6 +314,60 @@ const chargingStore = useChargingStore()
 const uiStore = useUiStore()
 const showToast = inject('showToast')
 
+const overlayComponents = {
+  stationDetail: StationDetail,
+  stationsList: StationsList,
+  vehicleFilter: VehicleFilter,
+  reservation: ReservationPanel,
+  chargingSettings: ChargingSettings,
+  charging: ChargingPanel,
+  payment: PaymentPanel,
+  paymentSuccess: PaymentSuccess,
+  review: ReviewPanel,
+  userProfile: UserProfile,
+  notifications: NotificationsPanel,
+  vehicle: VehiclePanel,
+  chargingHistory: ChargingHistoryPanel,
+  coupons: CouponsPanel,
+  wallet: WalletPanel,
+  favorites: FavoritesPanel,
+  settings: SettingsPanel,
+  help: HelpCenterPanel
+}
+const activeOverlay = computed(
+  () => uiStore.activePanel || (currentStation.value && !isDesktop.value ? 'stationDetail' : null)
+)
+const disableLeavingOverlay = (element) => {
+  element.setAttribute('inert', '')
+  element.setAttribute('aria-hidden', 'true')
+}
+const closeActiveOverlay = () => {
+  if (activeOverlay.value === 'stationDetail') closeStationDetail()
+  else if (['charging', 'payment', 'paymentSuccess', 'review'].includes(uiStore.activePanel)) {
+    uiStore.dismiss()
+    stationsStore.setCurrentStation(null)
+  } else uiStore.close()
+}
+const resumeSession = () =>
+  uiStore.open(
+    chargingStore.isCharging || ['awaiting_unplug', 'interrupted'].includes(chargingStore.phase)
+      ? 'charging'
+      : 'payment',
+    { reset: true }
+  )
+const openChargingSettings = () => {
+  if (chargingStore.isCharging || chargingStore.paymentPending) resumeSession()
+  else uiStore.open('chargingSettings')
+}
+const handleStartCharging = (options) => {
+  if (activeOverlay.value === 'stationDetail') openChargingSettings()
+  else onChargingSettingsConfirmed(options)
+}
+const viewFavoriteStation = (station) => {
+  uiStore.dismiss()
+  selectStationFromSidebar(station)
+}
+
 const currentStation = computed(() => stationsStore.currentStation)
 const isNavigating = computed(() => stationsStore.isNavigating)
 const viewportStationCount = computed(() => stationsStore.viewportStationCount)
@@ -372,7 +378,21 @@ const closeStationDetail = () => {
 
 // Non-panel state: layout + last receipt amount stay local to the view.
 const lastPaidAmount = ref(null)
-const desktopSidebarOpen = ref(false)
+const isDesktop = ref(false)
+// Keep the user's desktop preference across mobile/desktop breakpoint changes.
+const desktopSidebarOpen = ref(true)
+const expandSidebarRef = ref(null)
+const collapseSidebarRef = ref(null)
+const collapseSidebar = async () => {
+  desktopSidebarOpen.value = false
+  await nextTick()
+  expandSidebarRef.value?.focus({ preventScroll: true })
+}
+const expandSidebar = async () => {
+  desktopSidebarOpen.value = true
+  await nextTick()
+  collapseSidebarRef.value?.focus({ preventScroll: true })
+}
 
 const selectStationFromSidebar = (station) => {
   stationsStore.setCurrentStation(station)
@@ -400,6 +420,7 @@ const toggleStationsList = () => {
 watch(currentStation, (newStation) => {
   if (newStation) {
     closeStationsListIfOpen()
+    if (isDesktop.value) desktopSidebarOpen.value = true
   }
 })
 
@@ -415,13 +436,14 @@ const navigateToStation = () => {
 
 const onReservationSuccess = () => {
   uiStore.dismiss()
-  showToast('预约成功！请按时到达充电站', 'success')
+  showToast('预约成功（演示），请按预约时间到站', 'success')
 }
 
 const onChargingSettingsConfirmed = () => {
-  uiStore.replace('charging')
-  chargingStore.startCharging()
-  showToast('充电已开始', 'success')
+  if (chargingStore.isCharging) {
+    uiStore.replace('charging')
+    showToast('连接检测通过，已开始充电', 'success')
+  }
 }
 
 const onChargingComplete = () => {
@@ -432,10 +454,6 @@ const onPaymentSuccess = (receipt) => {
   const amount = receipt?.finalAmount
   lastPaidAmount.value = typeof amount === 'number' && Number.isFinite(amount) ? amount : null
   uiStore.open('paymentSuccess', { reset: true })
-}
-
-const onPaymentSuccessClose = () => {
-  uiStore.replace('review')
 }
 
 const handleHeaderEvent = (event) => {
@@ -461,10 +479,12 @@ const handleHeaderEvent = (event) => {
         })
       break
     case 'home':
+      uiStore.dismiss()
       stationsStore.setCurrentStation(null)
       closeStationsListIfOpen()
       mapManager.clearRoute()
       stationsStore.stopNavigation()
+      if (isDesktop.value) expandSidebar()
       break
   }
 }
@@ -487,13 +507,15 @@ const cancelNavigation = () => {
 }
 
 const handleMapClick = () => {
-  if (currentStation.value) {
+  if (currentStation.value && !uiStore.activePanel) {
     stationsStore.setCurrentStation(null)
   }
 }
 
 const handleNavigateToStation = (event) => {
   const station = event.detail
+  uiStore.dismiss()
+  stationsStore.setCurrentStation(null)
   closeStationsListIfOpen()
   mapManager.clearRoute()
   mapManager.navigateToStation(station)
@@ -529,22 +551,36 @@ const DESKTOP_QUERY = '(min-width: 1024px)'
 let desktopMediaQuery = null
 
 const applyDesktopLayout = (isDesktop) => {
-  if (isDesktop) {
-    if (!desktopSidebarOpen.value) {
-      desktopSidebarOpen.value = true
-    }
-  } else {
-    desktopSidebarOpen.value = false
-    closeStationsListIfOpen()
-  }
+  // A single left-side explorer on desktop; a single sheet on mobile.
+  if (isDesktop) closeStationsListIfOpen()
 }
 
 const handleBreakpointChange = (event) => {
+  isDesktop.value = event.matches
+  if (event.matches && currentStation.value) desktopSidebarOpen.value = true
   applyDesktopLayout(event.matches)
 }
 
+watch(
+  () => chargingStore.phase,
+  () => {
+    if (chargingStore.sessionStation)
+      mapManager.refreshMarker(chargingStore.sessionStation.stationId)
+  }
+)
+
+watch(
+  () => chargingStore.isCharging,
+  (isCharging, wasCharging) => {
+    if (wasCharging && !isCharging && chargingStore.paymentPending) {
+      showToast('充电已停止，请拔枪归位后查看账单', 'info')
+    }
+  }
+)
+
 onMounted(() => {
   chargingStore.loadSettings()
+  chargingStore.restoreSession()
   window.addEventListener('headerEvent', handleHeaderEvent)
   window.addEventListener('routeResult', handleRouteResult)
   window.addEventListener('mapClickClose', handleMapClick)
@@ -554,9 +590,11 @@ onMounted(() => {
 
   if (typeof window.matchMedia === 'function') {
     desktopMediaQuery = window.matchMedia(DESKTOP_QUERY)
+    isDesktop.value = desktopMediaQuery.matches
     desktopMediaQuery.addEventListener('change', handleBreakpointChange)
     applyDesktopLayout(desktopMediaQuery.matches)
   } else {
+    isDesktop.value = window.innerWidth >= 1024
     applyDesktopLayout(window.innerWidth >= 1024)
   }
 })
@@ -577,64 +615,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition:
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.4s ease;
-}
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
-}
-
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition:
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.3s ease;
-}
-.slide-right-enter-from,
-.slide-right-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-.fade-scale-enter-active {
-  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.fade-scale-leave-active {
-  transition: all 0.3s ease-in;
-}
-.fade-scale-enter-from {
-  opacity: 0;
-  transform: scale(0.9);
-}
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(1.05);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 .sidebar-switch-enter-active,
 .sidebar-switch-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 160ms ease;
 }
 .sidebar-switch-enter-from {
   opacity: 0;
-  transform: translateX(30px);
 }
 .sidebar-switch-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
 }
 </style>
