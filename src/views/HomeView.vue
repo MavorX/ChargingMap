@@ -1,38 +1,93 @@
 <template>
-  <main class="h-screen overflow-hidden pt-16 supports-[height:100dvh]:h-[100dvh]">
-    <div class="flex h-full">
-      <div class="relative min-w-0 flex-1">
+  <main
+    class="h-screen overflow-hidden bg-white pt-16 supports-[height:100dvh]:h-[100dvh] dark:bg-surface-900"
+  >
+    <h1 class="sr-only">探索附近充电站</h1>
+    <div class="flex h-full lg:gap-4 lg:p-4 lg:pl-0">
+      <div
+        class="relative min-w-0 flex-1 overflow-hidden bg-surface-100 dark:bg-surface-950 lg:rounded-2xl lg:border lg:border-surface-200 dark:lg:border-surface-800"
+      >
         <MapView />
 
         <div
-          v-if="!isNavigating"
-          class="fixed bottom-24 z-fab flex flex-col space-y-3 pb-[env(safe-area-inset-bottom)] transition-all duration-300"
-          :class="desktopSidebarOpen ? 'right-[424px] xl:right-[444px]' : 'right-6'"
+          v-if="!isNavigating && !currentStation && !uiStore.activePanel"
+          class="absolute inset-x-4 top-4 z-20 lg:hidden"
         >
-          <button
-            class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95"
-            title="放大地图"
-            aria-label="放大地图"
-            @click="handleZoomIn"
+          <div class="glass-card flex items-center gap-2 p-2">
+            <StationSearch class="flex-1" />
+            <button
+              class="icon-button h-12 w-12 shrink-0 text-primary-600 dark:text-primary-400"
+              aria-label="高级筛选"
+              @click="uiStore.open('vehicleFilter')"
+            >
+              <i class="fa fa-sliders" aria-hidden="true"></i>
+            </button>
+          </div>
+          <span
+            class="mt-2 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-2 text-xs text-surface-600 shadow-sm dark:bg-surface-900/95 dark:text-surface-300"
           >
+            <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span
+            >{{ viewportStationCount }} 个站点在当前视野内
+          </span>
+        </div>
+
+        <button
+          v-if="!isNavigating"
+          class="glass-card absolute left-4 top-4 z-10 hidden items-center gap-3 px-4 py-3 text-left lg:flex"
+          aria-label="定位当前位置"
+          @click="locateUser"
+        >
+          <span
+            class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+            ><i class="fa fa-location-arrow" aria-hidden="true"></i
+          ></span>
+          <span
+            ><span class="block text-sm font-semibold text-surface-800 dark:text-surface-100">{{
+              stationsStore.userLocation ? '已获取你的位置' : '合肥市 · 默认视野'
+            }}</span
+            ><span class="block text-[11px] text-surface-500 dark:text-surface-400">{{
+              stationsStore.userLocation ? '点击重新定位' : '点击定位，发现身边的好站'
+            }}</span></span
+          >
+        </button>
+
+        <div
+          v-if="!isNavigating"
+          class="glass-card absolute bottom-4 left-4 z-10 hidden flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-[11px] text-surface-600 dark:text-surface-300 sm:flex"
+          aria-label="地图状态图例"
+        >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-secondary-500"></span>有空闲</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-warning-500"></span>余位紧张</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-danger-500"></span>已满</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-surface-500"></span>维护中</span
+          >
+        </div>
+
+        <div
+          v-if="!isNavigating"
+          class="map-tools absolute bottom-28 right-4 z-fab flex flex-col gap-2 pb-[env(safe-area-inset-bottom)] lg:bottom-5"
+        >
+          <button class="map-tool" title="放大地图" aria-label="放大地图" @click="handleZoomIn">
             <i
               class="fa fa-plus text-primary-500 transition-all duration-200 group-hover:scale-110 group-hover:text-primary-600"
               aria-hidden="true"
             ></i>
           </button>
-          <button
-            class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-primary active:scale-95"
-            title="缩小地图"
-            aria-label="缩小地图"
-            @click="handleZoomOut"
-          >
+          <button class="map-tool" title="缩小地图" aria-label="缩小地图" @click="handleZoomOut">
             <i
               class="fa fa-minus text-surface-600 transition-all duration-200 group-hover:scale-110 group-hover:text-primary-500 dark:text-surface-300"
               aria-hidden="true"
             ></i>
           </button>
           <button
-            class="glass-card group flex h-12 w-12 items-center justify-center transition-all duration-300 hover:shadow-glow-secondary active:scale-95"
+            class="map-tool"
             title="我的车辆"
             aria-label="我的车辆"
             @click="uiStore.open('vehicle')"
@@ -42,28 +97,37 @@
               aria-hidden="true"
             ></i>
           </button>
+          <button
+            class="map-tool text-primary-600 dark:text-primary-400"
+            title="定位当前位置"
+            aria-label="定位当前位置"
+            @click="locateUser"
+          >
+            <i class="fa fa-location-arrow" aria-hidden="true"></i>
+          </button>
         </div>
 
         <button
           v-if="!isNavigating && !desktopSidebarOpen"
           id="toggle-list"
-          class="group fixed bottom-[calc(2rem_+_env(safe-area-inset-bottom))] left-1/2 z-fab -translate-x-1/2 transform overflow-hidden rounded-2xl px-7 py-3.5 shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary-500/30 active:scale-[0.98] lg:hidden"
+          class="group absolute bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 z-fab -translate-x-1/2 whitespace-nowrap rounded-full px-6 py-3.5 shadow-lg transition-colors lg:hidden"
           :class="
             uiStore.activePanel === 'stationsList'
-              ? 'bg-gradient-to-r from-surface-700 to-surface-800 dark:from-surface-800 dark:to-surface-900'
-              : 'bg-gradient-to-r from-primary-500 to-accent-500'
+              ? 'bg-surface-800 dark:bg-surface-700'
+              : 'bg-primary-600 hover:bg-primary-700'
           "
           @click="toggleStationsList"
         >
-          <div
-            class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-          ></div>
           <span class="relative z-10 flex items-center space-x-2.5 font-semibold text-white">
             <i
               :class="uiStore.activePanel === 'stationsList' ? 'fa fa-times' : 'fa fa-list'"
               aria-hidden="true"
             ></i>
-            <span>{{ uiStore.activePanel === 'stationsList' ? '关闭列表' : '查看站点列表' }}</span>
+            <span>{{
+              uiStore.activePanel === 'stationsList'
+                ? '关闭列表'
+                : `查看 ${viewportStationCount} 个站点`
+            }}</span>
           </span>
         </button>
 
@@ -72,25 +136,26 @@
 
       <aside
         v-if="desktopSidebarOpen"
-        class="hidden w-[400px] flex-shrink-0 flex-col overflow-hidden border-l border-surface-200 bg-white dark:border-surface-700/50 dark:bg-surface-900 lg:flex xl:w-[420px]"
+        class="order-first hidden w-[380px] flex-shrink-0 flex-col overflow-hidden bg-white dark:bg-surface-900 lg:flex xl:w-[400px]"
+        aria-label="站点探索"
       >
         <Transition name="sidebar-switch" mode="out-in">
-          <div v-if="!currentStation" key="list" class="flex h-full flex-col">
-            <div
-              class="glass-effect flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
-            >
-              <div class="flex items-center space-x-3">
-                <div
-                  class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-400 to-accent-500 shadow-md"
-                >
-                  <i class="fa fa-map-marker text-sm text-white" aria-hidden="true"></i>
-                </div>
+          <div v-if="!currentStation" key="list" class="flex h-full min-h-0 flex-col">
+            <div class="flex flex-shrink-0 items-start justify-between px-5 pb-5 pt-3">
+              <div>
                 <div>
-                  <h2 class="text-base font-bold text-surface-900 dark:text-surface-100">
+                  <p
+                    class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-primary-600 dark:text-primary-400"
+                  >
+                    FIND YOUR NEXT CHARGE
+                  </p>
+                  <h2
+                    class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
+                  >
                     附近充电站
                   </h2>
-                  <span class="text-xs text-surface-400 dark:text-surface-500"
-                    >{{ viewportStationCount }}个在视野内</span
+                  <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400"
+                    >选个好站，轻松出发。</span
                   >
                 </div>
               </div>
@@ -106,8 +171,11 @@
                 ></i>
               </button>
             </div>
-            <div class="flex-1 overflow-y-auto">
-              <DesktopStationList @select-station="selectStationFromSidebar" />
+            <div class="min-h-0 flex-1">
+              <DesktopStationList
+                @select-station="selectStationFromSidebar"
+                @show-filter="uiStore.open('vehicleFilter')"
+              />
             </div>
           </div>
           <StationDetail
@@ -264,6 +332,7 @@ import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
 import StationDetail from '../components/station/StationDetail.vue'
 import DesktopStationList from '../components/station/DesktopStationList.vue'
+import StationSearch from '../components/station/StationSearch.vue'
 import ReservationPanel from '../components/reservation/ReservationPanel.vue'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
 import ChargingSettings from '../components/charging/ChargingSettings.vue'
@@ -307,7 +376,12 @@ const desktopSidebarOpen = ref(false)
 
 const selectStationFromSidebar = (station) => {
   stationsStore.setCurrentStation(station)
+  if (Number.isFinite(station.lng) && Number.isFinite(station.lat)) {
+    mapManager.map?.setCenter([station.lng, station.lat])
+  }
 }
+
+const locateUser = () => handleHeaderEvent({ detail: { type: 'locateUser' } })
 
 const closeStationsListIfOpen = () => {
   if (uiStore.activePanel === 'stationsList') {

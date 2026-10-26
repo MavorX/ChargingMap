@@ -3,5 +3,7 @@
 // header's string contract.
 export const HEADER_PANEL_EVENTS = Object.freeze({
   showNotifications: 'notifications',
-  showUserProfile: 'userProfile'
+  showUserProfile: 'userProfile',
+  showFavorites: 'favorites',
+  showChargingHistory: 'chargingHistory'
 })

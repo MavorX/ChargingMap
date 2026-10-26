@@ -23,25 +23,35 @@
     </div>
     <div id="map-container" class="h-full w-full"></div>
     <div
+      v-if="isMapLoading"
+      class="absolute inset-0 z-10 flex items-center justify-center"
+      role="status"
+      aria-label="正在加载地图"
+    >
+      <span
+        class="glass-card flex items-center gap-3 px-5 py-3 text-sm text-surface-600 dark:text-surface-300"
+        ><i class="fa fa-circle-o-notch fa-spin text-primary-500" aria-hidden="true"></i
+        >正在加载地图…</span
+      >
+    </div>
+    <div
       v-if="mapError"
       class="absolute inset-0 z-10 flex items-center justify-center bg-surface-100/80 p-6 backdrop-blur-sm dark:bg-surface-900/80"
       role="alert"
       data-testid="map-fallback"
     >
-      <div
-        class="glass-card w-[min(92%,24rem)] min-w-0 border border-danger-200 p-6 text-center shadow-soft-lg dark:border-danger-800/60"
-      >
+      <div class="glass-card w-[min(92%,24rem)] min-w-0 p-6 text-center">
         <div
-          class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-50 dark:bg-danger-900/30"
+          class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 dark:bg-primary-900/30"
         >
-          <i class="fa fa-map-marked-alt text-2xl text-danger-500" aria-hidden="true"></i>
+          <i class="fa fa-map-marked-alt text-2xl text-primary-500" aria-hidden="true"></i>
         </div>
         <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">地图加载失败</h2>
         <p class="mt-2 break-words text-sm leading-relaxed text-surface-500 dark:text-surface-400">
           {{ mapError }}
         </p>
         <button
-          class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-danger-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-danger-600 disabled:cursor-not-allowed disabled:opacity-60"
+          class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isMapLoading"
           @click="retryMap"
         >
@@ -66,7 +76,6 @@ import { amapLoader } from '../../services/amapLoader'
 const stationsStore = useStationsStore()
 const userStore = useUserStore()
 const showToast = inject('showToast')
-const setLoading = inject('setLoading')
 
 const mapError = ref(null)
 const isMapLoading = ref(false)
@@ -108,7 +117,6 @@ const initMap = async () => {
       map = null
     }
     mapError.value = err?.message || '地图初始化失败，请稍后重试'
-    setLoading(false)
   } finally {
     isMapLoading.value = false
   }
@@ -161,7 +169,6 @@ const onMapViewportChange = () => {
 }
 
 const doInitialGeolocation = () => {
-  setLoading(true)
   mapManager
     .locateUser()
     .then((loc) => {
@@ -171,13 +178,9 @@ const doInitialGeolocation = () => {
     .catch(() => {
       if (map) map.setCenter([117.283042, 31.86119])
     })
-    .finally(() => {
-      setLoading(false)
-    })
 }
 
 const loadStations = async () => {
-  setLoading(true)
   try {
     await stationsStore.loadStations()
     // The store records the failure in `error` (shown as the retry banner);
@@ -188,8 +191,6 @@ const loadStations = async () => {
   } catch (err) {
     console.error('[MapView] Load stations error:', err)
     showToast('加载站点数据失败', 'error')
-  } finally {
-    setLoading(false)
   }
 }
 

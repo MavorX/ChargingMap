@@ -1,50 +1,61 @@
 <template>
-  <div class="space-y-3 p-4">
-    <StationListControls density="compact" />
-
-    <div v-if="activeFilterCount > 0" class="flex items-center justify-between">
-      <span class="text-xs text-surface-500">已筛选出 {{ displayedStations.length }} 个站点</span>
-      <button
-        class="rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-600 transition-all duration-200 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/40"
-        @click="resetFilters"
-      >
-        清除筛选
-      </button>
-    </div>
-
-    <div class="space-y-2.5">
-      <div v-if="displayedStations.length === 0" class="py-12 text-center">
-        <div
-          class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-100 dark:bg-surface-800"
-        >
-          <i
-            class="fa fa-search text-2xl text-surface-300 dark:text-surface-600"
-            aria-hidden="true"
-          ></i>
+  <div class="flex h-full min-h-0 flex-col">
+    <div class="space-y-3 px-5 pb-4">
+      <StationListControls density="compact" />
+      <div class="flex items-center justify-between pt-1">
+        <p class="text-xs text-surface-500 dark:text-surface-400" aria-live="polite">
+          <span class="font-semibold text-surface-800 dark:text-surface-200">{{
+            stationsStore.viewportStationCount
+          }}</span>
+          个站点 <span class="mx-1 text-surface-300 dark:text-surface-600">/</span
+          >{{ stationsStore.userLocation ? '距离优先' : '当前地图范围' }}
+        </p>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="activeFilterCount > 0 || stationsStore.searchQuery"
+            class="text-xs text-surface-500 hover:text-primary-600 dark:text-surface-400"
+            @click="resetFilters"
+          >
+            重置
+          </button>
+          <button
+            class="flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-surface-800"
+            @click="emit('show-filter')"
+          >
+            <i class="fa fa-sliders" aria-hidden="true"></i>高级筛选
+          </button>
         </div>
-        <h3 class="mb-1 text-sm font-bold text-surface-800 dark:text-surface-200">
-          没有找到匹配的充电站
-        </h3>
-        <p class="text-xs text-surface-500 dark:text-surface-400">尝试调整筛选条件</p>
       </div>
-
-      <StationListCard
-        v-for="(station, index) in displayedStations"
-        :key="station.stationId"
-        :station="station"
-        :index="index"
-        density="compact"
-        @select="emit('select-station', $event)"
-      />
-
-      <div v-if="hasMore" class="py-3 text-center">
+    </div>
+    <div
+      class="min-h-0 flex-1 overflow-y-auto border-t border-surface-100 bg-surface-50/70 px-5 py-4 dark:border-surface-800 dark:bg-surface-950/30"
+    >
+      <StationListState />
+      <div v-if="!stationsStore.isLoading && !stationsStore.error" class="space-y-3">
+        <StationListCard
+          v-for="(station, index) in displayedStations"
+          :key="station.stationId"
+          :station="station"
+          :index="index"
+          density="compact"
+          @select="emit('select-station', $event)"
+        />
         <button
-          class="rounded-xl bg-primary-50 px-5 py-2 text-xs font-semibold text-primary-600 transition-all duration-200 hover:bg-primary-100 active:scale-95 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/40"
+          v-if="hasMore"
+          class="w-full rounded-xl border border-surface-200 bg-white py-3 text-xs font-medium text-surface-600 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
           @click="loadMore"
         >
-          <i class="fa fa-angle-down mr-1" aria-hidden="true"></i>
-          加载更多 (还有 {{ remainingCount }} 个)
+          加载更多 · 还有 {{ remainingCount }} 个站点<i
+            class="fa fa-angle-down ml-2"
+            aria-hidden="true"
+          ></i>
         </button>
+        <p
+          v-else-if="displayedStations.length"
+          class="py-2 text-center text-[11px] text-surface-400"
+        >
+          已展示当前范围内的全部站点
+        </p>
       </div>
     </div>
   </div>
@@ -54,9 +65,16 @@
 import { useStationList } from '../../composables/useStationList'
 import StationListCard from './StationListCard.vue'
 import StationListControls from './StationListControls.vue'
+import StationListState from './StationListState.vue'
 
-const emit = defineEmits(['select-station'])
-
-const { activeFilterCount, displayedStations, hasMore, remainingCount, loadMore, resetFilters } =
-  useStationList()
+const emit = defineEmits(['select-station', 'show-filter'])
+const {
+  stationsStore,
+  activeFilterCount,
+  displayedStations,
+  hasMore,
+  remainingCount,
+  loadMore,
+  resetFilters
+} = useStationList()
 </script>

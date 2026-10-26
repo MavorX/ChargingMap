@@ -190,4 +190,28 @@ describe('MapManager markers', () => {
     expect(manager._stationIndex.get('HF000001')).toBe(first)
     expect(manager._stationIndex.get('HF000002')).toBe(second)
   })
+
+  it('keeps cluster counts readable and supports keyboard zoom', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    const map = makeMap()
+    manager.setMap(map)
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
+    manager.setStations(stations)
+    manager.updateMarkers(stations)
+    const marker = new AMap.Marker({ position: [117.1, 31.8] })
+    AMap.MarkerCluster.instances[0].options.renderClusterMarker({
+      count: 2,
+      data: stations.map((station) => ({ station })),
+      marker
+    })
+    expect(marker.content.className).toBe('map-cluster')
+    expect(marker.content.getAttribute('role')).toBe('button')
+    expect(marker.content.getAttribute('aria-label')).toContain('2 个站点，6 个空闲充电桩')
+    expect(marker.content.textContent).toBe('26可用')
+    marker.content.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    expect(map.setZoom).toHaveBeenCalledWith(15)
+    marker.content.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', cancelable: true }))
+    expect(map.setZoom).toHaveBeenCalledTimes(2)
+  })
 })

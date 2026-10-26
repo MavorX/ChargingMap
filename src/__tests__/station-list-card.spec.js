@@ -23,10 +23,10 @@ const station = {
 }
 
 describe('StationListCard', () => {
-  it('renders the comfortable density with metric labels and the entry animation', () => {
+  it('renders clear price and connector labels without staggered entry animations', () => {
     const wrapper = mount(StationListCard, { props: { station } })
 
-    expect(wrapper.classes()).toContain('animate-in')
+    expect(wrapper.classes()).not.toContain('animate-in')
     expect(wrapper.classes()).toContain('p-5')
     expect(wrapper.text()).toContain('快充')
     expect(wrapper.text()).toContain('慢充')
@@ -37,15 +37,22 @@ describe('StationListCard', () => {
     expect(wrapper.text()).toContain('1.2 km')
   })
 
-  it('renders the compact density without metric labels', () => {
+  it('keeps metric labels in compact density instead of relying on icons alone', () => {
     const wrapper = mount(StationListCard, { props: { station, density: 'compact' } })
 
-    expect(wrapper.classes()).toContain('p-3.5')
+    expect(wrapper.classes()).toContain('p-4')
     expect(wrapper.classes()).not.toContain('animate-in')
-    expect(wrapper.text()).not.toContain('快充')
-    expect(wrapper.text()).not.toContain('电价')
+    expect(wrapper.text()).toContain('快充')
+    expect(wrapper.text()).toContain('电价')
     expect(wrapper.text()).toContain('2/4')
     expect(wrapper.text()).toContain('¥1.20')
+  })
+
+  it('explains availability counts and never fabricates a missing distance', () => {
+    const wrapper = mount(StationListCard, { props: { station: { ...station, distance: null } } })
+    expect(wrapper.text()).toContain('待定位')
+    expect(wrapper.text()).not.toContain('0.0 km')
+    expect(wrapper.find('[aria-label="快充空闲 2 个，共 4 个"]').exists()).toBe(true)
   })
 
   it('falls back to comfortable and warns when the density is unknown', () => {

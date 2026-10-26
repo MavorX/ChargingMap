@@ -76,11 +76,10 @@ class MapManager {
       station.openStatus === 0 ? '维护' : availableCount === 0 ? '已满' : `${availableCount}空`
 
     const div = document.createElement('div')
-    div.style.cssText =
-      'cursor:pointer;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.25));'
+    div.style.cssText = 'cursor:pointer;display:flex;flex-direction:column;align-items:center;'
 
     const circle = document.createElement('div')
-    circle.style.cssText = `width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);`
+    circle.style.cssText = `width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid var(--map-marker-bg,white);box-shadow:0 2px 6px rgba(15,23,42,0.15);`
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     svg.setAttribute('width', '16')
@@ -93,7 +92,8 @@ class MapManager {
     circle.appendChild(svg)
 
     const label = document.createElement('div')
-    label.style.cssText = `margin-top:2px;background:white;border-radius:8px;padding:1px 6px;box-shadow:0 1px 4px rgba(0,0,0,0.15);font-size:10px;font-weight:700;color:${color};white-space:nowrap;`
+    label.style.cssText =
+      'margin-top:2px;background:var(--map-marker-bg,white);border-radius:6px;padding:2px 6px;box-shadow:0 1px 4px rgba(15,23,42,0.12);font-size:10px;font-weight:600;color:var(--map-marker-text,#0f172a);white-space:nowrap;'
     label.textContent = statusText
 
     const stem = document.createElement('div')
@@ -415,52 +415,24 @@ class MapManager {
         }
       }
 
-      let size, fontSize, subFontSize, bgGradient, borderColor, ringSize
-      if (count >= 100) {
-        size = 96
-        fontSize = '24px'
-        subFontSize = '12px'
-        bgGradient = `radial-gradient(circle at 35% 35%, ${statusColor}, ${self.adjustColor(statusColor, -40)})`
-        borderColor = 'rgba(255,255,255,0.9)'
-        ringSize = 5
-      } else if (count >= 50) {
-        size = 78
-        fontSize = '20px'
-        subFontSize = '11px'
-        bgGradient = `radial-gradient(circle at 35% 35%, ${statusColor}, ${self.adjustColor(statusColor, -30)})`
-        borderColor = 'rgba(255,255,255,0.85)'
-        ringSize = 4
-      } else if (count >= 20) {
-        size = 62
-        fontSize = '17px'
-        subFontSize = '10px'
-        bgGradient = `radial-gradient(circle at 35% 35%, ${statusColor}, ${self.adjustColor(statusColor, -20)})`
-        borderColor = 'rgba(255,255,255,0.8)'
-        ringSize = 3
-      } else if (count >= 10) {
-        size = 50
-        fontSize = '15px'
-        subFontSize = '9px'
-        bgGradient = `radial-gradient(circle at 35% 35%, ${self.adjustColor(statusColor, 20)}, ${statusColor})`
-        borderColor = 'rgba(255,255,255,0.75)'
-        ringSize = 3
-      } else {
-        size = 42
-        fontSize = '14px'
-        subFontSize = '9px'
-        bgGradient = `radial-gradient(circle at 35% 35%, ${self.adjustColor(statusColor, 30)}, ${self.adjustColor(statusColor, 10)})`
-        borderColor = 'rgba(255,255,255,0.7)'
-        ringSize = 2
-      }
+      const size = count >= 100 ? 64 : count >= 50 ? 58 : count >= 20 ? 52 : 44
+      const fontSize = count >= 50 ? '18px' : '15px'
 
       const div = document.createElement('div')
-      div.style.cssText = `background:${bgGradient};width:${size}px;height:${size}px;border-radius:${size / 2}px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:${fontSize};box-shadow:0 4px 14px rgba(0,0,0,0.3),0 0 0 ${ringSize}px ${borderColor};cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease;position:relative;`
-
-      if (count >= 50) {
-        const pulse = document.createElement('div')
-        pulse.style.cssText = `position:absolute;top:-4px;left:-4px;right:-4px;bottom:-4px;border-radius:50%;border:2px solid ${statusColor};opacity:0;animation:clusterPulse 2s ease-out infinite;pointer-events:none;`
-        div.appendChild(pulse)
-      }
+      div.className = 'map-cluster'
+      div.style.cssText = `background:var(--map-marker-bg,white);width:${size}px;height:${size}px;border:2px solid ${statusColor};border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--map-marker-text,#0f172a);font-weight:700;font-size:${fontSize};cursor:pointer;`
+      div.setAttribute('role', 'button')
+      div.tabIndex = 0
+      div.setAttribute(
+        'aria-label',
+        `${count} 个站点，${totalAvailable} 个空闲充电桩，放大地图查看`
+      )
+      div.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          div.click()
+        }
+      })
 
       const numDiv = document.createElement('div')
       numDiv.textContent = count
@@ -468,19 +440,11 @@ class MapManager {
 
       if (totalAvailable > 0) {
         const availDiv = document.createElement('div')
-        availDiv.style.cssText = `font-size:${subFontSize};font-weight:600;margin-top:1px;opacity:0.9;`
+        availDiv.style.cssText =
+          'font-size:9px;font-weight:500;margin-top:1px;color:var(--map-marker-muted,#475569);'
         availDiv.textContent = `${totalAvailable}可用`
         div.appendChild(availDiv)
       }
-
-      div.addEventListener('mouseenter', () => {
-        div.style.transform = 'scale(1.12)'
-        div.style.boxShadow = `0 6px 20px rgba(0,0,0,0.35),0 0 0 ${ringSize + 1}px ${borderColor}`
-      })
-      div.addEventListener('mouseleave', () => {
-        div.style.transform = 'scale(1)'
-        div.style.boxShadow = `0 4px 14px rgba(0,0,0,0.3),0 0 0 ${ringSize}px ${borderColor}`
-      })
 
       div.addEventListener('click', () => {
         const clusterMarkers = context.clusterMarkers || context.markers || []

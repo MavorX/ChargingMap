@@ -52,11 +52,12 @@ const mountMapView = async () => {
   const store = useStationsStore()
   vi.spyOn(store, 'loadStations').mockResolvedValue()
   const setViewportBounds = vi.spyOn(store, 'setViewportBounds')
+  const setLoading = vi.fn()
 
   const wrapper = mount(MapView, {
     global: {
       plugins: [pinia],
-      provide: { showToast: vi.fn(), setLoading: vi.fn() }
+      provide: { showToast: vi.fn(), setLoading }
     }
   })
 
@@ -68,7 +69,7 @@ const mountMapView = async () => {
   setViewportBounds.mockClear()
   mapManager.updateMarkers.mockClear()
 
-  return { wrapper, store, setViewportBounds }
+  return { wrapper, store, setViewportBounds, setLoading }
 }
 
 describe('MapView viewport pipeline', () => {
@@ -141,6 +142,14 @@ describe('MapView viewport pipeline', () => {
     expect(mapManager.updateMarkers).toHaveBeenCalledTimes(1)
     expect(setViewportBounds).not.toHaveBeenCalled()
 
+    wrapper.unmount()
+  })
+
+  it('does not block the app while initial geolocation is pending', async () => {
+    mapManager.locateUser.mockImplementationOnce(() => new Promise(() => {}))
+    const { wrapper, setLoading } = await mountMapView()
+    expect(setLoading).not.toHaveBeenCalled()
+    expect(wrapper.find('[aria-label="正在加载地图"]').exists()).toBe(false)
     wrapper.unmount()
   })
 })

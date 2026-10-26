@@ -60,10 +60,10 @@
           </button>
         </div>
       </div>
-      <div class="premium-card animate-in" :class="[size.cardMb, size.heroPad]">
+      <div class="premium-card" :class="[size.cardMb, size.heroPad]">
         <div class="flex items-start" :class="size.heroHead">
           <div
-            class="mr-3 flex flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-100 to-primary-200 shadow-inner-soft dark:from-primary-900/30 dark:to-primary-800/30"
+            class="mr-3 flex flex-shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/30"
             :class="size.heroIcon"
           >
             <i
@@ -586,28 +586,20 @@
     >
       <div class="grid grid-cols-2" :class="size.footerGrid">
         <button
-          class="group relative transform overflow-hidden rounded-xl bg-gradient-to-r from-warning-400 to-orange-500 font-bold text-white shadow-lg shadow-warning-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-warning-500/30 active:translate-y-0"
+          class="rounded-xl border border-surface-200 bg-white font-semibold text-surface-700 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200 dark:hover:bg-surface-800"
           :class="[size.actionPad, size.actionText]"
           @click="$emit('start-reservation')"
         >
-          <div
-            v-if="!isInline"
-            class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-          ></div>
           <span class="relative z-10 flex items-center justify-center" :class="size.actionInner">
             <i class="fa fa-calendar-check-o" :class="size.actionGlyph" aria-hidden="true"></i>
             <span>预约充电</span>
           </span>
         </button>
         <button
-          class="group relative transform overflow-hidden rounded-xl bg-gradient-to-r from-primary-500 to-blue-600 font-bold text-white shadow-lg shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary-500/30 active:translate-y-0"
+          class="rounded-xl border border-primary-200 bg-primary-50 font-semibold text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50"
           :class="[size.actionPad, size.actionText]"
           @click="$emit('navigate')"
         >
-          <div
-            v-if="!isInline"
-            class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-          ></div>
           <span class="relative z-10 flex items-center justify-center" :class="size.actionInner">
             <i class="fa fa-location-arrow" :class="size.actionGlyph" aria-hidden="true"></i>
             <span>导航</span>
@@ -615,14 +607,10 @@
         </button>
       </div>
       <button
-        class="group relative w-full transform overflow-hidden rounded-xl bg-gradient-to-r from-secondary-500 via-emerald-500 to-teal-500 font-bold text-white shadow-xl shadow-secondary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-secondary-500/35 active:translate-y-0"
+        class="w-full rounded-xl bg-primary-600 font-semibold text-white transition-colors hover:bg-primary-700 active:bg-primary-800"
         :class="size.primaryPad"
         @click="$emit('start-charging')"
       >
-        <div
-          v-if="!isInline"
-          class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-        ></div>
         <span class="relative z-10 flex items-center justify-center" :class="size.primaryInner">
           <i class="fa fa-bolt" :class="size.primaryGlyph" aria-hidden="true"></i>
           <span>开始充电</span>
@@ -656,11 +644,11 @@ const SIZE_CLASSES = {
     tileIcon: 'mb-2 h-8 w-8',
     tileRoadGlyph: 'text-xs',
     tileBoltGlyph: 'text-sm',
-    tileLabel: 'mb-1 text-[10px]',
+    tileLabel: 'mb-1 text-xs',
     tileValue: 'text-xl',
     tileUnit: 'text-xs',
     summaryGrid: 'gap-4',
-    summaryLabel: 'mb-1.5 text-[10px]',
+    summaryLabel: 'mb-1.5 text-xs',
     summaryValue: 'text-lg',
     summaryUnit: 'text-xs',
     ratingPad: 'px-4',
@@ -731,11 +719,11 @@ const SIZE_CLASSES = {
     tileIcon: 'mb-1.5 h-7 w-7',
     tileRoadGlyph: 'text-[10px]',
     tileBoltGlyph: 'text-xs',
-    tileLabel: 'mb-0.5 text-[9px]',
+    tileLabel: 'mb-1 text-xs',
     tileValue: 'text-lg',
     tileUnit: 'text-[10px]',
     summaryGrid: 'gap-3',
-    summaryLabel: 'mb-1 text-[9px]',
+    summaryLabel: 'mb-1 text-xs',
     summaryValue: 'text-sm',
     summaryUnit: 'text-[10px]',
     ratingPad: 'px-2',
@@ -746,7 +734,7 @@ const SIZE_CLASSES = {
     rowsGap: 'space-y-2',
     rowIcon: 'mr-3 h-8 w-8 rounded-lg',
     rowGlyph: 'text-xs',
-    rowLabel: 'text-[10px]',
+    rowLabel: 'text-xs',
     rowValue: 'text-xs',
     rowBadge: 'text-[9px]',
     sectionTitle: 'text-sm',

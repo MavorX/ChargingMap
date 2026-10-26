@@ -1,107 +1,80 @@
 <template>
-  <header class="fixed left-0 right-0 top-0 z-header transition-all duration-500">
-    <div class="glass-effect shadow-soft">
-      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 items-center justify-between">
-          <div class="group flex cursor-pointer items-center space-x-3" @click="handleLogoClick">
-            <img :src="logoUrl" alt="大众学院" class="h-10 w-10 rounded-lg object-contain" />
-            <div
-              class="relative flex h-10 w-10 transform items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-400 via-primary-600 to-accent-600 shadow-glow-primary transition-all duration-300 group-hover:scale-105"
-            >
-              <div class="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent"></div>
-              <i
-                class="fa fa-bolt relative z-10 transform text-lg text-white transition-transform duration-300 group-hover:rotate-12"
-              ></i>
-            </div>
-            <div class="flex flex-col">
-              <h1 class="gradient-text text-xl font-bold leading-tight tracking-tight">
-                VWer-Charging
-              </h1>
-              <span
-                class="-mt-0.5 hidden text-[10px] font-medium uppercase tracking-wider text-surface-400 dark:text-surface-500 sm:block"
-                >Smart EV Charging</span
-              >
-            </div>
-          </div>
+  <header
+    class="fixed inset-x-0 top-0 z-header border-b border-surface-200/80 bg-white dark:border-surface-800 dark:bg-surface-900"
+  >
+    <div class="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
+      <button
+        class="flex shrink-0 items-center gap-2.5 text-left"
+        aria-label="VWer-Charging 首页"
+        @click="emitHeaderEvent('home')"
+      >
+        <img :src="logoUrl" alt="" class="h-9 w-9 rounded-xl object-contain" />
+        <span>
+          <span
+            class="block text-base font-bold tracking-tight text-surface-900 dark:text-white sm:text-lg"
+            >VWer<span class="text-primary-600 dark:text-primary-400"> Charging</span></span
+          >
+          <span class="hidden text-[10px] tracking-[0.18em] text-surface-500 sm:block"
+            >让每一次出发，都满电</span
+          >
+        </span>
+      </button>
 
-          <nav class="hidden items-center space-x-1 md:flex">
-            <button
-              v-for="item in navItems"
-              :key="item.id"
-              :class="['icon-button relative', item.id === 'locateUser' && 'text-primary-500']"
-              :title="item.label"
-              :aria-label="item.label"
-              @click="emitHeaderEvent(item.id)"
-            >
-              <i :class="item.icon" aria-hidden="true"></i>
-              <span
-                v-if="item.badge"
-                class="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full"
-                :class="item.badgeClass"
-              ></span>
-            </button>
+      <nav class="hidden h-full items-center gap-1 lg:flex" aria-label="主导航">
+        <button
+          class="header-nav header-nav-active"
+          aria-current="page"
+          @click="emitHeaderEvent('home')"
+        >
+          <i class="fa fa-map-o" aria-hidden="true"></i>探索充电站
+        </button>
+        <button class="header-nav" @click="emitHeaderEvent('showFavorites')">
+          <i class="fa fa-heart-o" aria-hidden="true"></i>我的收藏
+        </button>
+        <button class="header-nav" @click="emitHeaderEvent('showChargingHistory')">
+          <i class="fa fa-history" aria-hidden="true"></i>充电记录
+        </button>
+      </nav>
 
-            <div class="mx-2 h-5 w-px bg-surface-200 dark:bg-surface-700"></div>
-
-            <button
-              class="icon-button group flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 hover:bg-surface-100 dark:hover:bg-surface-800"
-              title="切换主题"
-              aria-label="切换主题"
-              @click="toggleTheme"
-            >
-              <i
-                class="fa fa-moon-o text-sm text-surface-600 transition-transform duration-300 group-hover:rotate-12 dark:hidden"
-                aria-hidden="true"
-              ></i>
-              <i
-                class="fa fa-sun-o hidden text-sm text-warning-400 transition-transform duration-300 group-hover:-rotate-12 dark:block"
-                aria-hidden="true"
-              ></i>
-            </button>
-          </nav>
-
-          <div class="flex items-center space-x-1.5 md:hidden">
-            <button
-              class="icon-button relative p-2.5"
-              title="定位当前位置"
-              aria-label="定位当前位置"
-              @click="emitHeaderEvent('locateUser')"
-            >
-              <i class="fa fa-location-arrow text-primary-500" aria-hidden="true"></i>
-            </button>
-            <button
-              class="icon-button relative p-2.5"
-              title="通知"
-              aria-label="通知"
-              @click="emitHeaderEvent('showNotifications')"
-            >
-              <i class="fa fa-bell-o text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
-              <span
-                v-if="unreadNotificationsCount > 0"
-                class="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-danger-500"
-              ></span>
-            </button>
-
-            <button
-              class="icon-button p-2.5"
-              title="切换主题"
-              aria-label="切换主题"
-              @click="toggleTheme"
-            >
-              <i class="fa fa-moon-o text-surface-600 dark:hidden" aria-hidden="true"></i>
-              <i class="fa fa-sun-o hidden text-warning-400 dark:block" aria-hidden="true"></i>
-            </button>
-
-            <button
-              class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-accent-500 shadow-md"
-              title="个人中心"
-              aria-label="个人中心"
-              @click="emitHeaderEvent('showUserProfile')"
-            >
-              <i class="fa fa-user text-xs text-white" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
+      <div class="flex items-center gap-1 sm:gap-2">
+        <button
+          class="icon-button hidden text-surface-500 sm:block"
+          aria-label="定位当前位置"
+          title="定位当前位置"
+          @click="emitHeaderEvent('locateUser')"
+        >
+          <i class="fa fa-location-arrow" aria-hidden="true"></i>
+        </button>
+        <button
+          class="icon-button text-surface-500"
+          aria-label="切换主题"
+          title="切换主题"
+          :aria-pressed="userStore.isDarkMode"
+          @click="userStore.toggleTheme()"
+        >
+          <i :class="userStore.isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'" aria-hidden="true"></i>
+        </button>
+        <button
+          class="icon-button relative text-surface-500"
+          aria-label="通知中心"
+          title="通知中心"
+          @click="emitHeaderEvent('showNotifications')"
+        >
+          <i class="fa fa-bell-o" aria-hidden="true"></i>
+          <span
+            v-if="unreadNotificationsCount > 0"
+            class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-danger-500 dark:border-surface-900"
+          ></span>
+        </button>
+        <span class="mx-1 hidden h-6 w-px bg-surface-200 dark:bg-surface-700 sm:block"></span>
+        <button
+          class="flex h-10 items-center gap-2 rounded-full bg-surface-100 px-3 text-sm font-medium text-surface-700 transition-colors hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700"
+          aria-label="个人中心"
+          @click="emitHeaderEvent('showUserProfile')"
+        >
+          <i class="fa fa-user-o" aria-hidden="true"></i>
+          <span class="hidden sm:inline">我的账户</span>
+        </button>
       </div>
     </div>
   </header>
@@ -115,35 +88,7 @@ import logoUrl from '../assets/logo.webp'
 const userStore = useUserStore()
 const unreadNotificationsCount = computed(() => userStore.unreadNotificationsCount)
 
-const navItems = computed(() => [
-  {
-    id: 'showNotifications',
-    label: '通知中心',
-    icon: 'fa fa-bell-o text-surface-600 dark:text-surface-300',
-    badge: unreadNotificationsCount.value > 0,
-    badgeClass: 'bg-danger-500'
-  },
-  {
-    id: 'showUserProfile',
-    label: '个人中心',
-    icon: 'fa fa-user-o text-surface-600 dark:text-surface-300'
-  },
-  {
-    id: 'locateUser',
-    label: '定位当前位置',
-    icon: 'fa fa-location-arrow text-primary-500'
-  }
-])
-
-const toggleTheme = () => {
-  userStore.toggleTheme()
-}
-
 const emitHeaderEvent = (type) => {
   window.dispatchEvent(new CustomEvent('headerEvent', { detail: { type } }))
-}
-
-const handleLogoClick = () => {
-  window.dispatchEvent(new CustomEvent('headerEvent', { detail: { type: 'home' } }))
 }
 </script>

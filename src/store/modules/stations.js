@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { loadStationsList, loadStationDetail } from '../../services/api'
 import { currentPriceFor } from '../../utils/pricing'
 
+const DEFAULT_CONNECTORS = ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']
+
 const notifyError = (message) => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('appToast', { detail: { message, type: 'error' } }))
@@ -45,7 +47,7 @@ export const useStationsStore = defineStore('stations', {
       open24h: false,
       reservable: false,
       brand: '',
-      connectors: ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2'],
+      connectors: [...DEFAULT_CONNECTORS],
       power: 50
     },
     searchQuery: '',
@@ -169,7 +171,7 @@ export const useStationsStore = defineStore('stations', {
         open24h: false,
         reservable: false,
         brand: '',
-        connectors: ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2'],
+        connectors: [...DEFAULT_CONNECTORS],
         power: 50
       }
       this.searchQuery = ''
@@ -229,6 +231,12 @@ export const useStationsStore = defineStore('stations', {
       if (state.filters.open24h) count++
       if (state.filters.reservable) count++
       if (state.filters.brand) count++
+      if (state.filters.power !== 50) count++
+      if (
+        state.filters.connectors.length !== DEFAULT_CONNECTORS.length ||
+        DEFAULT_CONNECTORS.some((connector) => !state.filters.connectors.includes(connector))
+      )
+        count++
       return count
     },
 
