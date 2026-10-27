@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { CITIES } from './src/constants/cities.js';
 import { DETAILS_PER_PART, STATIONS_PER_CITY_LIMIT, partIdFor } from './src/constants/stationData.js';
 import { shanghaiRoads, shanghaiShowcaseSites } from './scripts/shanghai-roads.mjs';
+import { generateShanghaiLocations } from './scripts/shanghai-layout.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -281,15 +282,19 @@ function generatePointOnRoad(road) {
     };
 }
 
-function generateStationList(count, city) {
+function generateStationList(count, city, locations) {
     const stations = [];
 
     for (let i = 0; i < count; i++) {
         const stationId = `${city.id}${String(i + 1).padStart(6, '0')}`;
 
-        const road = pickRoad(city.roads);
+        // Retain the legacy geometry draws so relocating a published station
+        // does not reshuffle its brand, prices, availability or connector data.
+        const fallbackRoad = pickRoad(city.roads);
+        const fallbackPosition = generatePointOnRoad(fallbackRoad);
+        const road = locations ? locations[i].road : fallbackRoad;
         const district = road.district;
-        const pos = generatePointOnRoad(road);
+        const pos = locations ? locations[i] : fallbackPosition;
 
         const quickChargeNum = randomInt(2, 16);
         const slowChargeNum = randomInt(2, 10);
@@ -643,11 +648,16 @@ function main() {
 
     const stations = [], details = {};
     for (const city of cityDatasets) {
+        const count = options.counts[city.id];
+        // Layout has its own deterministic stream: rejection sampling must not
+        // couple station prices/connectors to placement attempts or another city.
+        const locations = city.id === 'SH'
+            ? generateShanghaiLocations(count, mulberry32((options.seed ^ 0x53484c) >>> 0))
+            : null;
         // Independent streams keep all original HF values stable and prevent
         // another city's station count from changing this city's random input.
         rand = mulberry32(city.id === 'HF' ? options.seed : (options.seed ^ 0x5348) >>> 0);
-        const count = options.counts[city.id];
-        const cityStations = generateStationList(count, city);
+        const cityStations = generateStationList(count, city, locations);
         if (city.id === 'SH') {
             shanghaiShowcaseSites.slice(0, count).forEach((site, index) => {
                 Object.assign(cityStations[index], site, {

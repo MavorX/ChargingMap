@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CITIES, cityById, cityAtLocation } from '../src/constants/cities.js';
 import { STATION_ID_PATTERN, STATIONS_PER_CITY_LIMIT, partIdFor } from '../src/constants/stationData.js';
+import { SHANGHAI_MIN_STATION_DISTANCE_METERS, distanceMeters } from './shanghai-layout.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -156,6 +157,23 @@ assert('坐标 bbox', (f) => {
   }
   if (bad.length > 0) {
     f.push(`坐标超出声明城市 bbox: ${sample(bad)}`);
+  }
+});
+
+// A valid bbox alone cannot detect hundreds of stations piled onto one block.
+assert('上海站点间距', (f) => {
+  const stations = listRecords.filter(s => s?.cityId === 'SH');
+  const crowded = [];
+  for (let i = 0; i < stations.length; i++) {
+    for (let j = i + 1; j < stations.length; j++) {
+      const meters = distanceMeters(stations[i], stations[j]);
+      if (meters < SHANGHAI_MIN_STATION_DISTANCE_METERS) {
+        crowded.push(`${stations[i].stationId}/${stations[j].stationId}: ${meters.toFixed(1)}m`);
+      }
+    }
+  }
+  if (crowded.length > 0) {
+    f.push(`相邻站点不足 ${SHANGHAI_MIN_STATION_DISTANCE_METERS}m: ${sample(crowded)}`);
   }
 });
 
