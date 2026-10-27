@@ -27,19 +27,19 @@
         <h3 class="section-title">{{ t('充电详情') }}</h3>
         <dl class="premium-card space-y-3 p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('充电时长') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('充电时长') }}</dt>
             <dd>{{ formatDuration(chargingData.duration, 'hm-verbose') }}</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('充电电量') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('充电电量') }}</dt>
             <dd>{{ chargingData.energy.toFixed(1) }} kWh</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('电价') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('电价') }}</dt>
             <dd>{{ formatPrice(currentStation?.currentPrice) }}{{ t('/度') }}</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('充电服务费（10%）') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('充电服务费（10%）') }}</dt>
             <dd>{{ formatPrice(amounts.serviceFee) }}</dd>
           </div>
         </dl>
@@ -64,7 +64,11 @@
             ></span>
           </button>
           <div v-if="showCouponList" id="payment-coupons" class="mt-3 space-y-2">
-            <p v-if="!coupons.length" class="p-3 text-xs text-surface-500" role="status">
+            <p
+              v-if="!coupons.length"
+              class="p-3 text-xs text-surface-500 dark:text-surface-400"
+              role="status"
+            >
               {{ t('暂无满足本次订单条件的优惠券') }}
             </p>
             <button
@@ -76,7 +80,7 @@
             >
               <span class="min-w-0 flex-1"
                 ><span class="block text-sm font-semibold">{{ t(coupon.title) }}</span
-                ><span class="mt-1 block text-xs text-surface-500">{{
+                ><span class="mt-1 block text-xs text-surface-500 dark:text-surface-400">{{
                   t('有效期至 {date}', { date: coupon.expiryDate || t('长期有效') })
                 }}</span></span
               >
@@ -84,7 +88,10 @@
                 >-{{ formatPrice(discountFor(coupon)) }}</span
               >
             </button>
-            <button class="min-h-11 w-full text-sm text-surface-500" @click="selectCoupon(null)">
+            <button
+              class="min-h-11 w-full text-sm text-surface-500 dark:text-surface-400"
+              @click="selectCoupon(null)"
+            >
               {{ t('不使用优惠券') }}
             </button>
           </div>
@@ -123,15 +130,15 @@
       </fieldset>
       <div class="premium-card space-y-3 p-4 text-sm">
         <div class="flex justify-between gap-3">
-          <span class="text-surface-500">{{ t('充电费用') }}</span
+          <span class="text-surface-500 dark:text-surface-400">{{ t('充电费用') }}</span
           ><span>{{ formatPrice(amounts.chargeCost) }}</span>
         </div>
         <div class="flex justify-between gap-3">
-          <span class="text-surface-500">{{ t('服务费') }}</span
+          <span class="text-surface-500 dark:text-surface-400">{{ t('服务费') }}</span
           ><span>{{ formatPrice(amounts.serviceFee) }}</span>
         </div>
         <div v-if="selectedCoupon" class="flex justify-between gap-3">
-          <span class="text-surface-500">{{ t('优惠券抵扣') }}</span
+          <span class="text-surface-500 dark:text-surface-400">{{ t('优惠券抵扣') }}</span
           ><span>-{{ formatPrice(amounts.couponDiscount) }}</span>
         </div>
         <div
@@ -234,13 +241,23 @@ const canPay = computed(
     currentStation.value.currentPrice >= 0
 )
 const paymentMethods = computed(() => [
-  { id: 'wechat', name: '微信支付', desc: '演示支付', icon: 'fab fa-weixin text-secondary-600' },
-  { id: 'alipay', name: '支付宝', desc: '演示支付', icon: 'fab fa-alipay text-primary-600' },
+  {
+    id: 'wechat',
+    name: '微信支付',
+    desc: '演示支付',
+    icon: 'fab fa-weixin text-secondary-600 dark:text-secondary-400'
+  },
+  {
+    id: 'alipay',
+    name: '支付宝',
+    desc: '演示支付',
+    icon: 'fab fa-alipay text-primary-600 dark:text-primary-400'
+  },
   {
     id: 'wallet',
     name: '钱包余额',
     desc: `${t('余额 {amount}', { amount: formatPrice(userStore.userInfo.balance) })}${insufficientBalance.value ? t(' · 余额不足') : ''}`,
-    icon: 'fa fa-credit-card text-primary-600'
+    icon: 'fa fa-credit-card text-primary-600 dark:text-primary-400'
   }
 ])
 watch(

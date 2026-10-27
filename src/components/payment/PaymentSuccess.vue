@@ -15,14 +15,16 @@
           <i class="fa fa-check text-3xl" aria-hidden="true"></i>
         </div>
         <h3 class="mb-2 text-2xl font-bold">{{ t('支付成功') }}</h3>
-        <p class="mb-6 text-sm text-surface-500">{{ t('感谢使用充电服务') }}</p>
+        <p class="mb-6 text-sm text-surface-500 dark:text-surface-400">
+          {{ t('感谢使用充电服务') }}
+        </p>
         <dl class="premium-card space-y-4 p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('充电电量') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('充电电量') }}</dt>
             <dd>{{ chargingData.energy.toFixed(1) }} kWh</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">{{ t('充电时长') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('充电时长') }}</dt>
             <dd>{{ formatDuration(chargingData.duration, 'hm-verbose') }}</dd>
           </div>
           <div

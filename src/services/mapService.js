@@ -2,12 +2,13 @@ import { formatPrice } from '../utils/format'
 import { LOCATION_TIMEOUT_MS, locationError, normalizeLocation } from '../utils/location'
 import { isEnglish, locale, t } from '../i18n'
 import { stationName, stationAddress } from '../i18n/data'
+import { brand, colors, stationColors } from '../theme/palette'
 
 // Small DOM builder: station fields only ever travel through textContent, never
 // through a markup string, so names/addresses cannot inject markup.
-const el = (tag, cssText, text) => {
+const el = (tag, className, text) => {
   const node = document.createElement(tag)
-  if (cssText) node.style.cssText = cssText
+  if (className) node.className = className
   if (text != null) node.textContent = String(text)
   return node
 }
@@ -58,26 +59,18 @@ class MapManager {
 
   getStationColor(station) {
     if (station.openStatus === 0) {
-      return '#6B7280'
+      return stationColors.maintenance
     }
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
     if (availableCount === 0) {
-      return '#EF4444'
+      return stationColors.full
     }
     const totalCount = station.quickChargeNum + station.slowChargeNum
     const usageRate = totalCount > 0 ? (totalCount - availableCount) / totalCount : 0
     if (usageRate >= 0.8) {
-      return '#F59E0B'
+      return stationColors.busy
     }
-    return '#10B981'
-  }
-
-  adjustColor(color, amount) {
-    const hex = color.replace('#', '')
-    const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) + amount))
-    const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) + amount))
-    const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) + amount))
-    return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')
+    return stationColors.available
   }
 
   createStationMarkerContent(station) {
@@ -94,7 +87,7 @@ class MapManager {
     div.style.cssText = 'cursor:pointer;display:flex;flex-direction:column;align-items:center;'
 
     const circle = document.createElement('div')
-    circle.style.cssText = `width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid var(--map-marker-bg,white);box-shadow:0 2px 6px rgba(15,23,42,0.15);`
+    circle.style.cssText = `width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid var(--map-marker-bg,white);box-shadow:0 2px 6px rgba(0,39,51,0.15);`
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     svg.setAttribute('width', '16')
@@ -107,8 +100,7 @@ class MapManager {
     circle.appendChild(svg)
 
     const label = document.createElement('div')
-    label.style.cssText =
-      'margin-top:2px;background:var(--map-marker-bg,white);border-radius:6px;padding:2px 6px;box-shadow:0 1px 4px rgba(15,23,42,0.12);font-size:10px;font-weight:600;color:var(--map-marker-text,#0f172a);white-space:nowrap;'
+    label.style.cssText = `margin-top:2px;background:var(--map-marker-bg,white);border-radius:6px;padding:2px 6px;box-shadow:0 1px 4px rgba(0,39,51,0.12);font-size:10px;font-weight:600;color:var(--map-marker-text,${brand.ink});white-space:nowrap;`
     label.textContent = statusText
 
     const stem = document.createElement('div')
@@ -122,73 +114,47 @@ class MapManager {
 
   buildInfoWindowContent(station) {
     const color = this.getStationColor(station)
-    const color2 = this.adjustColor(color, -15)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
     const statusText = t(
       station.openStatus === 0 ? '维护中' : availableCount === 0 ? '已满' : '空闲'
     )
     const price = formatPrice(station.currentPrice, { withSymbol: false })
     const isFav = station.isFavorite
-    const self = this
 
-    const content = el(
-      'div',
-      'background:var(--map-marker-bg,white);color:var(--map-marker-text,#0f172a);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);width:min(340px,calc(100vw - 40px));overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
-    )
-
-    const header = el(
-      'div',
-      `background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;gap:8px;justify-content:space-between;align-items:flex-start;`
-    )
-    const title = el(
-      'h3',
-      'margin:0;color:white;font-size:15px;font-weight:700;min-width:0;line-height:1.5;overflow-wrap:break-word;',
-      stationName(station.stationName)
-    )
-    const statusBadge = el(
-      'span',
-      'background:rgba(255,255,255,0.25);color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;',
-      statusText
-    )
+    const content = el('div', 'map-info')
+    const header = el('div', 'map-info-header')
+    const title = el('h3', 'map-info-title', stationName(station.stationName))
+    const statusBadge = el('span', 'map-info-status')
+    const statusDot = el('span', 'h-1.5 w-1.5 rounded-full')
+    statusDot.style.backgroundColor = color
+    statusDot.setAttribute('aria-hidden', 'true')
+    statusBadge.append(statusDot, el('span', '', statusText))
     header.append(title, statusBadge)
 
-    const body = el('div', 'padding:14px 16px;')
-    const grid = el(
-      'div',
-      'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;'
-    )
+    const body = el('div', 'px-4 py-3.5')
+    const grid = el('div', 'mb-3 grid grid-cols-2 gap-2.5')
 
-    const quickBox = el(
-      'div',
-      'background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px;text-align:center;'
-    )
-    quickBox.append(
-      el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', t('快充'))
-    )
-    const quickValue = el(
-      'div',
-      'color:#15803D;font-size:16px;font-weight:800;',
-      station.quickAvailableNum
-    )
+    const quickBox = el('div', 'map-info-metric map-info-metric-primary')
+    quickBox.append(el('div', 'mb-0.5 text-[11px] font-semibold', t('快充')))
+    const quickValue = el('div', 'text-base font-bold tabular-nums', station.quickAvailableNum)
     quickValue.append(
-      el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.quickChargeNum}`)
+      el(
+        'span',
+        'text-xs font-medium text-surface-500 dark:text-surface-400',
+        `/${station.quickChargeNum}`
+      )
     )
     quickBox.append(quickValue)
 
-    const slowBox = el(
-      'div',
-      'background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;text-align:center;'
-    )
-    slowBox.append(
-      el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', t('慢充'))
-    )
-    const slowValue = el(
-      'div',
-      'color:#2563EB;font-size:16px;font-weight:800;',
-      station.slowAvailableNum
-    )
+    const slowBox = el('div', 'map-info-metric')
+    slowBox.append(el('div', 'mb-0.5 text-[11px] font-semibold', t('慢充')))
+    const slowValue = el('div', 'text-base font-bold tabular-nums', station.slowAvailableNum)
     slowValue.append(
-      el('span', 'font-size:12px;font-weight:500;color:#6B7280;', `/${station.slowChargeNum}`)
+      el(
+        'span',
+        'text-xs font-medium text-surface-500 dark:text-surface-400',
+        `/${station.slowChargeNum}`
+      )
     )
     slowBox.append(slowValue)
 
@@ -197,27 +163,24 @@ class MapManager {
       grid,
       el(
         'p',
-        'margin:0 0 10px 0;color:var(--map-marker-muted,#475569);font-size:12px;line-height:1.5;',
+        'mb-2.5 text-xs leading-relaxed text-surface-600 dark:text-surface-300',
         stationAddress(station.address)
       )
     )
 
     const footer = el(
       'div',
-      'display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E5E7EB;'
+      'flex flex-wrap items-center justify-between gap-2.5 border-t border-surface-200 pt-2.5 dark:border-surface-700'
     )
-    const footerLeft = el('div', 'display:flex;gap:8px;')
+    const footerLeft = el('div', 'flex gap-2')
 
-    const favBtn = el(
-      'div',
-      `display:flex;align-items:center;gap:4px;background:${isFav ? '#FEE2E2' : '#F3F4F6'};color:${isFav ? '#EF4444' : '#6B7280'};padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;`
-    )
-    favBtn.className = 'info-fav-btn'
+    const favBtn = el('button', `info-fav-btn map-info-action${isFav ? ' map-info-favorite' : ''}`)
+    favBtn.type = 'button'
+    favBtn.setAttribute('aria-pressed', String(Boolean(isFav)))
     favBtn.setAttribute('data-station-id', station.stationId)
-    favBtn.append(
-      el('span', 'font-size:14px;', isFav ? '♥' : '♡'),
-      el('span', '', t(isFav ? '已收藏' : '收藏'))
-    )
+    const heart = el('span', 'text-sm', isFav ? '♥' : '♡')
+    heart.setAttribute('aria-hidden', 'true')
+    favBtn.append(heart, el('span', '', t(isFav ? '已收藏' : '收藏')))
     favBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       window.dispatchEvent(
@@ -226,57 +189,30 @@ class MapManager {
         })
       )
     })
-    favBtn.addEventListener('mouseenter', () => {
-      favBtn.style.transform = 'scale(1.05)'
-    })
-    favBtn.addEventListener('mouseleave', () => {
-      favBtn.style.transform = 'scale(1)'
-    })
-
-    const detailBtn = el(
-      'div',
-      'display:flex;align-items:center;gap:4px;background:#EFF6FF;color:#2563EB;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;'
-    )
-    detailBtn.className = 'info-detail-btn'
+    const detailBtn = el('button', 'info-detail-btn map-info-action', t('详情'))
+    detailBtn.type = 'button'
     detailBtn.setAttribute('data-station-id', station.stationId)
-    detailBtn.append(el('span', '', t('详情')))
     detailBtn.addEventListener('click', (e) => {
       e.stopPropagation()
-      self.closeInfoWindow()
+      this.closeInfoWindow()
       window.dispatchEvent(new CustomEvent('viewStationDetailFromMap', { detail: station }))
-    })
-    detailBtn.addEventListener('mouseenter', () => {
-      detailBtn.style.transform = 'scale(1.05)'
-    })
-    detailBtn.addEventListener('mouseleave', () => {
-      detailBtn.style.transform = 'scale(1)'
     })
 
     footerLeft.append(favBtn, detailBtn)
 
-    const footerRight = el('div', 'display:flex;align-items:center;gap:8px;')
-    const navBtn = el(
-      'div',
-      'background:linear-gradient(135deg,#10B981,#059669);color:white;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;',
-      t('导航')
-    )
-    navBtn.className = 'info-nav-btn'
+    const footerRight = el('div', 'flex items-center gap-2')
+    const navBtn = el('button', 'info-nav-btn map-info-action map-info-primary', t('导航'))
+    navBtn.type = 'button'
     navBtn.setAttribute('data-station-id', station.stationId)
     navBtn.addEventListener('click', (e) => {
       e.stopPropagation()
-      self.closeInfoWindow()
+      this.closeInfoWindow()
       window.dispatchEvent(new CustomEvent('navigateToStation', { detail: station }))
-    })
-    navBtn.addEventListener('mouseenter', () => {
-      navBtn.style.transform = 'scale(1.05)'
-    })
-    navBtn.addEventListener('mouseleave', () => {
-      navBtn.style.transform = 'scale(1)'
     })
     footerRight.append(
       el(
         'span',
-        'color:#3B82F6;font-size:12px;font-weight:600;white-space:nowrap;',
+        'whitespace-nowrap text-xs font-semibold text-primary-600 dark:text-primary-300',
         `¥${price}${t('/度')}`
       ),
       navBtn
@@ -429,14 +365,14 @@ class MapManager {
         hasOpenStation = true
       }
 
-      let statusColor = '#6B7280'
+      let statusColor = stationColors.maintenance
       if (hasOpenStation) {
         if (totalAvailable === 0) {
-          statusColor = '#EF4444'
+          statusColor = stationColors.full
         } else if (totalCount > 0 && (totalCount - totalAvailable) / totalCount >= 0.8) {
-          statusColor = '#F59E0B'
+          statusColor = stationColors.busy
         } else {
-          statusColor = '#10B981'
+          statusColor = stationColors.available
         }
       }
 
@@ -445,7 +381,7 @@ class MapManager {
 
       const div = document.createElement('div')
       div.className = 'map-cluster'
-      div.style.cssText = `background:var(--map-marker-bg,white);width:${size}px;height:${size}px;border:2px solid ${statusColor};border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--map-marker-text,#0f172a);font-weight:700;font-size:${fontSize};cursor:pointer;`
+      div.style.cssText = `background:var(--map-marker-bg,white);width:${size}px;height:${size}px;border:2px solid ${statusColor};border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--map-marker-text,${brand.ink});font-weight:700;font-size:${fontSize};cursor:pointer;`
       div.setAttribute('role', 'button')
       div.tabIndex = 0
       div.setAttribute(
@@ -468,8 +404,7 @@ class MapManager {
 
       if (totalAvailable > 0) {
         const availDiv = document.createElement('div')
-        availDiv.style.cssText =
-          'font-size:9px;font-weight:500;margin-top:1px;color:var(--map-marker-muted,#475569);'
+        availDiv.style.cssText = `font-size:9px;font-weight:500;margin-top:1px;color:var(--map-marker-muted,${colors.surface[600]});`
         availDiv.textContent = t('{count}可用', { count: totalAvailable })
         div.appendChild(availDiv)
       }
@@ -568,9 +503,8 @@ class MapManager {
     }
     this._userMarker = new AMap.Marker({
       position: [lng, lat],
-      content:
-        '<div style="width:20px;height:20px;background:rgba(59,130,246,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(59,130,246,0.5);"></div></div>',
-      offset: new AMap.Pixel(-10, -10),
+      content: el('div', 'map-user-location'),
+      offset: new AMap.Pixel(-12, -12),
       zIndex: 200
     })
     this.map.add(this._userMarker)
@@ -583,10 +517,10 @@ class MapManager {
       this._accuracyCircle = new AMap.Circle({
         center: [lng, lat],
         radius: accuracy,
-        strokeColor: '#3B82F6',
+        strokeColor: brand.green,
         strokeOpacity: 0.3,
         strokeWeight: 1,
-        fillColor: '#3B82F6',
+        fillColor: brand.green,
         fillOpacity: 0.08,
         zIndex: 199
       })

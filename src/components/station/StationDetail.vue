@@ -57,7 +57,7 @@
             </p>
           </div>
           <button
-            class="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+            class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isRetryingDetails"
             @click="retryDetails"
           >
@@ -140,7 +140,9 @@
                 class="fa fa-bolt"
                 :class="[
                   size.tileBoltGlyph,
-                  station.quickAvailableNum > 0 ? 'text-secondary-500' : 'text-danger-500'
+                  station.quickAvailableNum > 0
+                    ? 'text-secondary-600 dark:text-secondary-300'
+                    : 'text-danger-600 dark:text-danger-400'
                 ]"
                 aria-hidden="true"
               ></i>
@@ -155,7 +157,9 @@
               class="font-bold"
               :class="[
                 size.tileValue,
-                station.quickAvailableNum > 0 ? 'text-secondary-600' : 'text-danger-600'
+                station.quickAvailableNum > 0
+                  ? 'text-secondary-600 dark:text-secondary-300'
+                  : 'text-danger-600 dark:text-danger-400'
               ]"
             >
               {{ station.quickAvailableNum
@@ -173,7 +177,7 @@
               :class="[
                 size.tileIcon,
                 station.slowAvailableNum > 0
-                  ? 'bg-accent-100 dark:bg-accent-900/30'
+                  ? 'bg-surface-100 dark:bg-surface-700'
                   : 'bg-danger-100 dark:bg-danger-900/30'
               ]"
             >
@@ -181,7 +185,9 @@
                 class="fa fa-plug"
                 :class="[
                   size.tileBoltGlyph,
-                  station.slowAvailableNum > 0 ? 'text-accent-500' : 'text-danger-500'
+                  station.slowAvailableNum > 0
+                    ? 'text-surface-600 dark:text-surface-300'
+                    : 'text-danger-500'
                 ]"
                 aria-hidden="true"
               ></i>
@@ -196,7 +202,9 @@
               class="font-bold"
               :class="[
                 size.tileValue,
-                station.slowAvailableNum > 0 ? 'text-accent-600' : 'text-danger-600'
+                station.slowAvailableNum > 0
+                  ? 'text-surface-700 dark:text-surface-200'
+                  : 'text-danger-600 dark:text-danger-400'
               ]"
             >
               {{ station.slowAvailableNum
@@ -218,7 +226,10 @@
               >
                 {{ t('当前电价') }}
               </p>
-              <p class="font-bold text-primary-600" :class="size.summaryValue">
+              <p
+                class="font-bold text-primary-600 dark:text-primary-300"
+                :class="size.summaryValue"
+              >
                 {{ formatPrice(station.currentPrice)
                 }}<span
                   class="station-rate-unit font-normal text-surface-400"
@@ -312,10 +323,14 @@
           class="info-row group transition-colors duration-200 hover:bg-surface-100/80 dark:hover:bg-surface-800/80"
         >
           <div
-            class="flex items-center justify-center bg-accent-100 transition-transform duration-200 group-hover:scale-105 dark:bg-accent-900/30"
+            class="flex items-center justify-center bg-surface-100 transition-transform duration-200 group-hover:scale-105 dark:bg-surface-700"
             :class="size.rowIcon"
           >
-            <i class="fa fa-phone text-accent-500" :class="size.rowGlyph" aria-hidden="true"></i>
+            <i
+              class="fa fa-phone text-surface-600 dark:text-surface-300"
+              :class="size.rowGlyph"
+              aria-hidden="true"
+            ></i>
           </div>
           <div class="flex-1">
             <p class="mb-0.5 text-surface-500 dark:text-surface-400" :class="size.rowLabel">
@@ -334,10 +349,10 @@
       >
         <h3 class="section-title" :class="size.sectionTitle">
           <div
-            class="flex items-center justify-center rounded-lg bg-gradient-to-br from-warning-400 to-orange-500"
+            class="flex items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
             :class="[size.sectionIcon, size.sectionShadow]"
           >
-            <i class="fa fa-bolt text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
+            <i class="fa fa-bolt" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
           {{ t('快充桩详情') }}
         </h3>
@@ -393,10 +408,10 @@
       >
         <h3 class="section-title" :class="size.sectionTitle">
           <div
-            class="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary-400 to-blue-500"
+            class="flex items-center justify-center rounded-lg bg-surface-100 text-surface-600 dark:bg-surface-700 dark:text-surface-200"
             :class="[size.sectionIcon, size.sectionShadow]"
           >
-            <i class="fa fa-plug text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
+            <i class="fa fa-plug" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
           {{ t('慢充桩详情') }}
         </h3>
@@ -448,10 +463,10 @@
       >
         <h3 class="section-title" :class="size.sectionTitle">
           <div
-            class="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary-400 to-cyan-500"
+            class="flex items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
             :class="[size.sectionIcon, size.sectionShadow]"
           >
-            <i class="fa fa-rmb text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
+            <i class="fa fa-rmb" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
           {{ t('分时电价') }}
         </h3>
@@ -496,10 +511,10 @@
       >
         <h3 class="section-title" :class="size.sectionTitle">
           <div
-            class="flex items-center justify-center rounded-lg bg-gradient-to-br from-pink-400 to-rose-500"
+            class="flex items-center justify-center rounded-lg bg-surface-100 text-surface-600 dark:bg-surface-700 dark:text-surface-200"
             :class="[size.sectionIcon, size.sectionShadow]"
           >
-            <i class="fa fa-comments text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
+            <i class="fa fa-comments" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
           {{ t('用户评价') }}
           <span class="font-normal text-surface-400" :class="size.reviewCount">{{
@@ -519,14 +534,10 @@
             <div class="flex items-start justify-between" :class="size.reviewHead">
               <div class="flex items-center">
                 <div
-                  class="flex items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-accent-500 shadow-md"
+                  class="flex items-center justify-center rounded-full bg-surface-100 text-surface-600 dark:bg-surface-700 dark:text-surface-200"
                   :class="size.reviewAvatar"
                 >
-                  <i
-                    class="fa fa-user text-white"
-                    :class="size.reviewAvatarGlyph"
-                    aria-hidden="true"
-                  ></i>
+                  <i class="fa fa-user" :class="size.reviewAvatarGlyph" aria-hidden="true"></i>
                 </div>
                 <p
                   class="font-bold text-surface-800 dark:text-surface-200"
@@ -559,14 +570,10 @@
       <div v-if="station.details" class="animate-in delay-500" :class="size.guideBottom">
         <h3 class="section-title" :class="size.sectionTitle">
           <div
-            class="flex items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-emerald-500"
+            class="flex items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
             :class="[size.sectionIcon, size.sectionShadow]"
           >
-            <i
-              class="fa fa-map-marker text-white"
-              :class="size.sectionGlyph"
-              aria-hidden="true"
-            ></i>
+            <i class="fa fa-map-marker" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
           {{ t('站点指引') }}
         </h3>
@@ -685,7 +692,7 @@ const SIZE_CLASSES = {
     rowBadge: 'text-[10px]',
     sectionTitle: '',
     sectionIcon: 'mr-2.5 h-7 w-7 rounded-lg',
-    sectionShadow: 'shadow-md',
+    sectionShadow: '',
     sectionGlyph: 'text-xs',
     sectionList: 'space-y-2.5',
     itemPad: 'p-4',
@@ -760,7 +767,7 @@ const SIZE_CLASSES = {
     rowBadge: 'text-[9px]',
     sectionTitle: 'text-sm',
     sectionIcon: 'mr-2 h-6 w-6 rounded-md',
-    sectionShadow: 'shadow-sm',
+    sectionShadow: '',
     sectionGlyph: 'text-[10px]',
     sectionList: 'space-y-2',
     itemPad: 'p-3',

@@ -4,15 +4,17 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --map-marker-bg: #fff;
-    --map-marker-text: #0f172a;
-    --map-marker-muted: #475569;
+    --map-marker-text: theme('colors.surface.900');
+    --map-marker-muted: theme('colors.surface.600');
   }
 
   .dark {
-    --map-marker-bg: #1e293b;
-    --map-marker-text: #f1f5f9;
-    --map-marker-muted: #cbd5e1;
+    color-scheme: dark;
+    --map-marker-bg: theme('colors.surface.800');
+    --map-marker-text: theme('colors.surface.100');
+    --map-marker-muted: theme('colors.surface.300');
   }
 
   * {
@@ -91,11 +93,32 @@
   }
 
   .header-nav {
-    @apply inline-flex h-full items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-sm font-medium text-surface-500 transition-colors hover:text-primary-600 dark:text-surface-400 dark:hover:text-primary-400 xl:px-4;
+    @apply inline-flex h-full items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-sm font-medium text-surface-200 transition-colors hover:border-white/30 hover:text-white xl:px-4;
   }
 
   .header-nav-active {
-    @apply border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400;
+    @apply border-accent-500 text-accent-500 hover:border-accent-500 hover:text-accent-500;
+  }
+
+  .brand-header .header-tool {
+    @apply text-surface-200 hover:bg-white/10 hover:text-white;
+  }
+
+  .brand-header .language-switch {
+    @apply border-white/20 text-surface-100 hover:border-primary-200 hover:bg-white/10 hover:text-white;
+  }
+
+  .brand-header :focus-visible {
+    outline-color: theme('colors.accent.500');
+  }
+
+  .explorer-eyebrow {
+    @apply mb-2 inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-primary-600 dark:text-primary-300;
+  }
+
+  .explorer-eyebrow::before {
+    content: '';
+    @apply h-2 w-2 rounded-sm border border-primary-600/30 bg-accent-500 dark:border-accent-500;
   }
 
   .filter-chip {
@@ -146,12 +169,59 @@
   }
 
   .map-cluster {
-    box-shadow: 0 2px 8px rgb(15 23 42 / 12%);
+    box-shadow: 0 2px 8px rgb(0 39 51 / 12%);
     transition: box-shadow 0.2s ease;
   }
 
   .map-cluster:hover {
-    box-shadow: 0 3px 12px rgb(15 23 42 / 24%);
+    box-shadow: 0 3px 12px rgb(0 39 51 / 24%);
+  }
+
+  .map-info {
+    @apply overflow-hidden rounded-2xl border border-surface-200 bg-white font-sans text-surface-900 shadow-soft-lg dark:border-surface-600 dark:bg-surface-900 dark:text-surface-100;
+    width: min(340px, calc(100vw - 40px));
+  }
+
+  .map-info-header {
+    @apply flex items-start justify-between gap-2 border-b border-surface-100 px-4 py-3 dark:border-surface-700;
+  }
+
+  .map-info-title {
+    @apply min-w-0 text-[15px] font-bold leading-relaxed;
+    overflow-wrap: break-word;
+  }
+
+  .map-info-status {
+    @apply inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-100 px-2 py-1 text-[11px] font-semibold text-surface-700 dark:bg-surface-800 dark:text-surface-200;
+  }
+
+  .map-info-metric {
+    @apply rounded-lg border border-surface-200 bg-surface-50 px-2.5 py-2 text-center text-surface-700 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200;
+  }
+
+  .map-info-metric-primary {
+    @apply border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-300;
+  }
+
+  .map-info-action {
+    @apply inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-surface-200 bg-white px-3 py-2 text-xs font-semibold text-surface-600 transition-colors hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-surface-600 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700;
+  }
+
+  .map-info-favorite {
+    @apply border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-900/30 dark:text-danger-300;
+  }
+
+  .map-info-primary {
+    @apply border-primary-600 bg-primary-600 text-white hover:border-primary-700 hover:bg-primary-700 hover:text-white dark:border-primary-600 dark:bg-primary-600 dark:text-white dark:hover:bg-primary-700;
+  }
+
+  .map-user-location {
+    @apply flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/20;
+  }
+
+  .map-user-location::after {
+    content: '';
+    @apply h-3.5 w-3.5 rounded-full border-2 border-accent-500 bg-surface-900 shadow-sm;
   }
 
   .status-badge {
@@ -193,9 +263,9 @@
   .shimmer-bg {
     background: linear-gradient(
       90deg,
-      rgba(148, 163, 184, 0.1) 25%,
-      rgba(148, 163, 184, 0.2) 50%,
-      rgba(148, 163, 184, 0.1) 75%
+      rgb(128 147 153 / 10%) 25%,
+      rgb(128 147 153 / 20%) 50%,
+      rgb(128 147 153 / 10%) 75%
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
@@ -213,7 +283,7 @@
     content: '';
     position: absolute;
     inset: -2px;
-    background: linear-gradient(45deg, #3b82f6, #8b5cf6, #10b981);
+    background: theme('colors.primary.500');
     border-radius: inherit;
     z-index: -1;
     opacity: 0;

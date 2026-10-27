@@ -7,7 +7,7 @@
         >
           <div class="flex min-w-0 items-center gap-3 min-[480px]:flex-1">
             <div
-              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-blue-600 shadow-lg shadow-primary-500/25"
+              class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary-600"
             >
               <i class="fa fa-location-arrow text-lg text-white" aria-hidden="true"></i>
             </div>

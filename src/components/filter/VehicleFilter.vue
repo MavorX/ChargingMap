@@ -30,12 +30,13 @@
           <button
             v-for="brand in chargingBrands"
             :key="brand.value"
-            class="rounded-xl border-2 py-2.5 text-sm font-bold transition-all duration-300 active:scale-95"
+            class="rounded-xl border px-2 py-2.5 text-sm font-semibold transition-colors"
             :class="
               selectedBrand === brand.value
-                ? 'border-primary-500 bg-primary-50 text-primary-600 shadow-glow-primary dark:bg-primary-900/20 dark:text-primary-400'
+                ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
                 : 'border-surface-200 text-surface-600 hover:border-primary-300 dark:border-surface-700 dark:text-surface-300'
             "
+            :aria-pressed="selectedBrand === brand.value"
             @click="selectedBrand = selectedBrand === brand.value ? '' : brand.value"
           >
             {{ t(brand.label) }}
@@ -90,7 +91,7 @@
           t('最大充电功率')
         }}</label>
         <div
-          class="rounded-2xl bg-gradient-to-br from-white to-surface-50 p-5 shadow-soft dark:from-surface-800 dark:to-surface-900"
+          class="rounded-2xl border border-surface-200 bg-surface-50 p-5 dark:border-surface-700 dark:bg-surface-800"
         >
           <div class="mb-3 flex items-center justify-between">
             <span class="text-sm text-surface-500 dark:text-surface-400">{{ t('最低功率') }}</span>
@@ -103,7 +104,7 @@
             min="50"
             max="300"
             step="50"
-            class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-200 accent-primary-500 dark:bg-surface-700"
+            class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-200 accent-primary-600 dark:bg-surface-700"
           />
           <div class="mt-2 flex justify-between text-xs text-surface-400">
             <span>50kW</span>
@@ -117,18 +118,9 @@
     <div
       class="glass-effect flex-shrink-0 border-t border-surface-200/50 p-4 dark:border-surface-700/50 lg:p-5"
     >
-      <button
-        id="apply-vehicle-filter"
-        class="group relative w-full transform overflow-hidden rounded-2xl bg-gradient-to-r from-primary-500 to-accent-500 py-3.5 font-bold text-white shadow-xl shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary-500/35 active:translate-y-0"
-        @click="applyFilters"
-      >
-        <div
-          class="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[100%]"
-        ></div>
-        <span class="relative z-10 flex items-center justify-center space-x-2">
-          <i class="fa fa-filter" aria-hidden="true"></i>
-          <span>{{ t('应用筛选') }}</span>
-        </span>
+      <button id="apply-vehicle-filter" class="action-primary" @click="applyFilters">
+        <i class="fa fa-filter" aria-hidden="true"></i>
+        <span>{{ t('应用筛选') }}</span>
       </button>
     </div>
   </PanelShell>

@@ -15,7 +15,9 @@
         <h3 class="break-words text-base font-bold">
           {{ stationName(station?.stationName) || t('请先选择充电站') }}
         </h3>
-        <p class="text-xs leading-5 text-surface-500">{{ stationAddress(station?.address) }}</p>
+        <p class="text-xs leading-5 text-surface-500 dark:text-surface-400">
+          {{ stationAddress(station?.address) }}
+        </p>
       </div>
       <fieldset
         class="min-w-0 space-y-5"
@@ -44,18 +46,22 @@
                 ><span class="block break-words text-sm font-semibold">{{
                   dataText(connector.connectorName)
                 }}</span
-                ><span class="mt-1 block text-xs text-surface-500"
+                ><span class="mt-1 block text-xs text-surface-500 dark:text-surface-400"
                   >{{ connector.power }} kW · {{ connector.connectorType }}</span
                 ></span
               >
               <i
                 v-if="connectorId === connector.id"
-                class="fa fa-check text-primary-600"
+                class="fa fa-check text-primary-600 dark:text-primary-400"
                 aria-hidden="true"
               ></i>
             </button>
           </div>
-          <p v-if="!connectors.length" class="info-row text-sm text-surface-500" role="status">
+          <p
+            v-if="!connectors.length"
+            class="info-row text-sm text-surface-500 dark:text-surface-400"
+            role="status"
+          >
             {{
               t(
                 station?.detailsLoaded
@@ -64,7 +70,7 @@
               )
             }}
           </p>
-          <p v-else class="mt-2 text-xs leading-5 text-surface-500">
+          <p v-else class="mt-2 text-xs leading-5 text-surface-500 dark:text-surface-400">
             {{ t('请选择车位旁对应的充电桩，确认接口与车辆匹配。') }}
           </p>
         </section>
@@ -79,7 +85,7 @@
             </option>
           </select>
           <div class="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span class="text-surface-500">{{
+            <span class="text-surface-500 dark:text-surface-400">{{
               selectedVehicle?.batteryCapacityKwh
                 ? t('{capacity} kWh · 最高 {power} kW', {
                     capacity: selectedVehicle.batteryCapacityKwh,
@@ -125,16 +131,16 @@
         </section>
         <dl v-if="model" class="premium-card space-y-3 p-4 text-sm">
           <div class="flex justify-between gap-2">
-            <dt class="text-surface-500">{{ t('预计充入') }}</dt>
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('预计充入') }}</dt>
             <dd class="font-semibold tabular-nums">{{ model.targetEnergy.toFixed(1) }} kWh</dd>
           </div>
           <div class="flex justify-between gap-2">
-            <dt class="text-surface-500">
+            <dt class="text-surface-500 dark:text-surface-400">
               {{ t('预计费用') }}<span class="block text-xs">{{ t('（含服务费）') }}</span>
             </dt>
             <dd class="font-semibold tabular-nums">{{ formatPrice(estimatedCost) }}</dd>
           </div>
-          <p class="text-xs leading-5 text-surface-500">
+          <p class="text-xs leading-5 text-surface-500 dark:text-surface-400">
             {{
               t('按 {power} kW 估算，约 {minutes} 分钟，以结束时的电量结算。', {
                 power: model.powerKw,
@@ -146,7 +152,7 @@
         <div
           class="flex items-center justify-between gap-3 rounded-xl bg-surface-50 p-3 text-xs dark:bg-surface-800/60"
         >
-          <span class="leading-5 text-surface-500"
+          <span class="leading-5 text-surface-500 dark:text-surface-400"
             >{{ t('演示进度') }}<br />{{
               t(clockScale === 60 ? '1 秒演示 1 分钟充电过程' : '按正常时间演示充电过程')
             }}</span
@@ -164,7 +170,11 @@
       </fieldset>
     </div>
     <div class="glass-effect shrink-0 space-y-2 border-t p-4">
-      <p v-if="validationError" class="text-xs leading-5 text-surface-500" role="status">
+      <p
+        v-if="validationError"
+        class="text-xs leading-5 text-surface-500 dark:text-surface-400"
+        role="status"
+      >
         {{ t(validationError) }}
       </p>
       <button
@@ -198,7 +208,7 @@
           {{ dataText(store.preparation?.connector.connectorName) }} ·
           {{ dataText(store.preparation?.vehicle.model) }}
         </p>
-        <p class="break-all font-mono text-xs text-surface-500">
+        <p class="break-all font-mono text-xs text-surface-500 dark:text-surface-400">
           {{ store.preparation?.connector.id }}
         </p>
       </div>
@@ -207,8 +217,8 @@
           <i
             :class="
               store.phase === 'starting'
-                ? 'fa fa-check-circle text-secondary-600'
-                : 'fa fa-circle-o-notch fa-spin text-primary-600'
+                ? 'fa fa-check-circle text-secondary-600 dark:text-secondary-400'
+                : 'fa fa-circle-o-notch fa-spin text-primary-600 dark:text-primary-400'
             "
             aria-hidden="true"
           ></i
@@ -218,7 +228,7 @@
           <i
             :class="
               store.phase === 'starting'
-                ? 'fa fa-circle-o-notch fa-spin text-primary-600'
+                ? 'fa fa-circle-o-notch fa-spin text-primary-600 dark:text-primary-400'
                 : 'fa fa-circle-o text-surface-400'
             "
             aria-hidden="true"
@@ -241,7 +251,7 @@
         }}
       </button>
       <button
-        class="mt-2 min-h-11 w-full text-sm text-surface-500"
+        class="mt-2 min-h-11 w-full text-sm text-surface-500 dark:text-surface-400"
         :disabled="isConnecting"
         @click="cancelConnection"
       >

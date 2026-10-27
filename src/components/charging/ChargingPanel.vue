@@ -17,7 +17,7 @@
         <p class="break-words text-sm font-semibold">
           {{ stationName(store.sessionStation?.stationName) || t('暂无充电记录') }}
         </p>
-        <p class="text-xs text-surface-500">
+        <p class="text-xs text-surface-500 dark:text-surface-400">
           {{ dataText(store.sessionConnector?.connectorName) || t('未选择充电桩') }} ·
           {{ dataText(store.sessionVehicle?.model) || t('未选择车辆') }}
         </p>
@@ -50,16 +50,16 @@
           />
         </svg>
         <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-xs text-surface-500">{{ t('当前电量') }}</span
+          <span class="text-xs text-surface-500 dark:text-surface-400">{{ t('当前电量') }}</span
           ><strong class="my-2 text-4xl tabular-nums"
             >{{ Number.isFinite(data.battery) ? data.battery.toFixed(1) : '—'
             }}<span class="ml-1 text-lg">%</span></strong
-          ><span class="text-xs text-surface-500">{{
+          ><span class="text-xs text-surface-500 dark:text-surface-400">{{
             t('目标 {battery}%', { battery: store.sessionModel?.targetBattery ?? '—' })
           }}</span>
         </div>
       </div>
-      <p class="text-center text-xs text-surface-500">
+      <p class="text-center text-xs text-surface-500 dark:text-surface-400">
         <i
           class="fa fa-circle mr-1.5 text-[8px]"
           :class="store.isCharging ? 'text-secondary-500' : 'text-surface-400'"
@@ -73,21 +73,24 @@
       </p>
       <dl class="grid grid-cols-1 gap-3 min-[380px]:grid-cols-3">
         <div class="info-row min-w-0 flex-col gap-2 p-3 text-center">
-          <dt class="text-xs text-surface-500">{{ t('充电时长') }}</dt>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">{{ t('充电时长') }}</dt>
           <dd class="text-sm font-semibold tabular-nums">
             {{ formatDuration(Math.floor(data.duration), 'hms') }}
           </dd>
         </div>
         <div class="info-row min-w-0 flex-col gap-2 p-3 text-center">
-          <dt class="text-xs text-surface-500">{{ t('已充电量') }}</dt>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">{{ t('已充电量') }}</dt>
           <dd class="text-sm font-semibold tabular-nums">{{ data.energy.toFixed(2) }} kWh</dd>
         </div>
         <div class="info-row min-w-0 flex-col gap-2 p-3 text-center">
-          <dt class="text-xs text-surface-500">{{ t('当前费用') }}</dt>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">{{ t('当前费用') }}</dt>
           <dd class="text-sm font-semibold tabular-nums">{{ formatPrice(data.cost) }}</dd>
         </div>
       </dl>
-      <p v-if="store.phase === 'charging'" class="info-row justify-center text-sm text-surface-500">
+      <p
+        v-if="store.phase === 'charging'"
+        class="info-row justify-center text-sm text-surface-500 dark:text-surface-400"
+      >
         {{ t('预计还需 {minutes} 分钟达到目标电量', { minutes: remainingMinutes }) }}
       </p>
       <p v-if="store.phase === 'stopping'" class="info-row text-sm leading-6" role="status">

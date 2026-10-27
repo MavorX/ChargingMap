@@ -1,6 +1,6 @@
 <template>
   <main
-    class="h-screen overflow-hidden bg-white pt-16 supports-[height:100dvh]:h-[100dvh] dark:bg-surface-900"
+    class="h-screen overflow-hidden bg-surface-50 pt-16 supports-[height:100dvh]:h-[100dvh] dark:bg-surface-900"
   >
     <h1 class="sr-only">{{ t('探索附近充电站') }}</h1>
     <div class="flex h-full lg:gap-4 lg:p-4 lg:pl-0">
@@ -175,11 +175,7 @@
               <div class="flex flex-shrink-0 items-start justify-between px-5 pb-5 pt-3">
                 <div>
                   <div>
-                    <p
-                      class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-primary-600 dark:text-primary-400"
-                    >
-                      FIND YOUR NEXT CHARGE
-                    </p>
+                    <p class="explorer-eyebrow">FIND YOUR NEXT CHARGE</p>
                     <h2
                       class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
                     >

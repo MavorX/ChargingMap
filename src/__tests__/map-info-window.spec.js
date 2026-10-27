@@ -210,4 +210,26 @@ describe('MapManager shared info window', () => {
     expect(content.textContent).toContain('<img src=x onerror="window.__xss=1">')
     expect(window.__xss).toBeUndefined()
   })
+
+  it('uses theme-aware surfaces and native buttons instead of fixed-color action divs', async () => {
+    const station = makeStation('HF000001', 117.1, 31.8, { isFavorite: true })
+    const { manager } = await setup([station])
+    manager._directMarkers[0].handlers.click()
+    const content = manager._infoWindow.getContent()
+
+    expect(content.classList.contains('map-info')).toBe(true)
+    expect(content.querySelector('.map-info-header').style.background).toBe('')
+    const buttons = [...content.querySelectorAll('button')]
+    expect(buttons).toHaveLength(3)
+    for (const button of buttons) {
+      expect(button.type).toBe('button')
+      expect(button.classList.contains('map-info-action')).toBe(true)
+      expect(button.style.background).toBe('')
+    }
+    expect(content.querySelector('.info-fav-btn').getAttribute('aria-pressed')).toBe('true')
+    expect(content.querySelector('.info-fav-btn').classList.contains('map-info-favorite')).toBe(
+      true
+    )
+    expect(content.querySelector('.info-nav-btn').classList.contains('map-info-primary')).toBe(true)
+  })
 })

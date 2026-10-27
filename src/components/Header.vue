@@ -1,7 +1,7 @@
 <template>
   <header
     data-panel-navigation
-    class="fixed inset-x-0 top-0 z-header border-b border-surface-200/80 bg-white dark:border-surface-800 dark:bg-surface-900"
+    class="brand-header fixed inset-x-0 top-0 z-header border-b border-surface-800 bg-brand-ink text-white dark:bg-surface-950"
   >
     <div class="flex h-16 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
       <button
@@ -9,17 +9,16 @@
         :aria-label="t('VWer-Charging 首页')"
         @click="emitHeaderEvent('home')"
       >
-        <img :src="logoUrl" alt="" class="h-9 w-9 rounded-xl object-contain" />
+        <img :src="logoUrl" alt="" class="h-9 w-9 rounded-xl bg-white object-contain p-0.5" />
         <span>
-          <span
-            class="block text-base font-bold tracking-tight text-surface-900 dark:text-white sm:text-lg"
+          <span class="block text-base font-bold tracking-tight text-white sm:text-lg"
             >VWer<span
-              class="block text-[10px] leading-3 text-primary-600 dark:text-primary-400 min-[400px]:inline min-[400px]:text-[length:inherit] min-[400px]:leading-[inherit]"
+              class="block text-[10px] leading-3 text-primary-200 min-[400px]:inline min-[400px]:text-[length:inherit] min-[400px]:leading-[inherit]"
             >
               Charging</span
             ></span
           >
-          <span class="hidden text-[10px] tracking-wide text-surface-500 sm:block">{{
+          <span class="hidden text-[10px] tracking-wide text-surface-300 sm:block">{{
             t('让每一次出发，都满电')
           }}</span>
         </span>
@@ -55,7 +54,7 @@
       <div class="flex shrink-0 items-center gap-0.5 sm:gap-2">
         <LanguageSwitch />
         <button
-          class="icon-button hidden text-surface-500 sm:block"
+          class="icon-button header-tool hidden sm:block"
           :aria-label="t('定位当前位置')"
           :title="t('定位当前位置')"
           :disabled="stationsStore.isLocating"
@@ -70,7 +69,7 @@
           ></i>
         </button>
         <button
-          class="icon-button text-surface-500"
+          class="icon-button header-tool"
           :aria-label="t('切换主题')"
           :title="t('切换主题')"
           :aria-pressed="userStore.isDarkMode"
@@ -84,8 +83,8 @@
           :aria-pressed="ui.navigationSection === 'notifications'"
           :class="
             ui.navigationSection === 'notifications'
-              ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-              : 'text-surface-500'
+              ? 'bg-white/10 text-accent-500 hover:bg-white/20 dark:hover:bg-white/20'
+              : 'header-tool'
           "
           :title="t('通知中心')"
           @click="emitHeaderEvent('showNotifications')"
@@ -93,18 +92,18 @@
           <i class="fa fa-bell-o" aria-hidden="true"></i>
           <span
             v-if="unreadNotificationsCount > 0"
-            class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-danger-500 dark:border-surface-900"
+            class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-brand-ink bg-danger-400"
           ></span>
         </button>
-        <span class="mx-1 hidden h-6 w-px bg-surface-200 dark:bg-surface-700 sm:block"></span>
+        <span class="mx-1 hidden h-6 w-px bg-white/20 sm:block"></span>
         <button
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm transition-colors"
           :aria-label="t('个人中心')"
           :aria-pressed="ui.navigationSection === 'account'"
           :class="
             ui.navigationSection === 'account'
-              ? 'bg-primary-50 text-primary-700 ring-2 ring-primary-500/40 dark:bg-primary-900/30 dark:text-primary-300'
-              : 'bg-surface-100 text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700'
+              ? 'bg-accent-500 text-brand-ink ring-2 ring-accent-500/30'
+              : 'bg-white/10 text-primary-100 hover:bg-white/20'
           "
           @click="emitHeaderEvent('showUserProfile')"
         >
