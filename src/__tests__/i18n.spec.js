@@ -80,9 +80,18 @@ describe('language preference and message formatting', () => {
     store.filters.quickAvailable = true
     const station = store.currentStation
     open(Header)
+    expect(wrapper.get('[aria-label="个人中心"]').text()).toBe('')
+    expect(wrapper.get('[aria-label="个人中心"] .fa-user-o').exists()).toBe(true)
     await wrapper.get('[aria-label="Switch to English"]').trigger('click')
     expect(wrapper.text()).toContain('Explore')
-    expect(wrapper.get('[aria-label="My account"]').exists()).toBe(true)
+    const accountButton = wrapper.get('[aria-label="My account"]')
+    expect(accountButton.text()).toBe('')
+    expect(accountButton.find('.fa-user-o').exists()).toBe(true)
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    await accountButton.trigger('click')
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'headerEvent', detail: { type: 'showUserProfile' } })
+    )
     expect(document.documentElement.lang).toBe('en-US')
     expect(document.title).toBe('VWer Charging · Find a charger')
     expect(store.currentStation).toBe(station)

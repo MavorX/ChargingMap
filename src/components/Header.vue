@@ -98,7 +98,7 @@
         </button>
         <span class="mx-1 hidden h-6 w-px bg-surface-200 dark:bg-surface-700 sm:block"></span>
         <button
-          class="flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm transition-colors"
           :aria-label="t('个人中心')"
           :aria-pressed="ui.navigationSection === 'account'"
           :class="
@@ -109,7 +109,6 @@
           @click="emitHeaderEvent('showUserProfile')"
         >
           <i class="fa fa-user-o" aria-hidden="true"></i>
-          <span class="hidden md:inline">{{ t('我的账户') }}</span>
         </button>
       </div>
     </div>
