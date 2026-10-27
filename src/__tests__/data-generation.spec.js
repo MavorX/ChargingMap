@@ -54,6 +54,18 @@ const nearestDistances = (stations) => {
   }
   return nearest.sort((a, b) => a - b)
 }
+const nearbyCounts = (stations, radius) => {
+  const counts = stations.map(() => 1)
+  for (let i = 0; i < stations.length; i++) {
+    for (let j = i + 1; j < stations.length; j++) {
+      if (distanceMeters(stations[i], stations[j]) < radius) {
+        counts[i]++
+        counts[j]++
+      }
+    }
+  }
+  return counts
+}
 const locationsFor = (list) =>
   list
     .filter((s) => s.cityId === 'SH')
@@ -88,7 +100,10 @@ describe('reproducible multi-city simulated data', () => {
         stations.every((s) => cityAtLocation(s)?.id === city.id && s.cityName === city.name)
       ).toBe(true)
     }
-    expect(new Set(shanghai.map((s) => s.road)).size).toBeGreaterThanOrEqual(300)
+    const usedRoads = new Set(shanghai.map((s) => s.road))
+    expect(usedRoads.size).toBeGreaterThanOrEqual(230)
+    // Cover neighborhoods without requiring a station on virtually every road.
+    expect(usedRoads.size).toBeLessThan(new Set(shanghaiRoads.map((r) => r.name)).size * 0.95)
     for (const district of new Set(shanghai.map((s) => s.district))) {
       // Coverage follows road capacity, not equal quotas for small/large districts.
       expect(shanghai.filter((s) => s.district === district).length).toBeGreaterThanOrEqual(25)
@@ -109,22 +124,26 @@ describe('reproducible multi-city simulated data', () => {
     }
   })
 
-  it('spaces Shanghai sites across neighborhoods instead of packing short CBD roads', () => {
+  it('mixes local clusters and quiet gaps instead of enforcing an even station spacing', () => {
     const stations = listFor('public/data').filter((s) => s.cityId === 'SH')
     const nearest = nearestDistances(stations)
-    expect(nearest[0]).toBeGreaterThanOrEqual(360)
-    expect(nearest[Math.floor(nearest.length / 2)]).toBeGreaterThan(550)
-    for (const station of stations) {
-      expect(
-        stations.filter((other) => distanceMeters(station, other) < 500).length
-      ).toBeLessThanOrEqual(5)
-    }
-    const center = { lng: 121.473, lat: 31.23 }
-    const inner = nearestDistances(stations.filter((s) => distanceMeters(s, center) < 8000))
-    const outer = nearestDistances(stations.filter((s) => distanceMeters(s, center) > 30000))
-    expect(outer[Math.floor(outer.length / 2)]).toBeGreaterThan(
-      inner[Math.floor(inner.length / 2)] * 1.15
+    expect(nearest[0]).toBeGreaterThanOrEqual(110)
+    expect(nearest.filter((meters) => meters < 250).length).toBeGreaterThan(stations.length * 0.15)
+    expect(nearest.filter((meters) => meters > 1000).length).toBeGreaterThan(stations.length * 0.04)
+    expect(nearest[Math.floor(nearest.length * 0.9)]).toBeGreaterThan(
+      nearest[Math.floor(nearest.length * 0.1)] * 4
     )
+    expect(Math.max(...nearbyCounts(stations, 250))).toBeLessThanOrEqual(5)
+  })
+
+  it('favors separate business/residential catchments rather than every long commuter road', () => {
+    const stations = listFor('public/data').filter((s) => s.cityId === 'SH')
+    const countAt = (lng, lat) =>
+      stations.filter((s) => distanceMeters(s, { lng, lat }) < 1000).length
+    const busy = countAt(121.438, 31.19) + countAt(121.607, 31.202) + countAt(121.356, 31.151)
+    const quiet = countAt(121.286, 31.241) + countAt(121.69, 31.192) + countAt(121.14, 30.998)
+    expect(busy).toBeGreaterThan(quiet * 3)
+    expect(busy).toBeGreaterThanOrEqual(15)
   })
 
   it('keeps simulated parking sites beside their named road rather than scattering over a city bbox', () => {
@@ -172,7 +191,9 @@ describe('reproducible multi-city simulated data', () => {
     generate(directory, ['--count=2000', '--seed=0'])
     const list = listFor(directory)
     expect(list).toHaveLength(4000)
-    expect(nearestDistances(list.filter((s) => s.cityId === 'SH'))[0]).toBeGreaterThanOrEqual(360)
+    const shanghai = list.filter((s) => s.cityId === 'SH')
+    expect(nearestDistances(shanghai)[0]).toBeGreaterThanOrEqual(110)
+    expect(Math.max(...nearbyCounts(shanghai, 250))).toBeLessThanOrEqual(5)
     expect(new Set(list.map((s) => s.stationId)).size).toBe(4000)
     expect(readdirSync(path.join(directory, 'details'))).toHaveLength(40)
     for (const id of ['HF002000', 'SH002000']) {
@@ -195,7 +216,8 @@ describe('reproducible multi-city simulated data', () => {
     generate(directory, ['--hefei-count=1', '--shanghai-count=2000', `--seed=${seed}`])
     const stations = listFor(directory).filter((s) => s.cityId === 'SH')
     expect(stations).toHaveLength(2000)
-    expect(nearestDistances(stations)[0]).toBeGreaterThanOrEqual(360)
+    expect(nearestDistances(stations)[0]).toBeGreaterThanOrEqual(110)
+    expect(Math.max(...nearbyCounts(stations, 250))).toBeLessThanOrEqual(5)
   })
 
   it('allows independent Shanghai expansion without changing Hefei data', () => {
@@ -241,6 +263,29 @@ describe('reproducible multi-city simulated data', () => {
     )
     expect(result.status).toBe(1)
     expect(result.stdout).toContain('[FAIL] 上海站点间距')
+  })
+
+  it('rejects block-sized piles even when every pair clears the near-duplicate distance', () => {
+    const directory = tempData()
+    generate(directory, ['--count=6'])
+    const list = listFor(directory)
+    const stations = list.filter((s) => s.cityId === 'SH')
+    const center = { lng: 121.473, lat: 31.233 }
+    stations.forEach((station, index) => {
+      const angle = ((index - 1) * 2 * Math.PI) / 5
+      station.lng = center.lng + (index === 0 ? 0 : (150 * Math.cos(angle)) / 95100)
+      station.lat = center.lat + (index === 0 ? 0 : (150 * Math.sin(angle)) / 111195)
+    })
+    expect(nearestDistances(stations)[0]).toBeGreaterThan(110)
+    writeFileSync(path.join(directory, 'station_list.json'), JSON.stringify(list))
+    const result = spawnSync(
+      process.execPath,
+      ['scripts/validate-data.mjs', `--list=${path.join(directory, 'station_list.json')}`],
+      { encoding: 'utf8' }
+    )
+    expect(result.status).toBe(1)
+    expect(result.stdout).toContain('[FAIL] 上海局部密度')
+    expect(result.stdout).not.toContain('[FAIL] 上海站点间距')
   })
 
   it('rejects a Shanghai record with Hefei coordinates and an incorrectly placed detail', () => {

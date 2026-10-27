@@ -71,7 +71,8 @@ describe('location/viewport discovery, without city modes', () => {
     ['上海中心', { west: 121.45, east: 121.5, south: 31.21, north: 31.25 }, 'SH'],
     ['张江', { west: 121.58, east: 121.64, south: 31.18, north: 31.23 }, 'SH'],
     ['临港', { west: 121.87, east: 121.95, south: 30.87, north: 30.95 }, 'SH'],
-    ['青浦西部', { west: 120.89, east: 120.95, south: 31.01, north: 31.05 }, 'SH'],
+    // Include western town catchments; a single quiet road need not contain a site.
+    ['青浦西部', { west: 120.89, east: 121.08, south: 31.01, north: 31.14 }, 'SH'],
     ['合肥', { west: 117.0, east: 117.6, south: 31.2, north: 32.2 }, 'HF']
   ])('finds %s stations solely from viewport bounds', async (_label, bounds, prefix) => {
     const store = useStationsStore()
@@ -80,6 +81,17 @@ describe('location/viewport discovery, without city modes', () => {
     expect(store.viewportStationCount).toBeGreaterThan(0)
     expect(store.viewportStations.every((s) => s.stationId.startsWith(prefix))).toBe(true)
     expect(store.pagedStations.length).toBeGreaterThan(0)
+  })
+
+  it('allows an empty viewport without filling every area or leaking nearby results into it', async () => {
+    const store = useStationsStore()
+    await store.loadStations()
+    // A lake-side gap between western Qingpu's town catchments, not a city filter.
+    store.setViewportBounds({ west: 120.97, east: 121.0, south: 31.15, north: 31.18 })
+    expect(store.viewportStationCount).toBe(0)
+    expect(store.viewportStations).toEqual([])
+    expect(store.pagedStations).toEqual([])
+    expect(store.filteredStations).toHaveLength(2000)
   })
 
   it('does not hide either region when zoomed out across both', async () => {

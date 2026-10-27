@@ -8,7 +8,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CITIES, cityById, cityAtLocation } from '../src/constants/cities.js';
 import { STATION_ID_PATTERN, STATIONS_PER_CITY_LIMIT, partIdFor } from '../src/constants/stationData.js';
-import { SHANGHAI_MIN_STATION_DISTANCE_METERS, distanceMeters } from './shanghai-layout.mjs';
+import {
+  SHANGHAI_MIN_STATION_DISTANCE_METERS,
+  SHANGHAI_NEIGHBORHOOD_RADIUS_METERS,
+  SHANGHAI_MAX_NEIGHBORHOOD_STATIONS,
+  distanceMeters
+} from './shanghai-layout.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -164,16 +169,40 @@ assert('坐标 bbox', (f) => {
 assert('上海站点间距', (f) => {
   const stations = listRecords.filter(s => s?.cityId === 'SH');
   const crowded = [];
+  let crowdedCount = 0;
   for (let i = 0; i < stations.length; i++) {
     for (let j = i + 1; j < stations.length; j++) {
       const meters = distanceMeters(stations[i], stations[j]);
       if (meters < SHANGHAI_MIN_STATION_DISTANCE_METERS) {
-        crowded.push(`${stations[i].stationId}/${stations[j].stationId}: ${meters.toFixed(1)}m`);
+        crowdedCount++;
+        if (crowded.length < MAX_SAMPLES) {
+          crowded.push(`${stations[i].stationId}/${stations[j].stationId}: ${meters.toFixed(1)}m`);
+        }
       }
     }
   }
   if (crowded.length > 0) {
-    f.push(`相邻站点不足 ${SHANGHAI_MIN_STATION_DISTANCE_METERS}m: ${sample(crowded)}`);
+    f.push(`相邻站点不足 ${SHANGHAI_MIN_STATION_DISTANCE_METERS}m（共 ${crowdedCount} 对）: ${sample(crowded)}`);
+  }
+});
+
+// Permit genuine local clusters, but never restore the original block-sized piles.
+assert('上海局部密度', (f) => {
+  const stations = listRecords.filter(s => s?.cityId === 'SH');
+  const nearbyCounts = stations.map(() => 1);
+  for (let i = 0; i < stations.length; i++) {
+    for (let j = i + 1; j < stations.length; j++) {
+      if (distanceMeters(stations[i], stations[j]) < SHANGHAI_NEIGHBORHOOD_RADIUS_METERS) {
+        nearbyCounts[i]++;
+        nearbyCounts[j]++;
+      }
+    }
+  }
+  const crowded = stations
+    .filter((_, index) => nearbyCounts[index] > SHANGHAI_MAX_NEIGHBORHOOD_STATIONS)
+    .map(s => s.stationId);
+  if (crowded.length > 0) {
+    f.push(`${SHANGHAI_NEIGHBORHOOD_RADIUS_METERS}m 内超过 ${SHANGHAI_MAX_NEIGHBORHOOD_STATIONS} 站（含自身）: ${sample(crowded)}`);
   }
 });
 
