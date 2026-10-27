@@ -40,34 +40,6 @@
           </div>
         </div>
 
-        <button
-          v-if="!isNavigating"
-          class="glass-card absolute left-4 top-4 z-10 hidden max-w-[calc(100%_-_2rem)] items-center gap-3 px-4 py-3 text-left disabled:cursor-wait lg:flex"
-          :aria-label="t('定位当前位置')"
-          :disabled="stationsStore.isLocating"
-          :aria-busy="stationsStore.isLocating"
-          :title="t(stationsStore.locationError) || stationsStore.locationPresentation.description"
-          @click="locateUser"
-        >
-          <span
-            class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-            ><i
-              :class="
-                stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
-              "
-              aria-hidden="true"
-            ></i
-          ></span>
-          <span class="min-w-0"
-            ><span class="block text-sm font-semibold text-surface-800 dark:text-surface-100">{{
-              stationsStore.locationPresentation.title
-            }}</span
-            ><span class="block text-[11px] text-surface-500 dark:text-surface-400">{{
-              stationsStore.locationPresentation.description
-            }}</span></span
-          >
-        </button>
-
         <div
           v-if="!isNavigating"
           class="glass-card absolute bottom-4 left-4 z-10 hidden flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-[11px] text-surface-600 dark:text-surface-300 sm:flex"
@@ -126,8 +98,9 @@
           </button>
           <button
             class="map-tool text-primary-600 dark:text-primary-400"
-            :title="t('定位当前位置')"
+            :title="`${t('定位当前位置')}\n${locationControlStatus}`"
             :aria-label="t('定位当前位置')"
+            aria-describedby="map-location-status"
             :disabled="stationsStore.isLocating"
             :aria-busy="stationsStore.isLocating"
             @click="locateUser"
@@ -139,6 +112,7 @@
               aria-hidden="true"
             ></i>
           </button>
+          <span id="map-location-status" class="sr-only">{{ locationControlStatus }}</span>
         </div>
 
         <button
@@ -433,6 +407,15 @@ const useCoupon = (couponId) => {
 const currentStation = computed(() => stationsStore.currentStation)
 const isNavigating = computed(() => stationsStore.isNavigating)
 const viewportStationCount = computed(() => stationsStore.viewportStationCount)
+const locationControlStatus = computed(() =>
+  [
+    stationsStore.locationPresentation.title,
+    stationsStore.locationPresentation.description,
+    t(stationsStore.locationError)
+  ]
+    .filter(Boolean)
+    .join('\n')
+)
 
 const closeStationDetail = () => {
   stationsStore.setCurrentStation(null)

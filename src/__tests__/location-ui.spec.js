@@ -33,6 +33,29 @@ const mountHome = () => {
 }
 
 describe('location accuracy and permission feedback', () => {
+  it('keeps one map location button and moves status and accuracy into its hint', async () => {
+    const locate = vi.spyOn(mapManager, 'locateUser').mockResolvedValue({
+      lng: 117.28,
+      lat: 31.86,
+      accuracy: 2800,
+      quality: 'approximate',
+      source: 'h5'
+    })
+    mountHome()
+    const mapButtons = wrapper.findAll('main [aria-label="定位当前位置"]')
+    expect(mapButtons).toHaveLength(1)
+    const button = mapButtons[0]
+    expect(button.element.closest('.map-tools')).not.toBe(null)
+    expect(button.attributes('title')).toContain('尚未获取设备位置')
+    expect(button.attributes('aria-describedby')).toBe('map-location-status')
+    await button.trigger('click')
+    await flushPromises()
+    expect(locate).toHaveBeenCalledTimes(1)
+    expect(button.attributes('title')).toContain('仅获取到估算位置')
+    expect(button.attributes('title')).toContain('报告误差约 ±2.8 公里')
+    expect(wrapper.get('#map-location-status').text()).toContain('报告误差约 ±2.8 公里')
+  })
+
   it('does not let an older rejected request overwrite the latest location status', async () => {
     let rejectOld, resolveNew
     const locate = vi.spyOn(mapManager, 'locateUser')
@@ -100,6 +123,10 @@ describe('location accuracy and permission feedback', () => {
     expect(store.userLocation.accuracy).toBe(30)
     expect(wrapper.text()).toContain('定位权限未获允许')
     expect(wrapper.text()).toContain('保留上次位置')
+    const hint = wrapper.get('.map-tools [aria-label="定位当前位置"]').attributes('title')
+    expect(hint).toContain('定位权限未获允许')
+    expect(hint).toContain('保留上次位置')
+    expect(hint).toContain('请检查浏览器和系统位置访问')
     expect(toast).not.toHaveBeenCalledWith(expect.any(String), 'success')
   })
 
