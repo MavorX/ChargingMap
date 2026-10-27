@@ -71,13 +71,11 @@
 <script setup>
 import { onMounted, onUnmounted, watch, inject, ref } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
-import { useUserStore } from '../../store/modules/user'
 import mapManager from '../../services/mapService'
 import { amapLoader } from '../../services/amapLoader'
 import { isEnglish, locale, t } from '../../i18n'
 
 const stationsStore = useStationsStore()
-const userStore = useUserStore()
 const showToast = inject('showToast')
 
 const mapError = ref(null)
@@ -99,7 +97,9 @@ const initMap = async () => {
       resizeEnable: true,
       viewMode: '3D',
       lang: isEnglish.value ? 'en' : 'zh_cn',
-      mapStyle: userStore.isDarkMode ? 'amap://styles/dark' : 'amap://styles/whitesmoke',
+      // Keep one base style. CSS themes its canvas locally; setMapStyle on each
+      // toggle refetches styles/tiles and leaves the map seconds behind the UI.
+      mapStyle: 'amap://styles/dark',
       center: stationsStore.userLocation
         ? [stationsStore.userLocation.lng, stationsStore.userLocation.lat]
         : [117.283042, 31.86119]
@@ -215,15 +215,6 @@ watch(
   }
 )
 
-watch(
-  () => userStore.isDarkMode,
-  (isDark) => {
-    if (map) {
-      map.setMapStyle(isDark ? 'amap://styles/dark' : 'amap://styles/whitesmoke')
-    }
-  }
-)
-
 watch(locale, () => {
   // Keep the map, selected station, route and charging session in place.
   if (map) mapManager.refreshLanguage(stationsStore.viewportStations)
@@ -243,3 +234,23 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+#map-container {
+  --map-basemap-filter: invert(1) hue-rotate(180deg) saturate(0.8) brightness(1.1);
+  /* AMap writes an inline background; keep loading gaps in the active theme. */
+  background-color: #e5e7eb !important;
+}
+
+.dark #map-container {
+  --map-basemap-filter: none;
+  background-color: #2a2a2a !important;
+}
+
+#map-container :deep(.amap-layers > canvas.amap-layer) {
+  /* Only the basemap canvas, never markers, popups, SDK controls or copyright.
+     No SDK style reload, delayed animation, or second hidden map is needed. */
+  filter: var(--map-basemap-filter);
+  transition: none;
+}
+</style>

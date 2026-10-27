@@ -5,6 +5,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import MapView from '../components/map/MapView.vue'
 import mapManager from '../services/mapService'
 import { useStationsStore } from '../store/modules/stations'
+import { useUserStore } from '../store/modules/user'
+import { amapLoader } from '../services/amapLoader'
 
 vi.mock('../services/amapLoader', () => ({
   amapLoader: {
@@ -29,6 +31,7 @@ vi.mock('../services/mapService', () => ({
 
 const mapHandlers = new Map()
 let initialMapOptions
+let mapCreationCount
 
 const fakeMap = {
   on: vi.fn((event, handler) => {
@@ -49,10 +52,12 @@ const fakeMap = {
   setZoomAndCenter: vi.fn()
 }
 
-const mountMapView = async () => {
+const mountMapView = async ({ isDarkMode = false } = {}) => {
   const pinia = createPinia()
   setActivePinia(pinia)
   const store = useStationsStore()
+  const user = useUserStore()
+  user.isDarkMode = isDarkMode
   vi.spyOn(store, 'loadStations').mockResolvedValue()
   const setViewportBounds = vi.spyOn(store, 'setViewportBounds')
   const setLoading = vi.fn()
@@ -72,12 +77,14 @@ const mountMapView = async () => {
   setViewportBounds.mockClear()
   mapManager.updateMarkers.mockClear()
 
-  return { wrapper, store, setViewportBounds, setLoading }
+  return { wrapper, store, user, setViewportBounds, setLoading }
 }
 
 describe('MapView viewport pipeline', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.clearAllMocks()
+    mapCreationCount = 0
     mapManager.locateUser.mockReset().mockResolvedValue({ lng: 117.28, lat: 31.86 })
     fakeMap.getBounds.mockReturnValue({
       getNorthEast: () => ({ lng: 117.5, lat: 32.0 }),
@@ -90,6 +97,7 @@ describe('MapView viewport pipeline', () => {
     globalThis.AMap = {
       Map: class {
         constructor(_container, options) {
+          mapCreationCount++
           initialMapOptions = options
           return fakeMap
         }
@@ -98,6 +106,7 @@ describe('MapView viewport pipeline', () => {
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.useRealTimers()
     vi.restoreAllMocks()
     delete globalThis.AMap
@@ -107,6 +116,66 @@ describe('MapView viewport pipeline', () => {
     const { wrapper } = await mountMapView()
     expect(wrapper.get('#map-container').classes()).toContain('relative')
     expect(wrapper.get('#map-container').classes()).toContain('isolate')
+    wrapper.unmount()
+  })
+
+  it.each([false, true])('keeps one base style when initially dark=%s', async (isDarkMode) => {
+    const { wrapper, user, setViewportBounds } = await mountMapView({ isDarkMode })
+    expect(initialMapOptions.mapStyle).toBe('amap://styles/dark')
+    user.toggleTheme()
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(mapCreationCount).toBe(1)
+    expect(fakeMap.setMapStyle).not.toHaveBeenCalled()
+    expect(mapManager.updateMarkers).not.toHaveBeenCalled()
+    expect(setViewportBounds).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('does not reload the map, markers or route during rapid theme changes', async () => {
+    const { wrapper, user, store, setViewportBounds } = await mountMapView()
+    const bounds = store.viewportBounds
+    const station = { stationId: 'SH000001' }
+    store.currentStation = station
+    const selectedStation = store.currentStation
+    mapManager.setStations.mockClear()
+    for (let i = 0; i < 9; i++) {
+      user.toggleTheme()
+      await nextTick()
+    }
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(user.isDarkMode).toBe(true)
+    expect(store.currentStation).toBe(selectedStation)
+    expect(store.viewportBounds).toBe(bounds)
+    expect(mapCreationCount).toBe(1)
+    expect(amapLoader.load).toHaveBeenCalledTimes(1)
+    expect(fakeMap.setMapStyle).not.toHaveBeenCalled()
+    expect(fakeMap.destroy).not.toHaveBeenCalled()
+    expect(mapManager.setStations).not.toHaveBeenCalled()
+    expect(mapManager.updateMarkers).not.toHaveBeenCalled()
+    expect(mapManager.clearRoute).not.toHaveBeenCalled()
+    expect(mapManager.closeInfoWindow).not.toHaveBeenCalled()
+    expect(setViewportBounds).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('uses the same base style when the theme changes while the SDK is loading', async () => {
+    let resolveLoader
+    vi.mocked(amapLoader.load).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLoader = resolve
+      })
+    )
+    const { wrapper, user } = await mountMapView()
+    expect(mapCreationCount).toBe(0)
+    user.toggleTheme()
+    await nextTick()
+    resolveLoader()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(user.isDarkMode).toBe(true)
+    expect(mapCreationCount).toBe(1)
+    expect(initialMapOptions.mapStyle).toBe('amap://styles/dark')
+    expect(fakeMap.setMapStyle).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
