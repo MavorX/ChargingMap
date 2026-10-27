@@ -17,6 +17,15 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-10-26T10:30:00'))
+  useUserStore().vehicles = [
+    {
+      id: 'test-vehicle',
+      model: 'ID.3',
+      connectorType: 'GB/T',
+      batteryCapacityKwh: 58,
+      maxPower: 120
+    }
+  ]
   useStationsStore().currentStation = {
     stationId: 's1',
     stationName: '测试站',

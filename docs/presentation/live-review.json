@@ -1,0 +1,403 @@
+{
+  "measurements": [
+    {
+      "width": 1440,
+      "height": 1000,
+      "twoFrameObservationMs": [202, 192, 218, 36, 21, 32, 23, 31],
+      "styleOrTileRequests": 0,
+      "canvasCameraMarkersAndTestRoutePreserved": true,
+      "remoteServicesBlockedToggle": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "twoFrameObservationMs": [109, 124, 135, 29, 31, 32, 31, 31],
+      "styleOrTileRequests": 0,
+      "canvasCameraMarkersAndTestRoutePreserved": true,
+      "remoteServicesBlockedToggle": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "desktop-light",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "desktop-dark",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "desktop-detail",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "desktop-filter",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-detail",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-setup",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-plug",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-charging",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-charging-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "mobile-unplug",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-checkout",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-paid",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "mobile-account",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-userProfile-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-wallet-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-vehicle-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-chargingHistory-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-coupons-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-favorites-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-notifications-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-settings-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-help-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-vehicleFilter-light",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": false
+    },
+    {
+      "name": "account-userProfile-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-wallet-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-vehicle-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-chargingHistory-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-coupons-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-favorites-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-notifications-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-settings-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-help-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "account-vehicleFilter-dark",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "zh-CN",
+      "dark": true
+    },
+    {
+      "name": "english-detail-320",
+      "width": 320,
+      "height": 568,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-filter-320",
+      "width": 320,
+      "height": 568,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-detail-390",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-filter-390",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-detail-1024",
+      "width": 1024,
+      "height": 768,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-filter-1024",
+      "width": 1024,
+      "height": 768,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-detail-1440",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "english-filter-1440",
+      "width": 1440,
+      "height": 1000,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    },
+    {
+      "name": "mobile-english",
+      "width": 390,
+      "height": 844,
+      "pageOverflow": false,
+      "controlOverflow": [],
+      "locale": "en-US",
+      "dark": false
+    }
+  ],
+  "pageErrors": [],
+  "languageAndNightThemeRestored": true,
+  "boundary": "Controlled review camera; test polyline, not a live driving-service or physical GPS validation."
+}

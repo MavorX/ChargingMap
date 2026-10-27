@@ -74,14 +74,17 @@ describe('charging order lifecycle', () => {
     expect(store.paymentPending).toBe(true)
   })
 
-  it('does not invent target-time stopping when a background timer wakes late', async () => {
+  it('limits modeled output but still waits for stop acknowledgement after a late timer', async () => {
     const store = await start()
     vi.setSystemTime(Date.now() + 3600000)
     await vi.advanceTimersByTimeAsync(1000)
     expect(store.phase).toBe('stopping')
     expect(store.isCharging).toBe(true)
-    expect(store.chargingData.duration).toBe(3601)
-    expect(store.chargingData.battery).toBe(100)
+    expect(store.chargingData.elapsedRealSeconds).toBe(3601)
+    expect(store.chargingData.duration).toBe(2160)
+    expect(store.chargingData.energy).toBe(36)
+    expect(store.chargingData.battery).toBe(80)
+    expect(() => store.disconnectPlug()).toThrow('禁止拔枪')
     await vi.advanceTimersByTimeAsync(500)
     expect(store.isCharging).toBe(false)
     expect(store.phase).toBe('awaiting_unplug')

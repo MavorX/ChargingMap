@@ -214,4 +214,68 @@ describe('MapManager markers', () => {
     marker.content.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', cancelable: true }))
     expect(map.setZoom).toHaveBeenCalledTimes(2)
   })
+
+  it('does not accumulate click handlers when the SDK reuses a single marker', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
+    manager.setStations(stations)
+    manager.updateMarkers(stations)
+    const marker = new AMap.Marker({ position: [117.1, 31.8] })
+    const on = vi.spyOn(marker, 'on')
+    const render = AMap.MarkerCluster.instances[0].options.renderMarker
+    render({ marker, data: [{ station: stations[0] }] })
+    render({ marker, data: [{ station: stations[0] }] })
+    render({ marker, data: [{ station: stations[1] }] })
+    expect(on).toHaveBeenCalledTimes(1)
+    const open = vi.spyOn(manager, '_openStationInfoWindow').mockImplementation(() => {})
+    marker.handlers.click()
+    expect(open).toHaveBeenCalledOnce()
+    expect(open.mock.calls[0][0].stationId).toBe('HF000002')
+    expect(manager._markersByStationId.has('HF000001')).toBe(false)
+  })
+
+  it('refreshes cluster inputs when an available gun changes without station IDs changing', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    const station = makeStation('HF000001', 117.1, 31.8)
+    manager.setStations([station])
+    manager.updateMarkers([station])
+    station.quickAvailableNum--
+    manager.updateMarkers([station])
+    expect(AMap.MarkerCluster.instances[0].setPoints).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not open a stale station when a station marker is recycled as a cluster', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    const station = makeStation('HF000001', 117.1, 31.8)
+    manager.setStations([station])
+    manager.updateMarkers([station])
+    const marker = new AMap.Marker({ position: [117.1, 31.8] })
+    const options = AMap.MarkerCluster.instances[0].options
+    options.renderMarker({ marker, data: [{ station }] })
+    options.renderClusterMarker({ marker, count: 2, data: [{ station }] })
+    const open = vi.spyOn(manager, '_openStationInfoWindow').mockImplementation(() => {})
+    marker.handlers.click()
+    expect(open).not.toHaveBeenCalled()
+    expect(manager._markersByStationId.has(station.stationId)).toBe(false)
+  })
+
+  it('refreshMarker updates availability in a visible cluster as well as an open popup', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    manager.setMap(makeMap())
+    const station = makeStation('HF000001', 117.1, 31.8)
+    manager.setStations([station])
+    manager.updateMarkers([station])
+    station.quickAvailableNum--
+    manager.refreshMarker(station.stationId)
+    expect(AMap.MarkerCluster.instances[0].setPoints).toHaveBeenCalledTimes(2)
+    manager.refreshMarker(station.stationId)
+    expect(AMap.MarkerCluster.instances[0].setPoints).toHaveBeenCalledTimes(2)
+  })
 })

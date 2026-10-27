@@ -4,7 +4,15 @@ import prettier from 'eslint-config-prettier'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'public/data/**', 'coverage/**', 'stats.html']
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'public/data/**',
+      'coverage/**',
+      'test-results/**',
+      'playwright-report/**',
+      'stats.html'
+    ]
   },
   js.configs.recommended,
   ...pluginVue.configs['flat/recommended'],

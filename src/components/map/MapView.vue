@@ -215,6 +215,25 @@ watch(
   }
 )
 
+watch(
+  () =>
+    stationsStore.stations
+      .map((station) =>
+        [
+          station.stationId,
+          station.openStatus,
+          station.quickAvailableNum,
+          station.slowAvailableNum
+        ].join(':')
+      )
+      .join('|'),
+  () => {
+    // Live availability can change filter membership without replacing the
+    // stations array. Keep pins/clusters aligned with the reactive list too.
+    debouncedUpdateMarkers()
+  }
+)
+
 watch(locale, () => {
   // Keep the map, selected station, route and charging session in place.
   if (map) mapManager.refreshLanguage(stationsStore.viewportStations)

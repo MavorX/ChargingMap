@@ -189,6 +189,13 @@
       </p>
     </div>
     <div class="glass-effect shrink-0 border-t p-4">
+      <p
+        v-if="selectionError"
+        class="mb-2 text-xs leading-5 text-danger-700 dark:text-danger-300"
+        role="status"
+      >
+        {{ t(selectionError) }}
+      </p>
       <button
         class="action-primary"
         :disabled="!canSubmit || isSubmitting"
@@ -214,6 +221,7 @@ import { calculatePaymentAmounts } from '../../store/modules/charging'
 import { useAvailableConnectors } from '../../composables/useAvailableConnectors'
 import { reservationDateValue, reservationSlotsFor } from '../../utils/reservationSlots'
 import { formatPrice } from '../../utils/format'
+import { reservationSelectionError } from '../../utils/reservationValidation'
 const emit = defineEmits(['close', 'reservation-success', 'show-vehicles'])
 const stationsStore = useStationsStore()
 const reservationStore = useReservationStore()
@@ -247,8 +255,15 @@ watch(
 watch(
   vehicles,
   (list) => {
-    if (!list.some((vehicle) => vehicle.id === selectedVehicle.value))
-      selectedVehicle.value = list[0]?.id || ''
+    if (!list.some((vehicle) => vehicle.id === selectedVehicle.value)) {
+      const connector = availableConnectors.value.find(
+        (item) => item.id === selectedConnector.value
+      )
+      selectedVehicle.value =
+        list.find((vehicle) => vehicle.connectorType === connector?.connectorType)?.id ||
+        list[0]?.id ||
+        ''
+    }
   },
   { immediate: true, deep: true }
 )
@@ -288,13 +303,17 @@ const estimatedCost = computed(
       price: currentStation.value?.currentPrice
     }).totalAmount
 )
+const selectionError = computed(() =>
+  reservationSelectionError({
+    station: currentStation.value,
+    connector: availableConnectors.value.find((item) => item.id === selectedConnector.value),
+    vehicle: vehicles.value.find((item) => item.id === selectedVehicle.value),
+    chargeAmount: chargeAmount.value
+  })
+)
 const canSubmit = computed(
   () =>
-    currentStation.value?.openStatus === 1 &&
-    currentStation.value.reservationAvailable &&
-    Number.isFinite(currentStation.value.currentPrice) &&
-    availableConnectors.value.some((connector) => connector.id === selectedConnector.value) &&
-    vehicles.value.some((vehicle) => vehicle.id === selectedVehicle.value) &&
+    !selectionError.value &&
     timeSlots.value.some((slot) => slot.available && slot.value === selectedTimeSlot.value)
 )
 const submitReservation = async () => {
@@ -313,6 +332,7 @@ const submitReservation = async () => {
       timeSlot: selectedTimeSlot.value,
       connectorId: connector.id,
       connectorName: connector.connectorName,
+      vehicleId: vehicle.id,
       vehicleModel: vehicle.model,
       chargeAmount: chargeAmount.value
     })

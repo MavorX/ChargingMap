@@ -292,4 +292,32 @@ describe('MapView viewport pipeline', () => {
     expect(store.$state).not.toHaveProperty('activeCityId')
     wrapper.unmount()
   })
+
+  it('removes a newly occupied station from filtered markers without moving the map', async () => {
+    const { wrapper, store, setViewportBounds } = await mountMapView()
+    store.stations = [
+      {
+        stationId: 'HF000001',
+        lng: 117.28,
+        lat: 31.86,
+        openStatus: 1,
+        quickAvailableNum: 1,
+        slowAvailableNum: 0,
+        connectorTypes: ['GB/T']
+      }
+    ]
+    store.toggleFilter('quickAvailable')
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(mapManager.updateMarkers).toHaveBeenLastCalledWith(store.viewportStations)
+    mapManager.updateMarkers.mockClear()
+    store.stations[0].quickAvailableNum = 0
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(store.viewportStationCount).toBe(0)
+    expect(mapManager.updateMarkers).toHaveBeenCalledOnce()
+    expect(mapManager.updateMarkers).toHaveBeenLastCalledWith([])
+    expect(setViewportBounds).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
 })

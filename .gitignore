@@ -33,6 +33,8 @@ out/
 
 # Test coverage
 coverage/
+test-results/
+playwright-report/
 *.lcov
 
 # Temporary files

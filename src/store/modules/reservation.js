@@ -3,6 +3,8 @@ import { demoReservations } from '../../mocks/userDemo'
 import { reservationDateValue, reservationSlotsFor } from '../../utils/reservationSlots'
 import { createRecordId } from '../../utils/id'
 import { useStationsStore } from './stations'
+import { useUserStore } from './user'
+import { reservationSelectionError } from '../../utils/reservationValidation'
 
 const isDemoMode = import.meta.env.VITE_DEMO === 'true'
 
@@ -15,10 +17,10 @@ export const useReservationStore = defineStore('reservation', {
   }),
 
   actions: {
-    async createReservation(reservationData) {
-      if (this.isLoading) throw new Error('预约正在提交，请勿重复操作')
+    validateReservation(reservationData) {
+      const station = useStationsStore().currentStation
       if (
-        useStationsStore().currentStation?.dataSource === 'amap' ||
+        station?.dataSource === 'amap' ||
         String(reservationData?.stationId || '').startsWith('AMAP:')
       )
         throw new Error('真实地点未接入运营商预约，不能锁定真实枪位')
@@ -38,13 +40,34 @@ export const useReservationStore = defineStore('reservation', {
       if (
         !reservationData.stationId ||
         !reservationData.connectorId ||
-        !reservationData.vehicleModel ||
+        !reservationData.vehicleId ||
         !Number.isFinite(reservationData.chargeAmount) ||
         reservationData.chargeAmount < 10 ||
         reservationData.chargeAmount > 100
       ) {
         throw new Error('请完善有效的预约信息')
       }
+      if (station?.stationId !== reservationData.stationId)
+        throw new Error('预约站点已变化，请返回重新选择')
+      const connector = [
+        ...(station.details?.fastConnectors || []),
+        ...(station.details?.slowConnectors || [])
+      ].find((item) => item.id === reservationData.connectorId)
+      const vehicle = useUserStore().vehicles.find((item) => item.id === reservationData.vehicleId)
+      const error = reservationSelectionError({
+        station,
+        connector,
+        vehicle,
+        chargeAmount: reservationData.chargeAmount
+      })
+      if (error) throw new Error(error)
+      return { station, connector, vehicle }
+    },
+
+    async createReservation(reservationData) {
+      if (this.isLoading) throw new Error('预约正在提交，请勿重复操作')
+      const request = { ...reservationData }
+      this.validateReservation(request)
       this.isLoading = true
       this.error = null
 
@@ -52,9 +75,21 @@ export const useReservationStore = defineStore('reservation', {
         // 模拟API调用
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
+        // A slot can begin, a vehicle can disappear, or a gun can become busy
+        // while the simulated response is pending. Never save an obsolete choice.
+        const { station, connector, vehicle } = this.validateReservation(request)
         const newReservation = {
           id: createRecordId(),
-          ...reservationData,
+          stationId: station.stationId,
+          stationName: station.stationName,
+          stationAddress: station.address,
+          connectorId: connector.id,
+          connectorName: connector.connectorName,
+          vehicleId: vehicle.id,
+          vehicleModel: vehicle.model,
+          date: request.date,
+          timeSlot: request.timeSlot,
+          chargeAmount: request.chargeAmount,
           status: 'upcoming'
         }
 

@@ -44,19 +44,23 @@ export const validateChargingSetup = ({
 }
 
 export const meterAt = (
-  { powerKw, batteryCapacityKwh, initialBattery, clockScale },
+  { powerKw, batteryCapacityKwh, initialBattery, targetBattery = 100, clockScale },
   elapsedRealSeconds
 ) => {
   const seconds = Math.max(0, elapsedRealSeconds) * clockScale
-  const energy = Math.min(
-    ((100 - initialBattery) / 100) * batteryCapacityKwh,
-    (powerKw * seconds) / 3600
-  )
+  const targetEnergy = ((targetBattery - initialBattery) / 100) * batteryCapacityKwh
+  const targetSeconds = (targetEnergy / powerKw) * 3600
+  const reachedTarget = seconds >= targetSeconds
+  // A throttled browser timer or a delayed stop acknowledgement must not add
+  // energy (and charges) beyond the selected limit. Device acknowledgement and
+  // unplugging remain separate state-machine steps, even when output is zero.
+  const duration = Math.min(seconds, targetSeconds)
+  const energy = reachedTarget ? targetEnergy : (powerKw * duration) / 3600
   return {
-    duration: seconds,
+    duration,
     energy,
-    battery: Math.min(100, initialBattery + (energy / batteryCapacityKwh) * 100),
-    speed: powerKw,
+    battery: reachedTarget ? targetBattery : initialBattery + (energy / batteryCapacityKwh) * 100,
+    speed: reachedTarget ? 0 : powerKw,
     elapsedRealSeconds: Math.max(0, elapsedRealSeconds)
   }
 }

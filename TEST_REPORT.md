@@ -1,280 +1,111 @@
-# ChargingMap 测试报告
+# ChargingMap 全项目审查与测试报告
 
-## 当前版本：v12（2026-10-21）
+**日期：2026-10-28。**本报告替代旧 v12 报告作为当前结果；历史记录仍可从 Git 历史查看。仅将实际执行的验证记为通过，区分本地结果、真实 SDK 检查与未验收边界。
 
-本报告只记录**本次实际执行**的验证。任何没有真正运行过的项目都会明确标注“未执行”及原因，不把计划、推演或历史结论当作当前结果。
+## 结论
 
-### 验证边界（先读）
+- 修复 3 类功能问题：**充电目标越界计量、预约选择与异步失效校验、地图标记复用及可用数同步**。
+- 本地 **45 个测试文件 / 427 项单元与组件测试、8 条浏览器回归全部通过**；构建、lint、格式、数据与按钮名称检查通过。
+- 官方 npm 源审计 **0 项已知漏洞**；含最新 Playwright 的锁文件在隔离干净目录 `npm ci` 成功。
+- 真实高德 SDK 检查 **42 个界面状态**，所检查页面与控件无横向溢出，无 `pageerror`；明暗切换新增样式/瓦片请求 **0**。
+- 提供 [10 页中英双语 PPT](docs/presentation/ChargingMap_Project_Overview_ZH-EN.pptx)、[PDF](docs/presentation/ChargingMap_Project_Overview_ZH-EN.pdf)、[预览](docs/presentation/ChargingMap_Preview.png) 与生成脚本。
 
-- **未打开任何浏览器**：本次任务受用户明令约束，禁止启动浏览器 / Playwright / 截图。T31 仅执行过 **HTTP-only preview 冒烟**（无浏览器，见第四节）；390×844 手机视口截图、视觉比对与真实键盘走查均**未执行**。
-- **无真实高德 key**：本地 `.env.local` 仅含占位值。地图加载、图标视觉、聚合外观、信息窗口点击等依赖真实 JSAPI 的项目标注为“待真实 key 验证（步骤见 README「高德地图配置」与「部署」）”。
-- 自动化命令执行环境：Windows + PowerShell 5.1，Node v22.23.2，npm 10.9.8，Final Wave 收口前 HEAD `d85b331`；收口提交与 tag 见第六节。
+这不是“全项目不存在任何缺陷”的保证；真实设备、支付、定位精度和跨浏览器边界见末节。
 
----
+## 1. 环境与审查范围
 
-## 一、自动化命令结果（实际运行）
+- Windows / PowerShell，Node **22.23.2**、npm **10.9.8**；Vue **3.5.44**、Vite **6.4.5**、Vitest **4.1.12**、Playwright **1.64.1**。
+- 浏览器：本机无头 Microsoft Edge（Chromium），1440×1000、1024×768、390×844、320×568 视口。
+- 从已提交基线 `10c83e9` 开始；基线 43 文件 / 404 项测试通过，深入审查另补回归后修复，不以已有绿灯代替边界检查。
+- 检查范围：数据生成/契约、API 分片缓存、Pinia 各业务域、地图加载/生命周期/聚合/定位/路线边界、面板与焦点、预约/充电/结算/评价、账户持久化、中英文和响应式、依赖与构建配置。
+- 真实地图检查使用显式测试相机浏览上海，并非把测试相机宣称为设备定位。密钥只从本地环境读取，报告及截图不保存请求 URL/密钥。
 
-| 命令 | 退出码 | 关键输出 |
-| --- | --- | --- |
-| `npm run format:check` | **0** | `All matched files use Prettier code style!` |
-| `npm run lint` | **0** | ESLint 无告警、无错误（无输出即通过） |
-| `npm run test -- --run` | **0** | `Test Files 23 passed (23)`；`Tests 152 passed (152)`；Duration 6.00s |
-| `npm run check:data` | **0** | `data layout: sharded (5 files); list=500 stations, details=500 entries`；`[OK] 500 stations, 9 assertions passed` |
-| `npm run check:a11y` | **0** | `37 icon-only button(s) scanned across 109 buttons, all have an accessible name` |
-| `npm run build` | **0** | 86 modules transformed；built in 1.80s；dist 30 个文件、合计 **2,575,553 B** |
+## 2. 确认并修复的问题
 
-历史原始输出保存在 `.omo/evidence/task-30-lint2.log`、`task-30-vitest.log`、`task-30-check-data.log`、`task-30-build.log`、`task-30-a11y.log`（对应早期 21/137 运行）；上表为 Final Wave 收口时重新实测的最终数字。
+| 问题                 | 复现与影响                                                                                                                  | 修复与保护                                                                                                                                              |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 目标电量越界         | 79%→80%、60× 演示或后台计时器延迟时，下一次计量会越过目标；旧测试甚至把 81.5% 当作正确结果，费用随之超记                    | `meterAt()` 按目标可充电量与有效输出时长封顶，达目标输出 0；保留实际经过秒数。**不跳过停止应答**，`stopping` 阶段仍禁止拔枪/结算                        |
+| 预约不核对兼容性     | 枪位、车辆单独可选，但接口不匹配仍能提交；响应等待期间时段已开始、枪位占用、车辆或站点变化仍保存旧选择                      | 表单/store 共用 `reservationSelectionError()`；兼容车辆优先默认匹配，不兼容明确禁用；提交前后复核站点/车辆/接口/枪位/时段/电量和价格，保存标准名称与 ID |
+| 标记复用与可用数滞后 | 聚合 SDK 重用 marker 时重复注册点击，可能打开过时站点；只比较站点 ID 的签名忽略可用数，聚合总数或「快充可用」标记不及时变化 | WeakMap 只注册一次回调并更新绑定，转为聚合时清除旧站点身份；签名含坐标/状态/可用数。MapView 监听原数组内可用数变化，同步过滤后的标记                    |
 
-补充说明：早期一次 `npm run test -- --run` 在 PowerShell 将输出重定向到日志文件时遇到 Windows 文件占用错误，shell 退出码为 1；但 Vitest 汇总仍为 21/137 全通过，重跑后退出码 0。该问题属于本地日志重定向的基础设施问题，不是测试用例失败；最终 23/152 收口运行一次通过，未再出现。
+主要回归文件：`charging-target.spec.js`、`charging-session.spec.js`、`charging-intervals.spec.js`、`reservation-validation.spec.js`、`form-boundaries.spec.js`、`map-markers.spec.js`、`viewport-debounce.spec.js`。
 
-### 构建产物要点（v12）
+同时升级受影响的 Vue、Vite、Vitest、PostCSS 与间接依赖；初次官方源审计有 14 项告警，最终为 0。未引入真实运营/支付服务或新产品模式。
 
-| 文件 | 字节 | 说明 |
-| --- | --- | --- |
-| `assets/index-Bq-Csnc_.js` | 159,411 | 应用入口 chunk（gzip 40.62 kB） |
-| `assets/vendor-vue-BQL1d0Ib.js` | 104,084 | Vue / Pinia / Router vendor chunk（gzip 40.71 kB） |
-| `assets/index-D9okizqq.css` | 175,431 | 主样式（gzip 42.13 kB） |
-| `assets/logo-C9KChHPi.webp` | 4,386 | 品牌 Logo（原 PNG 3,929,078 B） |
-| `data/station_list.json` | 264,006 | 500 站列表（含 connectorTypes 筛选元数据） |
-| `data/details/part-01..05.json` | 301,767–313,867 / 片 | 详情分片，每片 100 站 |
-| **dist 合计** | **2,575,553** | 30 个文件 |
+## 3. 自动化检查（均为本轮实际运行）
 
----
+| 命令                                                                   | 结果 | 关键输出/范围                                                                        |
+| ---------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
+| `npm run test:coverage`                                                | 通过 | 45 个文件、427 项测试                                                                |
+| `npm run test:browser`                                                 | 通过 | 8 条 Playwright 流程，1 worker，约 35–45 秒，无页面脚本异常                          |
+| `npm run lint`                                                         | 通过 | 源码、测试与新增脚本无 ESLint 错误                                                   |
+| `npm run format:check`                                                 | 通过 | 源码与新增浏览器脚本格式检查                                                         |
+| `npm run check:data`                                                   | 通过 | 2000 列表/详情、20 个分片、13 项契约断言                                             |
+| `npm run check:a11y`                                                   | 通过 | 源码扫描 147 个 button，其中 30 个纯图标按钮均有可访问名称；**不等同完整无障碍审计** |
+| `npm run check:deps`                                                   | 通过 | 使用 `registry.npmjs.org`，0 项已知漏洞                                              |
+| `npm ci --prefix <干净临时目录> --registry=https://registry.npmjs.org` | 通过 | 336 个安装包、337 个审计包，最新锁文件可正常安装，无需 `legacy-peer-deps`            |
+| `npm run build`                                                        | 通过 | 102 模块，生产构建成功；构建产物不提交                                               |
 
-## 二、体积对照（T1 基线 → v12）
+### 覆盖率口径
 
-| 指标 | 基线（T1，`d75c2d5`） | v12（当前） | 变化 |
-| --- | --- | --- | --- |
-| `station_list.json` | 986,523 B | 264,006 B | **-73.2%** |
-| 详情数据 | 6,217,664 B（单文件） | 1,533,753 B（5 分片，单片 ≤ 313,867 B） | **-75.3%** |
-| 入口 JS（index + vendor） | 344,533 B | 263,495 B（159,411 + 104,084） | **-23.5%** |
-| 主 CSS | 173,007 B | 175,431 B | +1.4%（新增 a11y/面板样式） |
-| Logo 资产 | 3,929,078 B（PNG） | 4,386 B（WebP） | **-99.9%** |
-| dist 总体积 | 11,895,688 B（9 文件） | 2,575,553 B（30 文件） | **-78.3%** |
+`vitest.config.js` 只统计 **`src/store/**/*.js` 与 `src/services/**/*.js`**：
 
-数据体积下降来自“数据规模由 2000 站追加改为 500 站重置，并把详情拆成 5 个分片”；列表为支持品牌/接口筛选补充 `connectorTypes`，`station_list.json` 由早期 v12 的 246,499 B 增至 264,006 B，但仍较 T1 基线下降 73.2%。入口 JS 下降来自 vendor 分包与组件按需加载；CSS 略增属于可接受范围。
+| 指标 | 当前值                  |
+| ---- | ----------------------- |
+| 行   | **89.61%**（1087/1213） |
+| 分支 | **78.22%**（733/937）   |
+| 函数 | **88.70%**（212/239）   |
+| 语句 | **86.94%**（1185/1363） |
 
----
+组件与工具函数也有测试，但不在上述覆盖率分母中；不能将 89.61% 写成全项目覆盖率。基线使用 Vitest 3，当前升级为 Vitest 4，覆盖率插桩口径变化，不直接据此宣称覆盖率提升。
 
-## 三、原 10 项手动用例逐项映射
+### 安装过程中遇到的环境问题
 
-历史用例见附录 A（v10-final，15 站时代）。下表把它们映射到 v12 的可执行证据或明确的待验证项。
+本仓库有原先运行中的 Vite/esbuild 进程，原地 `npm ci` 曾因 Windows 文件锁返回 `EPERM`。未强停未知服务，使用 `npm install` 恢复后继续；最终另建干净目录，复制最新 `package.json` / 锁文件执行普通 `npm ci` 成功。早期 npm 依赖解析曾报 `edgesOut`，升级阶段临时使用 `legacy-peer-deps`，最终普通安装及干净安装均通过。
 
-| # | 原用例 | v12 验证方式 | 结论 |
-| --- | --- | --- | --- |
-| 1 | 地图加载（合肥区域） | 需真实高德 key + 浏览器 | **待真实 key 验证**（步骤见 README）；浏览器未执行 |
-| 2 | 数据加载（原 15 站） | `npm run check:data`：500 站 / 500 详情 / 9 项断言 | **通过**（数据层） |
-| 3 | 充电桩 SVG 图标显示 | `src/__tests__/map-markers.spec.js` 校验标记渲染契约；视觉呈现需浏览器 | 逻辑层**通过**；视觉**未执行**（用户禁止打开网页） |
-| 4 | 图标颜色区分（绿/黄/红/灰） | `map-markers.spec.js` 覆盖状态到颜色的映射；实际像素需浏览器 | 逻辑层**通过**；视觉**未执行** |
-| 5 | 聚合功能 | `map-markers.spec.js` 覆盖聚合数据与降级路径 | 逻辑层**通过**；浏览器**未执行** |
-| 6 | 聚合颜色 | 同上（聚合可用数 → 颜色计算） | 逻辑层**通过**；浏览器**未执行** |
-| 7 | 信息窗口 | `src/__tests__/map-info-window.spec.js`：单实例复用、内容与关闭行为 | **通过**（逻辑层） |
-| 8 | 点击标记打开详情 | `src/__tests__/panel-orchestration.spec.js`：activePanel 单源编排 | **通过**（逻辑层） |
-| 9 | 站点列表打开/分页 | `station-list-card`、`panel-shell`、`viewport-debounce` 等用例 | **通过**（逻辑层） |
-| 10 | 编译无错误 | `npm run build` 退出码 0，86 modules | **通过** |
+## 4. 可重复的浏览器回归
 
----
+`playwright.config.js` 启动 5176 测试服务器，固定空账户、根路径、不自动开浏览器；用例主动阻断高德 SDK，验证有文档说明的降级路径，**不是假装验证了真实地图**。
 
-## 四、未执行的验证（如实记录）
-
-| 项目 | 状态 | 原因 / 替代证据 |
-| --- | --- | --- |
-| `npm run preview` 冒烟（HTTP 200、首屏传输体积） | **已执行（HTTP-only）** | T31 已执行 HTTP-only preview 冒烟（无浏览器）：`/`、`station_list`、`part-01` 均 200；浏览器视觉/截图仍未执行（用户禁止） |
-| 390×844 手机视口截图 / 视觉比对 | **未执行** | 同上；移动端断点逻辑由 `viewport-debounce.spec.js` 单测覆盖，但不等于视觉验收 |
-| 键盘走查（Tab 顺序、Esc、焦点陷阱、焦点可见） | **未执行** | 同上；`panel-shell.spec.js` 与 `toast-a11y.spec.js` 仅验证属性/行为契约，不替代真实键盘操作 |
-| Lighthouse（LCP/TBT） | **未执行** | 需要浏览器；非本计划门槛 |
-| 真实高德 key 下的地图、定位、导航 | **待真实 key 验证** | 本地仅有 dummy key；操作步骤见 README「高德地图配置」「部署」 |
-| iOS Safari 真机安全区 | **未验证** | 见下节 |
+1. 列表分页、共享搜索、空态重置、快捷筛选，以及左侧收起/展开保留状态。
+2. 明确选枪 → 插枪取消不开始 → 已插好后检测 → 充电返回地图 → 恢复进度 → 停止确认 → 拔枪 → 支付 → 评价 → 刷新账本；历史/交易只写一次，外部支付不扣钱包。
+3. 预约不兼容车辆禁用并显示原因，换兼容车辆正常成功。
+4. 充值 0 无效、提现超余额无效、有效资金变化、车辆草稿放弃保护、昵称/余额刷新保留。
+5. 首次详情请求 503 后可重试成功。
+6. 320×568 英文、筛选、夜间模式和刷新偏好，无横向溢出。
+7. 390×844 同上。
+8. 1024×768 同上。
 
----
-
-## 五、待真机验证项（继承 T26）
+首轮新增 E2E 的 3 项失败来自测试误用 ID 搜索；产品只承诺站名/地址。改为「人民广场」后全绿，并修正文档中易误解的 ID 搜索示例，没有凭测试选择器错误新增产品功能。
 
-- **(P2, 未验证) iOS Safari 刘海机型底部安全区**：桌面 Chromium 中 `env(safe-area-inset-bottom)` 恒为 `0px`，本地无法验证实际留白。需真机确认：①主 CTA「查看站点列表」、②站点列表底部「加载更多」、③导航中 NavigationBar 按钮组，均与 home 指示条留有间距且不被误触/遮挡；④地址栏收起/展开时页面高度随 `100dvh` 平滑变化、底部无裁切。验证通过前不得视为已通过。详见 `.omo/evidence/task-26-optimize-chargingmap.md` §6。
+CI 新增独立 Chromium 浏览器任务；常规任务运行 coverage、lint、格式、数据、a11y 和构建。本地通过不代表远端 CI 或部署已完成。
 
----
+## 5. 真实高德 SDK 与视觉检查
 
-## 六、Final Wave 修复复验
+独立执行 `scripts/capture-presentation.mjs`，使用真实地图 SDK/瓦片与当前源码；业务会话仍为模拟。结果保存在 [live-review.json](docs/presentation/live-review.json)，PPT 采用其中经过实际面板标题等待后采集的最终截图。
 
-Final Wave 在收口前修复了支付、筛选、可访问性与 CI 四组问题，测试规模由 21 文件 / 137 用例增至 **23 文件 / 152 用例**（净增 15 条：新增 `payment-success.spec.js` 3 条、`safe-area.spec.js` 2 条；`payment-settlement.spec.js` +4、`stations-filter.spec.js` +5、`station-list-card.spec.js` +1）。
+- 检查 **42 个状态**：桌面明暗、详情、筛选；移动选桩、插枪、充电明暗、停止拔枪、账单、支付、账户；九个账户页面及筛选的明暗状态；320/390/1024/1440 英文详情与筛选。
+- 所检查页面/控件无横向溢出，`pageerror` 为 0；账户截图等待对应页面标题，避免把异步过渡中的地图误作面板。
+- 1440×1000、390×844 各连续主题切换 8 次，新增 `getMergedStyleData` / `web_map/get_tile` 请求均为 **0**；阻断远程样式/瓦片服务后仍能切换。
+- 主题切换保留同一底图 canvas、marker 节点、相机及测试折线；不调用 `setMapStyle`，DOM 标记滤镜为 `none`。
+- 本次点击后两帧观察约为桌面 21–218ms、窄屏 29–135ms；无头软件渲染和首次合成影响明显，**不宣称固定帧率或所有设备“零耗时”**。
+- 刷新后英文和夜间偏好恢复，底图滤镜为 `none`。
 
-| 修复项 | 覆盖用例 / 证据 | 结果 |
-| --- | --- | --- |
-| 0 元实付 | `payment-success.spec.js`、`payment-settlement.spec.js`：应付 ¥0.00 可正常完成支付，不再被正数金额校验拦截 | **通过** |
-| 优惠券有效期与门槛 | `user-coupon-math.spec.js`、`payment-settlement.spec.js`：过期券、未达 `minSpend` 的券不可抵扣 | **通过** |
-| 非法/null 价格 | `payment-settlement.spec.js`：null / NaN / 负数价格拒绝结算 | **通过** |
-| 品牌/接口筛选真实生效 | `stations-filter.spec.js`（+5）+ `check:data`（500 站）：列表行包含 `connectorTypes`，品牌与接口条件参与过滤，不再被静默忽略 | **通过** |
-| 面板底部安全区 | `safe-area.spec.js`（2 条静态契约）：面板底部使用 `env(safe-area-inset-bottom)` | **通过（静态契约）**；真机仍见第五节 |
-| 列表卡键盘操作 | `station-list-card.spec.js`（+1）：Enter / Space 打开站点、焦点可见 | **通过** |
-| 搜索可访问名 / 分享降级 | `a11y-controls.spec.js`、`station-list-card.spec.js`：搜索框有 `aria-label`；剪贴板不可用时分享降级提示 | **通过** |
-| CI 门禁 | `.github/workflows/ci.yml`：新增 `format:check`、`check:a11y`，Pages 权限分层 | **结构检查通过**；线上 Actions 未运行（本轮未 push） |
-| 格式基线 | `npm run format` 实际改动 9 个历史源码/测试文件；`format:check` exit 0；测试 fixture 中 `0.87` 改为 `1.23`，`git grep "0\.87" -- src` 零命中 | **通过** |
-
-本轮未做浏览器视觉/截图复验（用户禁止）；上表“通过”均指自动化测试、静态契约或命令退出码，不替代真机与视觉验收。
-
----
-
-## 附录 A：v10-final 历史记录（2026-04-12，已过时）
-
-> 以下为 v10 时期的原始记录，保留用于追溯。其中的“15 个站点”“Chrome 实测通过”等结论仅代表当时状态，**不构成本次 v12 的验证结果**；v12 的数据规模、组件结构与测试方式均已变化。
-
-### 版本: v10-final
-### 日期: 2026-04-12
-
-#### 一、问题概述
-
-地图中无法显示充电桩图标，充电站标记和聚合功能完全失效。
-
-#### 二、详细代码分析 - 发现的错误
-
-##### 错误 #1: 数据文件缺失（致命 - P0）
-
-**位置**: `data/station_list.json` 和 `data/station_details.json`
-**现象**: 代码通过 `fetch('./data/station_list.json')` 和 `fetch('./data/station_details.json')` 加载数据，但项目中完全不存在 `data/` 目录和这两个JSON文件。
-**影响**: `loadStationsData()` 函数抛出异常，`stations` 数组永远为空，地图上不会有任何标记。
-**修复**: 创建 `public/data/station_list.json`（15个充电站数据）和 `public/data/station_details.json`（充电站详情数据）。
-
-##### 错误 #2: AMap.Icon 使用了不存在的 `content` 属性（致命 - P0）
-
-**位置**: `src/services/mapService.js` - `createStationMarker()` 方法
-**原代码**:
-```javascript
-const icon = new AMap.Icon({
-  size: new AMap.Size(40, 48),
-  content: svgContent,  // ❌ AMap.Icon 不支持 content 属性
-  imageSize: new AMap.Size(40, 48)
-});
-return new AMap.Marker({
-  position: [station.lng, station.lat],
-  icon: icon,  // 使用了无效的icon
-  offset: new AMap.Pixel(-20, -48),
-  ...
-});
-```
-**分析**: 高德地图2.0的 `AMap.Icon` 只支持 `image`（图片URL）、`size`、`imageSize`、`imageOffset` 属性，**不支持 `content`**。SVG内容应该直接作为 `AMap.Marker` 的 `content` 属性。
-**修复**: 改为 `new AMap.Marker({ content: svgContent, ... })`
-
-##### 错误 #3: MarkerCluster API 版本不兼容（致命 - P0）
-
-**位置**: `src/services/mapService.js` - `createCluster()` 方法
-**原代码问题**:
-1. 传递 `AMap.Marker` 实例数组给 `MarkerCluster`，但 AMap 2.0 需要数据对象数组 `{lnglat: [lng, lat], weight: 1}`
-2. 使用 `context.markers`（AMap 1.x API），但 AMap 2.0 使用 `context.data`
-3. 缺少 `renderMarker` 回调（AMap 2.0 新增，用于自定义非聚合点样式）
-
-**AMap 2.0 MarkerCluster 正确用法**:
-```javascript
-new AMap.MarkerCluster(map, points, {
-  gridSize: 50,
-  renderMarker: (context) => {
-    // 自定义非聚合点样式 - 设置SVG图标
-    const station = context.data[0].station;
-    context.marker.setContent(svgContent);
-    context.marker.setOffset(new AMap.Pixel(-20, -48));
-  },
-  renderClusterMarker: (context) => {
-    // 自定义聚合点样式 - 显示数量
-    const count = context.count;
-    context.marker.setContent(div);
-  }
-});
-```
-
-**修复**: 完全重写 `updateMarkers()` 方法，使用 AMap 2.0 的数据驱动方式。
-
-##### 错误 #4: computed 属性直接赋值（中等 - P1）
-
-**位置**: `src/views/HomeView.vue`
-**原代码**: `@close="currentStation = null"` - `currentStation` 是 computed 属性，不能直接赋值
-**修复**: 创建 `closeStationDetail()` 方法，调用 `stationsStore.setCurrentStation(null)`
-
-##### 错误 #5: 插件名称兼容性问题（中等 - P1）
-
-**位置**: `index.html` script标签
-**原代码**: `plugin=AMap.MarkerCluster`
-**分析**: AMap 2.0 中聚合插件名称可能是 `AMap.MarkerCluster` 或 `AMap.MarkerClusterer`，不同版本有差异
-**修复**: 同时加载两个插件名 `plugin=AMap.MarkerCluster,AMap.MarkerClusterer`，代码中使用 `AMap.MarkerCluster || AMap.MarkerClusterer` 兼容
-
-#### 三、修复版本记录
-
-##### v10-final-fix-1: 初始修复
-- 创建数据文件 `public/data/station_list.json` 和 `public/data/station_details.json`
-- 修复 `AMap.Icon` 的 `content` 属性错误，改为 `AMap.Marker.content`
-- 添加 MarkerCluster 插件名称兼容性处理
-
-##### v10-final-fix-2: MarkerCluster API 重写
-- 完全重写 `mapService.js` 的 `updateMarkers()` 方法
-- 改用 AMap 2.0 的数据驱动方式：`{lnglat, weight, station}` 格式
-- 添加 `renderMarker` 回调自定义非聚合点样式
-- 修复 `renderClusterMarker` 中 `context.markers` → `context.data`
-- 添加 fallback 机制：当 MarkerCluster 不可用时直接添加标记到地图
-
-##### v10-final-fix-3: 组件修复
-- 创建缺失的 Vue 组件（StationDetail, ReservationPanel, ChargingPanel 等10个组件）
-- 修复 `HomeView.vue` 中 computed 属性赋值问题
-- 优化 MapView.vue 的地图初始化逻辑
-
-#### 四、测试结果
-
-##### 测试环境
-- 服务器: Vite dev server (http://localhost:3000/)
-- 浏览器: Chrome
-- 高德地图版本: 2.0
-
-##### 测试项目
-
-| 测试项 | 预期结果 | 实际结果 | 状态 |
-|--------|----------|----------|------|
-| 地图加载 | 显示合肥区域地图 | 地图正常显示 | ✅ |
-| 数据加载 | 15个充电站数据加载 | 数据正常加载 | ✅ |
-| 充电桩图标显示 | 显示SVG充电桩标记 | 标记正常显示 | ✅ |
-| 图标颜色区分 | 绿/黄/红/灰四种颜色 | 颜色正确区分 | ✅ |
-| 聚合功能 | 缩小时聚合显示数量 | 聚合正常工作 | ✅ |
-| 聚合颜色 | 聚合点根据可用数量变色 | 颜色正确 | ✅ |
-| 信息窗口 | 鼠标悬停显示详情 | 窗口正常弹出 | ✅ |
-| 点击事件 | 点击标记打开详情面板 | 事件正常触发 | ✅ |
-| 站点列表 | 底部按钮打开列表 | 列表正常显示 | ✅ |
-| 编译无错误 | Vite编译无错误 | 无编译错误 | ✅ |
-
-#### 五、关键代码变更摘要
-
-##### mapService.js - 核心修复
-
-**变更前**: 创建 AMap.Marker 实例 → 传给 MarkerCluster（AMap 1.x 方式）
-**变更后**: 创建数据对象 `{lnglat, weight, station}` → 传给 MarkerCluster（AMap 2.0 方式）
-
-**renderMarker 回调** (新增):
-- 从 `context.data[0].station` 获取站点数据
-- 使用 `context.marker.setContent(svgContent)` 设置SVG图标
-- 绑定 mouseover/mouseout/click 事件
-
-**renderClusterMarker 回调** (修复):
-- 从 `context.data` 遍历获取站点数据（原 `context.markers`）
-- 计算聚合内总可用数和总充电桩数
-- 动态设置聚合点大小和颜色
-
-#### 六、数据文件说明
-
-##### station_list.json
-包含15个充电站的基础信息，分布在合肥市各区：
-- 蜀山区: 5个站 (S001, S002, S003, S005, S014)
-- 包河区: 3个站 (S004, S007, S008)
-- 蜀山区/高新区: 2个站 (S009, S013)
-- 瑶海区: 1个站 (S010)
-- 庐阳区: 1个站 (S011)
-- 经开区: 1个站 (S012)
-- 蜀山区: 1个站 (S006)
-- 其他: 1个站 (S015)
-
-##### station_details.json
-包含每个充电站的详细信息：
-- 分时电价（8个时段）
-- 充电桩列表（含功率、接口类型、状态）
-- 用户评价
-- 站点指引
-
----
-
-## 附录 B：v11 变更索引（无独立测试报告）
-
-v11 的修复项记录在 README「更新日志 → v11 Bug 修复 / v11 代码优化」，本报告不再重复。当前 v12 的 152 个用例覆盖了其中可回归的部分（充电后台继续、功率筛选、通知角标、可用桩合并、搜索范围、钱包交易类型）。
+这些是真实地图渲染/主题检查，不是物理 GPS 或在线驾车服务验收；测试折线也不是实测驾车路线。
+
+## 6. 演示文稿检查
+
+- 10 页、16:9、同页中英文；使用公司品牌色，不分发公司原始模板或字体。
+- 突出模拟数据的道路/需求/街区设计、固定种子与分片、双色地图、联动筛选、现实顺序的充电闭环和响应式。
+- 标题、正文和流程/数据卡为可编辑文字与图形，界面截图与坐标分布图为栅格图；技术来源与限制放讲稿备注，页面少文字。
+- 使用 LibreOffice 实际导出 10 页 PDF，并渲染检查每页；脚本检查幻灯片数量、形状边界与 PDF 可提取文字。下载入口详见 [演示文稿说明](docs/presentation/README.md)。
+
+## 7. 未验收边界与后续风险
+
+1. 不接入真实运营设备、支付、锁桩、系统推送、服务端账户；前端幂等不能代替后端资金/订单安全。
+2. 计量为常功率、可加速演示模型，不是实际电池降功率/温控曲线；测试不证明真实硬件安全。
+3. 未进行物理 GPS 精度、真实在线驾车路线或真实手机验收；权限、系统定位与服务配额仍受设备和高德限制。
+4. 仅使用 Edge/Chromium；未验证 Safari、Firefox、移动软键盘、真机安全区/手势、读屏器或完整 WCAG。静态按钮命名扫描不能证明全站无障碍合格。
+5. 预约仍仅本页内存；图片仅本地预览；本地账本会随清除站点存储丢失，不是跨设备账户。
+6. 依赖 0 漏洞仅是该日期 npm 已知公告的扫描结果，不排除未知漏洞；后续升级地图 SDK 应重新检查 canvas 选择器、文字/路线可读性和请求数。
+7. PPT 截图与结果来自本轮本地版本。**Git 推送、远端 CI 和 GitHub Pages 部署是不同状态**，未将推送视作网站已更新。

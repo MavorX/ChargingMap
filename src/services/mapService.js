@@ -29,6 +29,8 @@ class MapManager {
     this._directMarkers = []
     this._stationIndex = new Map()
     this._markersByStationId = new Map()
+    this._stationMarkerBindings = new WeakMap()
+    this._visibleStations = []
     this._markerSignature = ''
   }
 
@@ -247,6 +249,9 @@ class MapManager {
   refreshMarker(stationId) {
     const station = this._stationIndex.get(stationId)
     if (!station) return
+    // Availability changes affect cluster totals too, not only a single pin.
+    // The value signature makes unchanged/favorite-only refreshes a no-op.
+    if (this.map) this.updateMarkers(this._visibleStations)
     const marker = this._markersByStationId.get(stationId)
     if (marker && typeof marker.setContent === 'function') {
       marker.setContent(this.createStationMarkerContent(station))
@@ -284,9 +289,38 @@ class MapManager {
   _markerSignatureFor(points) {
     if (points.length === 0) return '0'
     const ids = points
-      .map((point) => point.station?.stationId ?? `${point.lnglat[0]},${point.lnglat[1]}`)
+      .map(({ station, lnglat }) =>
+        [
+          station?.stationId,
+          ...lnglat,
+          station?.openStatus,
+          station?.quickAvailableNum,
+          station?.slowAvailableNum,
+          station?.quickChargeNum,
+          station?.slowChargeNum
+        ].join(',')
+      )
       .sort()
     return `${locale.value}:${points.length}:${ids.join('|')}`
+  }
+
+  _bindStationMarker(marker, station = null) {
+    let binding = this._stationMarkerBindings.get(marker)
+    const previousId = binding?.station?.stationId
+    if (previousId != null && this._markersByStationId.get(previousId) === marker)
+      this._markersByStationId.delete(previousId)
+    if (!binding && station) {
+      binding = { station }
+      this._stationMarkerBindings.set(marker, binding)
+      // AMap recycles markers during clustering/zoom. Bind once, then update
+      // its current station instead of capturing an obsolete one on each render.
+      marker.on('click', () => {
+        if (binding.station && this.map)
+          this._openStationInfoWindow(binding.station, marker.getPosition())
+      })
+    }
+    if (binding) binding.station = station
+    if (station) this._markersByStationId.set(station.stationId, marker)
   }
 
   updateMarkers(filteredStations) {
@@ -294,6 +328,8 @@ class MapManager {
       console.error('[MapManager] Map not initialized!')
       return
     }
+
+    this._visibleStations = filteredStations.slice()
 
     const points = filteredStations
       .filter((station) => station.lng && station.lat)
@@ -332,14 +368,11 @@ class MapManager {
       const markerContent = self.createStationMarkerContent(station)
       context.marker.setContent(markerContent)
       context.marker.setOffset(new AMap.Pixel(-18, -50))
-      self._markersByStationId.set(station.stationId, context.marker)
-
-      context.marker.on('click', () => {
-        self._openStationInfoWindow(station, context.marker.getPosition())
-      })
+      self._bindStationMarker(context.marker, station)
     }
 
     const renderClusterMarker = (context) => {
+      self._bindStationMarker(context.marker)
       const count = context.count
 
       let totalAvailable = 0
@@ -444,8 +477,7 @@ class MapManager {
             title: stationName(station.stationName),
             extData: station
           })
-          marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
-          self._markersByStationId.set(station.stationId, marker)
+          self._bindStationMarker(marker, station)
           self.map.add(marker)
           self._directMarkers.push(marker)
         })
@@ -488,8 +520,7 @@ class MapManager {
           title: stationName(station.stationName),
           extData: station
         })
-        marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
-        self._markersByStationId.set(station.stationId, marker)
+        self._bindStationMarker(marker, station)
         self.map.add(marker)
         self._directMarkers.push(marker)
       })
@@ -846,6 +877,8 @@ class MapManager {
     this._driving = null
     this._stationIndex = new Map()
     this._markersByStationId = new Map()
+    this._stationMarkerBindings = new WeakMap()
+    this._visibleStations = []
     this._markerSignature = ''
     this.map = null
     this.stations = []

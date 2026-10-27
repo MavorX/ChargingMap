@@ -61,8 +61,9 @@ describe('physical sandbox metering', () => {
     await vi.advanceTimersByTimeAsync(500)
     expect(store.isCharging).toBe(false)
     expect(store.phase).toBe('awaiting_unplug')
-    expect(store.chargingData.energy).toBeCloseTo(1.5)
-    expect(store.chargingData.battery).toBeCloseTo(81.5)
+    expect(store.chargingData.energy).toBeCloseTo(0.6)
+    expect(store.chargingData.battery).toBeCloseTo(80)
+    expect(store.chargingData.duration).toBeCloseTo(36)
   })
 
   it('does not accumulate intervals across paid sessions', async () => {

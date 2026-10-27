@@ -28,8 +28,32 @@ jobs:
       - name: Accessibility scan
         run: npm run check:a11y
 
-      - run: npm run test -- --run
+      - run: npm run test:coverage
 
       - run: npm run check:data
 
       - run: npm run build
+
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_AMAP_KEY: dummy_key_for_ci
+      VITE_AMAP_SECURITY_CODE: dummy_code_for_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Upload browser failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

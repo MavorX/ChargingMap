@@ -6,6 +6,8 @@
 
 站点、充电及支付均为演示；定位需允许浏览器和系统的位置权限，不涉及真实设备或实际扣款。
 
+**项目介绍：** [中英双语 PPT](docs/presentation/ChargingMap_Project_Overview_ZH-EN.pptx) · [PDF](docs/presentation/ChargingMap_Project_Overview_ZH-EN.pdf) · [幻灯片预览](docs/presentation/ChargingMap_Preview.png) · [最新测试报告](TEST_REPORT.md)
+
 ## 项目简介
 
 项目使用上海 1500 个、合肥 500 个假设站点（共 2000 站）演示找站、筛选、查看详情、路线规划、预约、充电、结算和评价。**定位到哪里，就按实际位置与地图视野展示附近的数据，不需要选择城市。**站点、枪位、电价和车辆参数均可使用模拟数据，重点是交互连贯、状态一致，以及符合现实常识的操作顺序，而非接入真实运营商。
@@ -14,23 +16,25 @@
 
 ## 技术栈
 
-| 技术           | 版本  | 用途            |
-| ------------ | --- | ------------- |
-| Vue          | 3.5 | 前端框架          |
-| Pinia        | 2.3 | 状态管理          |
-| Vue Router   | 4.4 | 路由管理          |
-| TailwindCSS  | 3.4 | UI 样式（本地构建）   |
-| Font Awesome | 7.2 | 图标库（本地 npm 包） |
-| 高德地图 JS SDK  | 2.0 | 地图、定位、导航      |
-| Vite         | 6.0 | 构建工具          |
-| Vitest       | 3.2 | 单元测试          |
-| ESLint       | 9.x | 代码检查          |
+| 技术            | 版本 | 用途                  |
+| --------------- | ---- | --------------------- |
+| Vue             | 3.5  | 前端框架              |
+| Pinia           | 2.3  | 状态管理              |
+| Vue Router      | 4.4  | 路由管理              |
+| TailwindCSS     | 3.4  | UI 样式（本地构建）   |
+| Font Awesome    | 7.2  | 图标库（本地 npm 包） |
+| 高德地图 JS SDK | 2.0  | 地图、定位、导航      |
+| Vite            | 6.4  | 构建工具              |
+| Vitest          | 4.1  | 单元与组件测试        |
+| Playwright      | 1.64 | 浏览器流程回归        |
+| ESLint          | 9.x  | 代码检查              |
 
 ## 功能概览
 
 ### 🗺️ 地图与站点发现
 
 - **3D 地图展示** — 基于高德地图 3D 视图，跟随设备定位，也可自由拖动、缩放浏览；没有城市模式或城市切换入口
+- **双色地图** — 复用同一个深色底图实例，白天局部合成、夜间原生深色；切换不逐次请求新样式/瓦片，不重建相机、标记或路线，详见 [实现与验证](docs/map-theme-performance.md)
 - **自动/手动设备定位** — 地图初始化后请求设备位置，也可点击重新定位；显示报告误差，拒绝用 IP/城市位置冒充当前位置，无法授权时明确提示
 - **站点数据** — 上海 1500 站覆盖 16 个区，围绕商圈、居住区和园区形成疏密变化，保留安静路段与分散站点，不要求均匀铺满道路；保留合肥 500 站，列表和标记统一按地图视野展示，不依赖真实地点检索权限
 - **状态标记** — 用文字与颜色展示模拟可用数、已满、维护；缩小时聚合
@@ -62,10 +66,11 @@
 
 - 充电桩选择（快充+慢充可用桩，显示功率和接口类型）
 - 未来 7 天日期选择
-- 6 个时间段选择（已满时段不可选）
-- 车辆选择（从已添加车辆中选择）
-- 充电量设置（10-100 kWh）
+- 6 个时间段选择（已满或已开始时段不可选）
+- 车辆选择（从已添加车辆中优先匹配兼容接口，接口不兼容时禁用提交并说明原因）
+- 充电量设置（10–100 kWh，且不超过已知车辆电池容量）
 - 实时费用预估
+- 表单与 store 共用校验；模拟响应返回后重新核对时段、站点、枪位及车辆，不保存过期选择；预约仅存本页内存，不锁定真实设备
 
 ### ⚙️ 充电设置与接枪
 
@@ -79,6 +84,7 @@
 ### 🔋 充电进度与结束
 
 - 电量圆环、功率、时长、电量、费用与剩余时间；按功率 × 时间计算，避免数字明显不合常理
+- 模型输出与费用按用户目标电量封顶，计时器晚唤醒或等待停止应答不再超记电量；停止应答与拔枪保护仍独立生效
 - 选中枪位在使用期间显示占用，停止后仍需拔枪归位才恢复可用
 - 返回地图继续演示，提供进度恢复入口；「结束充电」有独立确认，避免误触
 - 停止完成后提示拔枪，再查看账单；目标电量自动停止也遵循停止 → 拔枪的顺序
@@ -159,7 +165,7 @@ vwcharging/
 │   ├── validate-data.mjs             # npm run check:data
 │   └── check-a11y.js                 # npm run check:a11y（icon-only 按钮扫描）
 ├── .github/workflows/
-│   ├── ci.yml                        # lint + test + check:data + build
+│   ├── ci.yml                        # lint / coverage / data / build + 浏览器回归
 │   └── deploy-pages.yml              # 手动触发的 GitHub Pages 部署
 ├── public/
 │   ├── favicon.svg
@@ -224,7 +230,7 @@ vwcharging/
     │       ├── reservation.js        # 预约记录
     │       ├── user.js               # 用户、车辆、通知、钱包、主题
     │       └── ui.js                 # activePanel 单源面板编排
-    └── __tests__/                    # 单元与交互测试（最新结果见 INTERACTION_AUDIT.md）
+    └── __tests__/                    # 单元与交互测试（最新结果见 TEST_REPORT.md）
 ```
 
 ## 架构设计
@@ -233,13 +239,13 @@ vwcharging/
 
 项目使用 Pinia 进行状态管理，按业务领域拆分为 5 个独立 Store：
 
-| Store         | 职责                        |
-| ------------- | ------------------------- |
+| Store         | 职责                                               |
+| ------------- | -------------------------------------------------- |
 | `stations`    | 站点数据加载、筛选、搜索、收藏、距离计算、导航状态 |
-| `charging`    | 充电过程模拟、充电设置管理             |
-| `reservation` | 预约记录的创建与取消                |
-| `user`        | 用户信息、车辆管理、通知、钱包交易、深色模式    |
-| `ui`          | `activePanel` 单源面板编排、返回历史栈 |
+| `charging`    | 充电过程模拟、充电设置管理                         |
+| `reservation` | 预约记录的创建与取消                               |
+| `user`        | 用户信息、车辆管理、通知、钱包交易、深色模式       |
+| `ui`          | `activePanel` 单源面板编排、返回历史栈             |
 
 ### 地图服务
 
@@ -269,19 +275,19 @@ CustomEvent ←→ mapService.js ←→ HomeView.vue (地图交互)
 
 ## 数据存储
 
-| 数据   | 存储方式         | 说明                                 |
-| ---- | ------------ | ---------------------------------- |
-| 演示站点 | JSON 文件与分片 | `public/data/`，上海 1500 + 合肥 500 站 |
-| 收藏站点 | localStorage | key: `favoriteStations`            |
-| 本地车辆 | localStorage | `chargingLocalVehicles` |
-| 演示会话 | localStorage | `chargingSandboxSession`，沿用存储键，中断恢复不补电量 |
-| 测试账本 | localStorage | `chargingSandboxLedger`，余额/记录/通知/已用券/积分明细；不是真实钱包 |
-| 昵称与提醒 | localStorage | `chargingPreferences`，仅当前浏览器 |
-| 主题设置 | localStorage | key: `isDarkMode`                  |
-| 充电设置 | localStorage | key: `chargingSettings`            |
-| 用户信息 | 内存 + 本地偏好 | 空态或 `VITE_DEMO` 初始数据；昵称可修改保存 |
-| 预约记录 | Pinia 内存     | 空态或 `VITE_DEMO` 演示数据               |
-| 通知/钱包交易 | 内存 + 本地测试账本 | 空态或 `VITE_DEMO` 初始数据，不涉及真实资金 |
+| 数据          | 存储方式            | 说明                                                                  |
+| ------------- | ------------------- | --------------------------------------------------------------------- |
+| 演示站点      | JSON 文件与分片     | `public/data/`，上海 1500 + 合肥 500 站                               |
+| 收藏站点      | localStorage        | key: `favoriteStations`                                               |
+| 本地车辆      | localStorage        | `chargingLocalVehicles`                                               |
+| 演示会话      | localStorage        | `chargingSandboxSession`，沿用存储键，中断恢复不补电量                |
+| 测试账本      | localStorage        | `chargingSandboxLedger`，余额/记录/通知/已用券/积分明细；不是真实钱包 |
+| 昵称与提醒    | localStorage        | `chargingPreferences`，仅当前浏览器                                   |
+| 主题设置      | localStorage        | key: `isDarkMode`                                                     |
+| 充电设置      | localStorage        | key: `chargingSettings`                                               |
+| 用户信息      | 内存 + 本地偏好     | 空态或 `VITE_DEMO` 初始数据；昵称可修改保存                           |
+| 预约记录      | Pinia 内存          | 空态或 `VITE_DEMO` 演示数据                                           |
+| 通知/钱包交易 | 内存 + 本地测试账本 | 空态或 `VITE_DEMO` 初始数据，不涉及真实资金                           |
 
 ## 快速开始
 
@@ -305,11 +311,20 @@ npm run build
 # 预览生产构建
 npm run preview
 
-# 代码检查 / 单元测试 / 数据契约校验
+# 代码检查 / 覆盖率 / 数据契约与依赖校验
 npm run lint
-npm run test -- --run
+npm run test:coverage
 npm run check:data
+npm run check:deps
+
+# 浏览器回归：首次安装 Chromium；不需要真实高德 key
+npx playwright install chromium
+npm run test:browser
 ```
+
+浏览器回归故意阻断地图 SDK，以固定环境验证列表、完整充电支付、预约、账户、详情重试和窄屏中英文布局；真实地图另用 `scripts/capture-presentation.mjs` 验证。Windows 已安装 Edge 时可在 PowerShell 设置 `$env:BROWSER_EXECUTABLE='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'` 后运行，免装 Chromium。CI 新增独立浏览器任务。
+
+当前本地结果：**45 个测试文件、427 项单元/组件测试和 8 条浏览器流程通过**。store/services 行覆盖率 **89.61%**（不是全项目覆盖率）；完整范围、真实 SDK 验证与未覆盖边界见 [TEST_REPORT.md](TEST_REPORT.md)。PPT 的编辑、截图与重新生成方式见 [演示文稿说明](docs/presentation/README.md)。
 
 本地使用 Node 版本管理器时可运行 `nvm install` / `nvm use`（或按所用工具读取 `.nvmrc`）。当前 `jsdom` 等开发依赖要求 Node `^22.22.2 || ^24.15.0 || >=26.0.0`；只修改工作流或只看本地测试结果会导致环境不一致。
 
@@ -345,7 +360,7 @@ node scripts/validate-data.mjs --list=./demo-data/station_list.json
 ### 在上海定位并演示
 
 - 允许浏览器和系统的位置权限。自动定位或点击定位后，地图移动到设备位置；人在上海即可看到视野内的上海模拟站点，不需要额外选择上海。
-- 浏览到人民广场附近时可搜索 **`SH000001` 上海·人民广场演示充电站**；陆家嘴 `SH000002`、徐家汇 `SH000003` 也保留常用接口可用。它们不是必经入口，任意营业且枪口可用、车辆兼容的模拟站点都能按正常选桩、接枪、检测、停止、拔枪、结算顺序演示。
+- 浏览到人民广场附近时可按名称搜索 **上海·人民广场演示充电站**（数据 ID：`SH000001`）；陆家嘴 `SH000002`、徐家汇 `SH000003` 也保留常用接口可用。搜索匹配站名/地址，不是 ID，结果仍受当前视野约束。它们不是必经入口，任意营业且枪口可用、车辆兼容的模拟站点都能按正常选桩、接枪、检测、停止、拔枪、结算顺序演示。
 - 上海 1500 站不仅分布于黄浦、浦东、徐汇、静安等中心城区，也包括临港、嘉定、松江、青浦西部、奉贤、金山和崇明等区域。拖动或缩放地图自然更新结果；大视野同时包含合肥与上海时，两个地区的站点都可显示。
 - 定位失败不伪造上海位置，也不跳回城市中心；仍可浏览地图、搜索并使用模拟数据。地图坐标、门牌、站名、电话、电价及枪位均为假设，不代表真实运营点，不应据此实际前往。
 
@@ -446,12 +461,19 @@ git checkout <sha> -- "大众学院logo.png"
 
 项目使用 TailwindCSS；当前页面规范见 [DESIGN.md](DESIGN.md)：
 
-- **色彩与层级** — 蓝色主操作、中性表面和轻边框；绿色/琥珀/红色仅承担状态语义，不堆叠渐变与发光
+- **色彩与层级** — 品牌绿主操作、深色顶栏、中性表面和轻边框；荧光色少量强调，琥珀/红色承担紧张与异常语义，不堆叠渐变与发光，详见 [公司主题色](docs/brand-theme.md)
 - **账户组件** — `AccountPanel` 统一标题、返回、滚动区与固定底栏，`account-card` / `account-group` / `segmented-control` 统一账户内容
 - **操作反馈** — `action-primary` / `action-secondary` 区分主次，选择、不可用、处理中均有明确状态
 - **弹层与动效** — `PanelShell` / `DialogModal` 统一焦点和忙碌锁；账户浏览可切换顶部导航，嵌套确认及车辆编辑时锁定；支持减少动态效果
 
 ## 更新日志
+
+### 全项目审查与双语介绍（2026-10-28）
+
+- 修复充电目标电量越界计量、预约车辆/接口兼容及异步失效选择、地图标记复用回调叠加与聚合/筛选可用数滞后；保留停止应答和拔枪保护。
+- 增加回归测试与 Playwright 流程，升级受影响依赖；官方 npm 审计 0 项已知漏洞，干净目录 `npm ci` 通过。
+- 真实高德 SDK 本轮检查 42 个界面状态；明暗切换不新增样式/瓦片请求，所检查布局无横向溢出。真机、真实定位及运营设备不在此次验收范围。
+- 提供少文字、同页中英双语的 10 页 PPT、PDF、预览及可复用生成脚本；统计与边界以 [最新测试报告](TEST_REPORT.md) 为准。
 
 ### 上海模拟站点疏密修正（2026-10）
 

@@ -7,6 +7,13 @@ export const errors = {
   '预约时段已失效，请重新选择日期和时间':
     'This time slot is no longer available. Choose a new date and time.',
   请完善有效的预约信息: 'Complete the required booking details.',
+  '所选预约充电桩已不可用，请重新选择':
+    'This booking connector is no longer available. Choose another one.',
+  '站点电价无效，暂不可预约':
+    'The station rate is unavailable. Booking is not available right now.',
+  '预计充电量不能超过车辆电池容量，请调整充电量':
+    'The requested energy exceeds the vehicle battery capacity. Reduce the amount.',
+  '预约站点已变化，请返回重新选择': 'The booking station has changed. Go back and select it again.',
   '仅获取到 IP 估算位置，未作为当前位置使用；请开启系统位置服务后重试':
     'Only an IP-based estimate was available, so it was not used. Enable system location services and try again.',
   '定位服务返回了无效坐标，请重试':
