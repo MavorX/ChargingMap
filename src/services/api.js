@@ -1,3 +1,6 @@
+import { partIdFor } from '../constants/stationData'
+export { partIdFor } from '../constants/stationData'
+
 // import.meta.env.BASE_URL always ends with a slash, so paths are relative to
 // the configured deploy base (e.g. /ChargingMap/).
 const dataUrl = (p) => import.meta.env.BASE_URL + p
@@ -11,17 +14,6 @@ export const loadStationsList = async () => {
     console.error('加载站点列表失败:', { url: dataUrl('data/station_list.json'), err })
     throw err
   }
-}
-
-// Details are sharded 100 stations per file: HF000001..HF000100 -> part-01.
-const DETAILS_PER_PART = 100
-
-export const partIdFor = (stationId) => {
-  const numeric = parseInt(String(stationId ?? '').slice(2), 10)
-  if (!Number.isFinite(numeric) || numeric < 1) {
-    throw new Error(`非法站点 id: ${stationId}`)
-  }
-  return `part-${String(Math.ceil(numeric / DETAILS_PER_PART)).padStart(2, '0')}`
 }
 
 // Single source of detail data: one Promise per shard. Storing the Promise (not

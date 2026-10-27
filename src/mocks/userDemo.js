@@ -1,10 +1,10 @@
 // 演示用户数据：仅在 VITE_DEMO === 'true' 时由 user / reservation store 采用。
-// 所有站点引用统一指向数据集首站 HF000001（generate_stations.js 默认 500 站必然包含），
+// 所有站点引用统一指向上海展示首站（任意生成数量均包含），
 // 避免旧 id '1' 在详情分片推导下请求 404。
-export const DEMO_STATION_ID = 'HF000001'
+export const DEMO_STATION_ID = 'SH000001'
 
-const DEMO_STATION_NAME = '城东充电站'
-const DEMO_STATION_ADDRESS = '合肥市瑶海区长江东路123号'
+const DEMO_STATION_NAME = '上海·人民广场演示充电站'
+const DEMO_STATION_ADDRESS = '上海市黄浦区南京西路100号（模拟站点）'
 
 export const demoUserInfo = {
   name: '电动汽车用户',

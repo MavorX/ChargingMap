@@ -595,6 +595,10 @@ class MapManager {
     this._locationRequest?.finish(locationError('LOCATION_CANCELLED', '定位请求已取消'))
   }
 
+  cancelLocation() {
+    this._cancelLocation()
+  }
+
   _isCurrentLocation(request) {
     return request.active && this._locationRequest === request && this.map === request.map
   }

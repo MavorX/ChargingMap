@@ -19,6 +19,8 @@ vi.mock('../services/mapService', () => ({
     setStations: vi.fn(),
     updateMarkers: vi.fn(),
     closeInfoWindow: vi.fn(),
+    clearRoute: vi.fn(),
+    cancelLocation: vi.fn(),
     destroy: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock('../services/mapService', () => ({
 }))
 
 const mapHandlers = new Map()
+let initialMapOptions
 
 const fakeMap = {
   on: vi.fn((event, handler) => {
@@ -43,7 +46,8 @@ const fakeMap = {
   add: vi.fn(),
   remove: vi.fn(),
   setCenter: vi.fn(),
-  setZoom: vi.fn()
+  setZoom: vi.fn(),
+  setZoomAndCenter: vi.fn()
 }
 
 const mountMapView = async () => {
@@ -74,13 +78,15 @@ const mountMapView = async () => {
 
 describe('MapView viewport pipeline', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.useFakeTimers()
     mapHandlers.clear()
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
     globalThis.AMap = {
       Map: class {
-        constructor() {
+        constructor(_container, options) {
+          initialMapOptions = options
           return fakeMap
         }
       }
@@ -139,6 +145,15 @@ describe('MapView viewport pipeline', () => {
     wrapper.unmount()
   })
 
+  it('refreshes bounds and markers after map container resizing', async () => {
+    const { wrapper, setViewportBounds } = await mountMapView()
+    mapHandlers.get('resize')()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(setViewportBounds).toHaveBeenCalledTimes(1)
+    expect(mapManager.updateMarkers).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
   it('refreshes markers once on filter changes without rewriting viewport bounds', async () => {
     const { wrapper, store, setViewportBounds } = await mountMapView()
 
@@ -152,23 +167,41 @@ describe('MapView viewport pipeline', () => {
     wrapper.unmount()
   })
 
-  it('does not block the app while initial geolocation is pending', async () => {
-    mapManager.locateUser.mockImplementationOnce(() => new Promise(() => {}))
-    const { wrapper, setLoading } = await mountMapView()
+  it('starts in Shanghai without requesting location or inventing a device fix', async () => {
+    const { wrapper, store, setLoading } = await mountMapView()
+    expect(initialMapOptions).toMatchObject({ center: [121.4737, 31.2304], zoom: 12 })
+    expect(mapManager.locateUser).not.toHaveBeenCalled()
+    expect(store.userLocation).toBe(null)
+    expect(store.locationStatus).toBe('idle')
     expect(setLoading).not.toHaveBeenCalled()
     expect(wrapper.find('[aria-label="正在加载地图"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('does not jump back to Hefei when the initial location request fails', async () => {
+  it('does not move the map on manual location failure', async () => {
     mapManager.locateUser.mockRejectedValueOnce(
       Object.assign(new Error('定位权限被拒绝'), { code: 'PERMISSION_DENIED' })
     )
     fakeMap.setCenter.mockClear()
     const { wrapper, store } = await mountMapView()
+    await expect(store.requestUserLocation()).rejects.toMatchObject({ code: 'PERMISSION_DENIED' })
     expect(store.locationStatus).toBe('error')
     expect(store.locationErrorCode).toBe('PERMISSION_DENIED')
     expect(fakeMap.setCenter).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('recenters even on a same-city return and synchronously precedes a favorite focus', async () => {
+    const { wrapper, store } = await mountMapView()
+    store.browseCity('HF')
+    expect(fakeMap.setZoomAndCenter).toHaveBeenLastCalledWith(13, [117.283042, 31.86119], true)
+    store.browseCity('SH')
+    expect(fakeMap.setZoomAndCenter).toHaveBeenLastCalledWith(12, [121.4737, 31.2304], true)
+    fakeMap.setZoomAndCenter.mockClear()
+    store.browseCity('SH')
+    expect(fakeMap.setZoomAndCenter).toHaveBeenCalledTimes(1)
+    expect(fakeMap.setCenter).not.toHaveBeenCalled()
+    expect(store.viewportBounds).toBe(null)
     wrapper.unmount()
   })
 })

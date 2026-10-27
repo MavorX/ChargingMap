@@ -3,6 +3,7 @@ import { loadStationsList, loadStationDetail } from '../../services/api'
 import { currentPriceFor } from '../../utils/pricing'
 import mapManager from '../../services/mapService'
 import { locationPresentation } from '../../utils/location'
+import { DEFAULT_CITY_ID, cityById, cityIdForStation, cityAtLocation } from '../../constants/cities'
 
 const DEFAULT_CONNECTORS = ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']
 
@@ -41,6 +42,9 @@ export const useStationsStore = defineStore('stations', {
     stations: [],
     loadRequestId: 0,
     currentStation: null,
+    activeCityId: DEFAULT_CITY_ID,
+    cityViewRevision: 0,
+    viewingDeviceLocation: false,
     userLocation: null,
     locationStatus: 'idle',
     locationRequestId: 0,
@@ -61,12 +65,36 @@ export const useStationsStore = defineStore('stations', {
     isLoading: false,
     error: null,
     detailsError: null,
+    detailsRequestId: 0,
     viewportBounds: null,
     listPage: 1,
     listPageSize: 20
   }),
 
   actions: {
+    browseCity(cityId) {
+      if (!cityById(cityId)) return false
+      // A deliberate city choice wins over a pending device request/route.
+      ++this.locationRequestId
+      mapManager.cancelLocation?.()
+      mapManager.clearRoute()
+      mapManager.closeInfoWindow()
+      this.stopNavigation()
+      this.activeCityId = cityId
+      this.viewingDeviceLocation = false
+      this.locationStatus = this.userLocation ? 'ready' : 'idle'
+      this.locationError = ''
+      this.locationErrorCode = ''
+      this.currentStation = null
+      ++this.detailsRequestId
+      this.detailsError = null
+      this.searchQuery = ''
+      this.viewportBounds = null
+      this.listPage = 1
+      ++this.cityViewRevision
+      return true
+    },
+
     async requestUserLocation() {
       const requestId = ++this.locationRequestId
       this.locationStatus = 'locating'
@@ -76,6 +104,16 @@ export const useStationsStore = defineStore('stations', {
         const location = await mapManager.locateUser()
         if (requestId !== this.locationRequestId) return location
         this.userLocation = location
+        this.viewingDeviceLocation = true
+        const locatedCity = cityAtLocation(location)
+        if (locatedCity && locatedCity.id !== this.activeCityId) {
+          // Device location was explicitly requested. Update the data region,
+          // but don't recenter to its city: the map already shows the real fix.
+          this.activeCityId = locatedCity.id
+          this.searchQuery = ''
+          this.listPage = 1
+          this.viewportBounds = null
+        }
         this.locationStatus = 'ready'
         this.recalculateDistances()
         return location
@@ -135,6 +173,7 @@ export const useStationsStore = defineStore('stations', {
     },
 
     async loadStationDetails(stationId) {
+      const requestId = ++this.detailsRequestId
       const station = this.stations.find((s) => s.stationId === stationId)
       if (!station) return null
 
@@ -152,9 +191,12 @@ export const useStationsStore = defineStore('stations', {
         station.currentPrice = currentPriceFor(station)
         return details
       } catch (err) {
-        this.detailsError = '站点详情加载失败'
         console.error('加载站点详情失败:', err)
-        notifyError(this.detailsError)
+        // The old city's failure must not replace feedback for a newer choice.
+        if (requestId === this.detailsRequestId) {
+          this.detailsError = '站点详情加载失败'
+          notifyError(this.detailsError)
+        }
         return null
       }
     },
@@ -178,6 +220,9 @@ export const useStationsStore = defineStore('stations', {
     },
 
     async setCurrentStation(station) {
+      ++this.detailsRequestId
+      const cityId = cityIdForStation(station)
+      if (cityById(cityId) && cityId !== this.activeCityId) this.browseCity(cityId)
       this.currentStation = station
       this.detailsError = null
       if (station && !station.detailsLoaded) {
@@ -263,6 +308,7 @@ export const useStationsStore = defineStore('stations', {
   },
 
   getters: {
+    activeCity: (state) => cityById(state.activeCityId),
     isLocating: (state) => state.locationStatus === 'locating',
     locationPresentation: (state) => locationPresentation(state),
     activeFilterCount: (state) => {
@@ -287,6 +333,8 @@ export const useStationsStore = defineStore('stations', {
 
       return state.stations
         .filter((station) => {
+          const cityId = cityIdForStation(station)
+          if (cityId && cityId !== state.activeCityId) return false
           if (filters.quickAvailable && station.quickAvailableNum <= 0) return false
           if (filters.slowAvailable && station.slowAvailableNum <= 0) return false
           if (filters.open24h && station.openTime !== '00:00-24:00') return false

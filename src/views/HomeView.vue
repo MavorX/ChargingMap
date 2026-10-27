@@ -2,7 +2,7 @@
   <main
     class="h-screen overflow-hidden bg-white pt-16 supports-[height:100dvh]:h-[100dvh] dark:bg-surface-900"
   >
-    <h1 class="sr-only">探索附近充电站</h1>
+    <h1 class="sr-only">探索{{ stationsStore.activeCity.shortName }}模拟充电站</h1>
     <div class="flex h-full lg:gap-4 lg:p-4 lg:pl-0">
       <div
         class="relative min-w-0 flex-1 overflow-hidden bg-surface-100 dark:bg-surface-950 lg:rounded-2xl lg:border lg:border-surface-200 dark:lg:border-surface-800"
@@ -13,6 +13,7 @@
           v-if="!isNavigating && !currentStation && !uiStore.activePanel"
           class="absolute inset-x-4 top-4 z-20 lg:hidden"
         >
+          <CitySelector class="glass-card mb-2" />
           <div class="glass-card flex items-center gap-2 p-2">
             <StationSearch class="flex-1" />
             <button
@@ -38,33 +39,39 @@
           </div>
         </div>
 
-        <button
+        <div
           v-if="!isNavigating"
-          class="glass-card absolute left-4 top-4 z-10 hidden max-w-[calc(100%_-_2rem)] items-center gap-3 px-4 py-3 text-left disabled:cursor-wait lg:flex"
-          aria-label="定位当前位置"
-          :disabled="stationsStore.isLocating"
-          :aria-busy="stationsStore.isLocating"
-          :title="stationsStore.locationError || stationsStore.locationPresentation.description"
-          @click="locateUser"
+          class="absolute left-4 top-4 z-10 hidden max-w-[calc(100%_-_2rem)] flex-col items-start gap-2 lg:flex"
         >
-          <span
-            class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-            ><i
-              :class="
-                stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
-              "
-              aria-hidden="true"
-            ></i
-          ></span>
-          <span class="min-w-0"
-            ><span class="block text-sm font-semibold text-surface-800 dark:text-surface-100">{{
-              stationsStore.locationPresentation.title
-            }}</span
-            ><span class="block text-[11px] text-surface-500 dark:text-surface-400">{{
-              stationsStore.locationPresentation.description
-            }}</span></span
+          <CitySelector class="glass-card w-full" />
+          <button
+            v-if="!isNavigating"
+            class="glass-card flex w-full items-center gap-3 px-4 py-3 text-left disabled:cursor-wait"
+            aria-label="定位当前位置"
+            :disabled="stationsStore.isLocating"
+            :aria-busy="stationsStore.isLocating"
+            :title="stationsStore.locationError || stationsStore.locationPresentation.description"
+            @click="locateUser"
           >
-        </button>
+            <span
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              ><i
+                :class="
+                  stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
+                "
+                aria-hidden="true"
+              ></i
+            ></span>
+            <span class="min-w-0"
+              ><span class="block text-sm font-semibold text-surface-800 dark:text-surface-100">{{
+                stationsStore.locationPresentation.title
+              }}</span
+              ><span class="block text-[11px] text-surface-500 dark:text-surface-400">{{
+                stationsStore.locationPresentation.description
+              }}</span></span
+            >
+          </button>
+        </div>
 
         <div
           v-if="!isNavigating"
@@ -197,7 +204,7 @@
                     <h2
                       class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
                     >
-                      附近充电站
+                      {{ stationsStore.activeCity.shortName }}充电站
                     </h2>
                     <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400"
                       >演示项目 · 站点与充电数据为模拟数据</span
@@ -312,6 +319,7 @@ import StationsList from '../components/station/StationsList.vue'
 import StationDetail from '../components/station/StationDetail.vue'
 import DesktopStationList from '../components/station/DesktopStationList.vue'
 import StationSearch from '../components/station/StationSearch.vue'
+import CitySelector from '../components/station/CitySelector.vue'
 import ReservationPanel from '../components/reservation/ReservationPanel.vue'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
 import ChargingSettings from '../components/charging/ChargingSettings.vue'
@@ -526,6 +534,7 @@ const handleHeaderEvent = (event) => {
           )
         })
         .catch((err) => {
+          if (err.code === 'LOCATION_CANCELLED') return
           showToast(err.message || '定位失败，请检查位置权限', 'error')
         })
       break

@@ -7,7 +7,7 @@
     <div class="flex shrink-0 items-center justify-between px-5 pb-3 pt-3">
       <div>
         <h2 class="text-xl font-bold tracking-tight text-surface-900 dark:text-surface-100">
-          附近充电站
+          {{ stationsStore.activeCity.shortName }}充电站
         </h2>
         <p class="mt-1 text-xs text-surface-500 dark:text-surface-400" aria-live="polite">
           当前视野内 {{ stationsStore.viewportStationCount }} 个站点

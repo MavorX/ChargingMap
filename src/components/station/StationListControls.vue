@@ -1,4 +1,5 @@
 <template>
+  <CitySelector v-if="!isCompact" class="border border-surface-200 dark:border-surface-700" />
   <StationSearch :input-id="isCompact ? '' : 'search-station'" />
   <div class="grid grid-cols-2 gap-2 min-[380px]:grid-cols-4" role="group" aria-label="快捷筛选">
     <button
@@ -19,6 +20,7 @@
 import { computed } from 'vue'
 import { useStationList } from '../../composables/useStationList'
 import StationSearch from './StationSearch.vue'
+import CitySelector from './CitySelector.vue'
 
 const props = defineProps({ density: { type: String, default: 'comfortable' } })
 const isCompact = computed(() => props.density === 'compact')

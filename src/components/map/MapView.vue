@@ -92,11 +92,11 @@ const initMap = async () => {
     if (isUnmounted) return
 
     map = new AMap.Map('map-container', {
-      zoom: 13,
+      zoom: stationsStore.activeCity.zoom,
       resizeEnable: true,
       viewMode: '3D',
       mapStyle: userStore.isDarkMode ? 'amap://styles/dark' : 'amap://styles/whitesmoke',
-      center: [117.283042, 31.86119]
+      center: [...stationsStore.activeCity.center]
     })
 
     mapManager.setMap(map)
@@ -107,9 +107,9 @@ const initMap = async () => {
 
     map.on('moveend', onMapViewportChange)
     map.on('zoomend', onMapViewportChange)
+    map.on('resize', onMapViewportChange)
 
     onMapViewportChange()
-    doInitialGeolocation()
   } catch (err) {
     console.error('[MapView] Map init error:', err)
     if (map) {
@@ -168,12 +168,6 @@ const onMapViewportChange = () => {
   debouncedUpdateMarkers()
 }
 
-const doInitialGeolocation = () => {
-  stationsStore.requestUserLocation().catch(() => {
-    // Keep the user's viewport; failure is visible in the shared location status.
-  })
-}
-
 const loadStations = async () => {
   try {
     await stationsStore.loadStations()
@@ -187,6 +181,20 @@ const loadStations = async () => {
     showToast('加载站点数据失败', 'error')
   }
 }
+
+watch(
+  () => stationsStore.cityViewRevision,
+  () => {
+    if (!map) return
+    const city = stationsStore.activeCity
+    // City selection is a jump, not an animated journey through empty regions.
+    // Apply center + zoom atomically so intermediate bounds cannot empty the list.
+    map.setZoomAndCenter(city.zoom, [...city.center], true)
+    onMapViewportChange()
+  },
+  // Recenter before a cross-city favorite applies its exact station center.
+  { flush: 'sync' }
+)
 
 watch(
   () => stationsStore.stations,

@@ -6,6 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CITIES, cityById, cityAtLocation } from '../src/constants/cities.js';
+import { STATION_ID_PATTERN, STATIONS_PER_CITY_LIMIT, partIdFor } from '../src/constants/stationData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -14,16 +16,14 @@ const listArg = process.argv.find((a) => a.startsWith('--list='));
 const LIST_PATH = listArg
   ? path.resolve(process.cwd(), listArg.slice('--list='.length))
   : path.join(DATA_DIR, 'station_list.json');
-const DETAILS_DIR = path.join(DATA_DIR, 'details');
-const DETAILS_FILE = path.join(DATA_DIR, 'station_details.json');
+const DETAILS_DIR = path.join(path.dirname(LIST_PATH), 'details');
+const DETAILS_FILE = path.join(path.dirname(LIST_PATH), 'station_details.json');
 
 const MIN_STATIONS = 1;
-const MAX_STATIONS = 1000;
-const BBOX = { lngMin: 117.0, lngMax: 117.6, latMin: 31.2, latMax: 32.2 };
+const MAX_STATIONS = STATIONS_PER_CITY_LIMIT * CITIES.length;
 const ALLOWED_STATUS = new Set([0, 1, 2, 3, 255]);
 const ALLOWED_CONNECTOR_TYPES = new Set(['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']);
 const PERIOD_COUNT = 8;
-const ID_PATTERN = /^HF\d{6}$/;
 const MAX_SAMPLES = 10;
 
 const RESULTS = []; // { name, failures: string[] }
@@ -54,10 +54,11 @@ function isPlainObject(value) {
 }
 
 function loadDetails() {
-  // Future layout: public/data/details/*.json (sharded, merged when the dir exists).
+  // HF keeps part-XX.json; SH uses sh-part-XX.json in the same directory.
   if (fs.existsSync(DETAILS_DIR) && fs.statSync(DETAILS_DIR).isDirectory()) {
     const merged = {};
     const duplicateIds = [];
+    const misplacedIds = [];
     const files = fs
       .readdirSync(DETAILS_DIR)
       .filter((f) => f.toLowerCase().endsWith('.json'))
@@ -66,11 +67,14 @@ function loadDetails() {
       const data = readJson(path.join(DETAILS_DIR, file));
       if (!isPlainObject(data)) continue;
       for (const [id, detail] of Object.entries(data)) {
+        try {
+          if (file !== `${partIdFor(id)}.json`) misplacedIds.push(`${id} in ${file}`);
+        } catch { misplacedIds.push(`${id} in ${file}`); }
         if (Object.prototype.hasOwnProperty.call(merged, id)) duplicateIds.push(id);
         merged[id] = detail;
       }
     }
-    return { details: merged, layout: `sharded (${files.length} files)`, duplicateIds, ok: true };
+    return { details: merged, layout: `sharded (${files.length} files)`, duplicateIds, misplacedIds, ok: true };
   }
   if (fs.existsSync(DETAILS_FILE)) {
     const data = readJson(DETAILS_FILE);
@@ -83,14 +87,14 @@ function loadDetails() {
 const list = fs.existsSync(LIST_PATH) ? readJson(LIST_PATH) : null;
 const listIsArray = Array.isArray(list);
 const listRecords = listIsArray ? list : [];
-const { details, layout, duplicateIds, ok: detailsOk } = loadDetails();
+const { details, layout, duplicateIds, misplacedIds = [], ok: detailsOk } = loadDetails();
 
 const listIds = listRecords.map((s) => (s && typeof s === 'object' ? s.stationId : undefined));
 const detailIds = Object.keys(details);
 const listIdSet = new Set(listIds.filter((id) => typeof id === 'string'));
 const detailIdSet = new Set(detailIds);
 
-// 1. Record count must be 1..1000.
+// 1. Up to 1000 per city, 2000 in the combined file.
 assert('记录数', (f) => {
   if (!listIsArray) {
     f.push(`station_list.json 不是数组（路径 ${LIST_PATH}）`);
@@ -98,6 +102,10 @@ assert('记录数', (f) => {
   }
   if (list.length < MIN_STATIONS || list.length > MAX_STATIONS) {
     f.push(`列表记录数 ${list.length}，要求 ${MIN_STATIONS}..${MAX_STATIONS}`);
+  }
+  for (const city of CITIES) {
+    const count = list.filter(s => s?.cityId === city.id).length;
+    if (count < 1 || count > STATIONS_PER_CITY_LIMIT) f.push(`${city.name} 记录数 ${count}，要求 1..${STATIONS_PER_CITY_LIMIT}`);
   }
 });
 
@@ -130,27 +138,24 @@ assert('列表↔详情 id 对齐', (f) => {
   if (missingDetail.length > 0) f.push(`列表有但详情缺失: ${sample(missingDetail)}`);
   if (missingList.length > 0) f.push(`详情有但列表缺失: ${sample(missingList)}`);
   if (duplicateIds.length > 0) f.push(`分片间重复 id: ${sample(new Set(duplicateIds))}`);
+  if (misplacedIds.length > 0) f.push(`详情分片与 id 不匹配: ${sample(misplacedIds)}`);
 });
 
-// 4. Coordinates within Hefei bbox.
+// 4. Coordinates must belong to their declared city, not merely either bbox.
 assert('坐标 bbox', (f) => {
   const bad = [];
   for (const s of listRecords) {
     const lng = Number(s && s.lng);
     const lat = Number(s && s.lat);
     if (
-      !Number.isFinite(lng) ||
-      !Number.isFinite(lat) ||
-      lng < BBOX.lngMin ||
-      lng > BBOX.lngMax ||
-      lat < BBOX.latMin ||
-      lat > BBOX.latMax
+      !Number.isFinite(lng) || !Number.isFinite(lat) ||
+      cityAtLocation({ lng, lat })?.id !== s?.cityId
     ) {
       bad.push(`${(s && s.stationId) || '(no id)'}(${s && s.lng},${s && s.lat})`);
     }
   }
   if (bad.length > 0) {
-    f.push(`坐标超出合肥 bbox(lng ${BBOX.lngMin}-${BBOX.lngMax}, lat ${BBOX.latMin}-${BBOX.latMax}): ${sample(bad)}`);
+    f.push(`坐标超出声明城市 bbox: ${sample(bad)}`);
   }
 });
 
@@ -194,24 +199,38 @@ assert('connector.status 取值', (f) => {
   if (bad.length > 0) f.push(`非法 connector.status(允许 0/1/2/3/255): ${sample(bad)}`);
 });
 
-// 8. stationId format ^HF\d{6}$ — conditional until T6 enforces it.
-// Only enforced when the first list id already carries the HF prefix (legacy
-// data must not be blocked before the T6 migration).
+// 8. No permissive parseInt / unknown-prefix fallbacks in the id contract.
 assert('stationId 格式', (f) => {
-  const firstId = listIds[0];
-  const contractActive = typeof firstId === 'string' && firstId.startsWith('HF');
-  if (!contractActive) {
-    // Legacy id format in place; T6 will make this assertion unconditional.
-    return;
-  }
   const bad = [];
-  for (const id of listIds) {
-    if (typeof id !== 'string' || !ID_PATTERN.test(id)) bad.push(String(id));
+  for (const id of [...listIds, ...detailIds]) {
+    try { partIdFor(id); } catch { bad.push(String(id)); }
   }
-  for (const id of detailIds) {
-    if (!ID_PATTERN.test(id)) bad.push(`${id} (detail key)`);
+  if (bad.length > 0) f.push(`stationId 不符合 ${STATION_ID_PATTERN} 且序号应为 1..1000: ${sample(bad)}`);
+});
+
+assert('城市元数据', (f) => {
+  for (const s of listRecords) {
+    const city = cityById(s?.cityId);
+    if (!city || s.cityName !== city.name || !s.stationId?.startsWith(city.id) || !s.address?.includes(city.name)) {
+      f.push(`${s?.stationId}: 城市、编号或地址不一致`);
+    }
   }
-  if (bad.length > 0) f.push(`stationId 不符合 ^HF\\d{6}$: ${sample(bad)}`);
+});
+
+assert('枪位与列表一致', (f) => {
+  for (const s of listRecords) {
+    const detail = details[s?.stationId];
+    if (!detail) continue;
+    for (const [key, total, available] of [
+      ['fastConnectors', s.quickChargeNum, s.quickAvailableNum],
+      ['slowConnectors', s.slowChargeNum, s.slowAvailableNum]
+    ]) {
+      const connectors = detail[key] || [];
+      if (connectors.length !== total || connectors.filter(c => c.status === 1).length !== available) f.push(`${s.stationId}: ${key} 数量不一致`);
+      if (connectors.some(c => !detail.connectorTypes.includes(c.connectorType))) f.push(`${s.stationId}: 枪口类型不一致`);
+    }
+    if (detail.stationId !== s.stationId || JSON.stringify(s.connectorTypes) !== JSON.stringify(detail.connectorTypes)) f.push(`${s.stationId}: 列表与详情元数据不一致`);
+  }
 });
 
 // 9. List-level connectorTypes must be a non-empty array of allowed values.

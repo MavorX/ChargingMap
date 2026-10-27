@@ -2,6 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { CITIES } from './src/constants/cities.js';
+import { DETAILS_PER_PART, STATIONS_PER_CITY_LIMIT, partIdFor } from './src/constants/stationData.js';
+import { shanghaiRoads, shanghaiShowcaseSites } from './scripts/shanghai-roads.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +19,7 @@ const REVIEW_YEAR = 2026;
 const DEFAULT_COUNT = 500;
 const DEFAULT_SEED = 42;
 const MIN_COUNT = 1;
-const MAX_COUNT = 1000;
+const MAX_COUNT = STATIONS_PER_CITY_LIMIT;
 const MAX_SEED = 0xffffffff;
 
 function mulberry32(seed) {
@@ -236,14 +239,23 @@ const reviewContents = [
     '周边配套齐全，等充电时有地方逛。', '会员价很优惠，值得办卡。'
 ];
 
-function pickRoad() {
-    const totalWeight = roadSegments.reduce((sum, r) => sum + r.weight, 0);
+const cityDatasets = [
+    { id: 'HF', addressPrefix: '安徽省合肥市', phone: '0551', roads: roadSegments, landmarks, parkFees },
+    {
+        id: 'SH', addressPrefix: '上海市', phone: '021', roads: shanghaiRoads,
+        landmarks: ['滨江商务中心', '社区停车场', '科创园', '城市生活广场', '商业中心', '体育中心', '公共停车场'],
+        parkFees: ['充电期间免费', '前2小时免费，之后8元/小时', '6元/小时', '8元/小时', '10元/小时']
+    }
+];
+
+function pickRoad(roads) {
+    const totalWeight = roads.reduce((sum, r) => sum + r.weight, 0);
     let r = rand() * totalWeight;
-    for (const road of roadSegments) {
+    for (const road of roads) {
         r -= road.weight;
         if (r <= 0) return road;
     }
-    return roadSegments[0];
+    return roads[0];
 }
 
 function generatePointOnRoad(road) {
@@ -269,15 +281,13 @@ function generatePointOnRoad(road) {
     };
 }
 
-function generateStationList(count) {
+function generateStationList(count, city) {
     const stations = [];
 
     for (let i = 0; i < count; i++) {
-        // 固定 id 契约: HF + 6 位零填充数字 (HF000001...)。分片加载按数字段推导分片号，
-        // scripts/validate-data.mjs 以 ^HF\d{6}$ 强制校验，不可随意变更。
-        const stationId = `HF${String(i + 1).padStart(6, '0')}`;
+        const stationId = `${city.id}${String(i + 1).padStart(6, '0')}`;
 
-        const road = pickRoad();
+        const road = pickRoad(city.roads);
         const district = road.district;
         const pos = generatePointOnRoad(road);
 
@@ -300,7 +310,7 @@ function generateStationList(count) {
         if (nameStyle === 1) {
             stationName = `${brand}·${road.name}充电站`;
         } else if (nameStyle === 2) {
-            stationName = `${brand}·${pick(landmarks)}充电站`;
+            stationName = `${brand}·${pick(city.landmarks)}充电站`;
         } else if (nameStyle === 3) {
             stationName = `${district}${road.name}${randomInt(1, 300)}号充电站`;
         } else {
@@ -313,7 +323,7 @@ function generateStationList(count) {
         stations.push({
             stationId,
             stationName,
-            address: `安徽省合肥市${district}${road.name}${randomInt(1, 300)}号`,
+            address: `${city.addressPrefix}${district}${road.name}${randomInt(1, 300)}号${city.id === 'SH' ? '（模拟站点）' : ''}`,
             lng: pos.lng,
             lat: pos.lat,
             district,
@@ -328,16 +338,19 @@ function generateStationList(count) {
             maxPower,
             openStatus,
             openTime: openStatus ? pick(openTimes) : '00:00-24:00',
-            parkFee: pick(parkFees),
-            stationTel: `0551-${randomInt(60000000, 69999999)}`,
-            stationGradeScore: parseFloat(random(3.0, 5.0).toFixed(1))
+            parkFee: pick(city.parkFees),
+            stationTel: `${city.phone}-${randomInt(60000000, 69999999)}`,
+            stationGradeScore: parseFloat(random(3.0, 5.0).toFixed(1)),
+            cityId: city.id,
+            cityName: CITIES.find(c => c.id === city.id).name,
+            ...(city.id === 'SH' ? { road: road.name } : {})
         });
     }
 
     return stations;
 }
 
-function generateStationDetails(stations) {
+function generateStationDetails(stations, city) {
     const details = {};
 
     const timePeriods = [
@@ -418,7 +431,7 @@ function generateStationDetails(stations) {
             else if (startHour >= 8 && startHour < 18) baseFee = random(0.9, 1.4);
             else baseFee = random(0.7, 1.1);
 
-            const totalFee = parseFloat(baseFee.toFixed(2));
+            const totalFee = parseFloat((baseFee * (city.id === 'SH' ? 1.18 : 1)).toFixed(2));
             const hasMember = station.memberPrice !== null;
             const memberFee = hasMember ? parseFloat((totalFee * 0.88).toFixed(2)).toString() : null;
 
@@ -459,7 +472,7 @@ function generateStationDetails(stations) {
             });
         }
 
-        const roadNames = roadSegments.map(r => r.name);
+        const roadNames = city.roads.map(r => r.name);
         details[station.stationId] = {
             stationId: station.stationId,
             connectorTypes: stationConnectorTypes,
@@ -468,7 +481,9 @@ function generateStationDetails(stations) {
             periodPrices,
             reviewsCount,
             reviews,
-            siteGuide: `位于${station.address}内，从${pick(roadNames)}入口进入后${pick(['左转', '右转', '直行'])}${randomInt(50, 300)}米即可看到充电区域。`
+            siteGuide: city.id === 'SH'
+                ? `模拟站点位于${station.address}停车场内，从${station.road}入口进入，沿充电指示前往充电区域；仅用于展示，不代表真实运营站点。`
+                : `位于${station.address}内，从${pick(roadNames)}入口进入后${pick(['左转', '右转', '直行'])}${randomInt(50, 300)}米即可看到充电区域。`
         };
     }
 
@@ -490,7 +505,7 @@ function parseBoundedInt(flag, raw, min, max) {
 }
 
 function parseArgs(argv) {
-    const options = { count: DEFAULT_COUNT, seed: DEFAULT_SEED, help: false };
+    const options = { count: DEFAULT_COUNT, seed: DEFAULT_SEED, outDir: path.join(__dirname, 'public', 'data'), help: false };
 
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
@@ -509,6 +524,9 @@ function parseArgs(argv) {
             options.count = parseBoundedInt('--count', raw, MIN_COUNT, MAX_COUNT);
         } else if (key === 'seed') {
             options.seed = parseBoundedInt('--seed', raw, 0, MAX_SEED);
+        } else if (key === 'out-dir') {
+            if (!raw || raw.startsWith('--')) throw new Error('--out-dir 缺少目录');
+            options.outDir = path.resolve(raw);
         } else {
             throw new Error(`未知参数: --${key}`);
         }
@@ -517,25 +535,13 @@ function parseArgs(argv) {
     return options;
 }
 
-const DETAILS_PER_SHARD = 100;
-
-function shardFileNameForId(stationId) {
-    // id 契约（T6 固化）: HF + 6 位数字，分片号 = ceil(序号 / 100)
-    const numeric = parseInt(stationId.slice(2), 10);
-    if (!Number.isInteger(numeric) || numeric < 1) {
-        throw new Error(`无法从站点 id 推导分片: ${stationId}`);
-    }
-    return `part-${String(Math.ceil(numeric / DETAILS_PER_SHARD)).padStart(2, '0')}.json`;
-}
-
-function writeDataFiles(stations, details) {
-    const publicDataDir = path.join(__dirname, 'public', 'data');
+function writeDataFiles(stations, details, publicDataDir) {
     const detailsDir = path.join(publicDataDir, 'details');
     fs.mkdirSync(detailsDir, { recursive: true });
 
     // 重置式重建：清掉上一轮的分片与旧单文件，避免残留死载荷随 dist 发布。
     for (const file of fs.readdirSync(detailsDir)) {
-        if (/^part-\d+\.json$/.test(file)) {
+        if (/^(?:sh-)?part-\d+\.json$/.test(file)) {
             fs.rmSync(path.join(detailsDir, file));
         }
     }
@@ -553,7 +559,7 @@ function writeDataFiles(stations, details) {
 
     const shards = new Map();
     for (const [stationId, detail] of Object.entries(details)) {
-        const fileName = shardFileNameForId(stationId);
+        const fileName = `${partIdFor(stationId)}.json`;
         if (!shards.has(fileName)) shards.set(fileName, {});
         shards.get(fileName)[stationId] = detail;
     }
@@ -575,7 +581,8 @@ function formatSize(bytes) {
 function printSummary(stations, listPath, detailPaths, seed) {
     console.log(`生成完成: count=${stations.length}, seed=${seed}（全量覆盖重建，未追加旧数据）`);
     console.log(`站点列表: ${listPath} (${formatSize(fs.statSync(listPath).size)})`);
-    console.log(`站点详情分片: ${detailPaths.length} 片，每片 ${DETAILS_PER_SHARD} 站`);
+    console.log(`站点详情分片: ${detailPaths.length} 片，每片最多 ${DETAILS_PER_PART} 站，按城市隔离`);
+    CITIES.forEach(city => console.log(`  ${city.name}: ${stations.filter(s => s.cityId === city.id).length} 站`));
     detailPaths.forEach((detailPath) => {
         console.log(`  ${path.basename(detailPath)} (${formatSize(fs.statSync(detailPath).size)})`);
     });
@@ -596,9 +603,9 @@ function printSummary(stations, listPath, detailPaths, seed) {
 
     const roadCounts = {};
     stations.forEach(s => {
-        const roadName = s.address.match(/(?:蜀山区|包河区|庐阳区|瑶海区|滨湖新区|政务区|高新区|经开区|新站区|肥西县|肥东县|长丰县|庐江县)(.+?)(?:\d+号$)/);
+        const roadName = s.road || s.address.match(/(?:蜀山区|包河区|庐阳区|瑶海区|滨湖新区|政务区|高新区|经开区|新站区|肥西县|肥东县|长丰县|庐江县)(.+?)(?:\d+号$)/)?.[1];
         if (roadName) {
-            const rn = roadName[1];
+            const rn = roadName;
             roadCounts[rn] = (roadCounts[rn] || 0) + 1;
         }
     });
@@ -620,22 +627,57 @@ function main() {
         options = parseArgs(process.argv.slice(2));
     } catch (err) {
         console.error(`参数错误: ${err.message}`);
-        console.error('用法: node generate_stations.js [--count 1..1000] [--seed 0..4294967295]');
+        console.error('用法: node generate_stations.js [--count 每城1..1000] [--seed 0..4294967295] [--out-dir 目录]');
         process.exitCode = 1;
         return;
     }
 
     if (options.help) {
-        console.log('用法: node generate_stations.js [--count 1..1000] [--seed 0..4294967295]');
-        console.log(`默认: --count ${DEFAULT_COUNT} --seed ${DEFAULT_SEED}；每次运行全量覆盖 public/data 下的数据文件。`);
+        console.log('用法: node generate_stations.js [--count 每城1..1000] [--seed 0..4294967295] [--out-dir 目录]');
+        console.log(`默认: --count ${DEFAULT_COUNT} --seed ${DEFAULT_SEED}；生成上海和合肥各 ${DEFAULT_COUNT} 站，全量覆盖输出目录内的生成数据。`);
         return;
     }
 
-    rand = mulberry32(options.seed);
-
-    const stations = generateStationList(options.count);
-    const details = generateStationDetails(stations);
-    const { listPath, detailPaths } = writeDataFiles(stations, details);
+    const stations = [], details = {};
+    for (const city of cityDatasets) {
+        // Independent streams keep all original HF values stable and prevent
+        // another city's station count from changing this city's random input.
+        rand = mulberry32(city.id === 'HF' ? options.seed : (options.seed ^ 0x5348) >>> 0);
+        const cityStations = generateStationList(options.count, city);
+        if (city.id === 'SH') {
+            shanghaiShowcaseSites.slice(0, options.count).forEach((site, index) => {
+                Object.assign(cityStations[index], site, {
+                    openStatus: 1, openTime: '00:00-24:00', reservationAvailable: true,
+                    quickAvailableNum: cityStations[index].quickChargeNum,
+                    slowAvailableNum: cityStations[index].slowChargeNum
+                });
+            });
+        }
+        const cityDetails = generateStationDetails(cityStations, city);
+        if (city.id === 'SH') {
+            cityStations.forEach((station, index) => {
+                const detail = cityDetails[station.stationId];
+                if (index < shanghaiShowcaseSites.length) {
+                    detail.connectorTypes = ['GB/T', 'CCS Combo', 'Type 2'];
+                    detail.fastConnectors.forEach((c, i) => {
+                        c.connectorType = i % 2 === 0 ? 'GB/T' : 'CCS Combo';
+                        c.power = i % 2 === 0 ? 180 : 240;
+                        c.connectorName = `超充${i + 1}`;
+                    });
+                    detail.slowConnectors.forEach(c => { c.connectorType = 'Type 2'; });
+                }
+                station.maxPower = Math.max(...detail.fastConnectors.map(c => c.power));
+                const current = detail.periodPrices.find(p => p.currentFlag);
+                station.totalCostPrice = Number(current.totalFee);
+                station.memberPrice = current.memberPrice === null ? null : Number(current.memberPrice);
+            });
+        }
+        stations.push(...cityStations);
+        Object.assign(details, cityDetails);
+    }
+    // Shanghai first in the unlocated list; original Hefei ids and shards stay valid.
+    stations.sort((a, b) => (a.cityId === b.cityId ? 0 : a.cityId === 'SH' ? -1 : 1));
+    const { listPath, detailPaths } = writeDataFiles(stations, details, options.outDir);
 
     printSummary(stations, listPath, detailPaths, options.seed);
 }

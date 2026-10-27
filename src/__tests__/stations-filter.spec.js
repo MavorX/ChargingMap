@@ -151,21 +151,32 @@ describe('stations store on the generated dataset', () => {
     setActivePinia(createPinia())
   })
 
-  it('keeps all 500 generated stations under default filters', () => {
+  it.each(['SH', 'HF'])(
+    'keeps all 500 %s stations, and no other city, under default filters',
+    (cityId) => {
+      const store = useStationsStore()
+      store.stations = dataset
+      store.browseCity(cityId)
+
+      expect(dataset).toHaveLength(1000)
+      expect(store.filteredStations).toHaveLength(500)
+      expect(store.filteredStations.every((s) => s.cityId === cityId)).toBe(true)
+    }
+  )
+
+  it.each([
+    ['HF', 40],
+    ['SH', 50]
+  ])('filters %s by brand using the station name', (cityId, count) => {
     const store = useStationsStore()
     store.stations = dataset
-
-    expect(store.filteredStations).toHaveLength(dataset.length)
-  })
-
-  it('filters by brand using the station name', () => {
-    const store = useStationsStore()
-    store.stations = dataset
+    store.browseCity(cityId)
     store.filters.brand = '国家电网'
 
     const result = store.filteredStations
 
-    expect(result).toHaveLength(40)
+    expect(result).toHaveLength(count)
+    expect(result.every((s) => s.cityId === cityId)).toBe(true)
     expect(result.every((station) => station.stationName.includes('国家电网'))).toBe(true)
     expect(store.activeFilterCount).toBe(1)
   })

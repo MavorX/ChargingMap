@@ -33,6 +33,13 @@
       试试移动地图，或调整搜索与筛选条件
     </p>
     <button
+      v-if="!stationsStore.searchQuery && !stationsStore.activeFilterCount"
+      class="mt-4 rounded-lg bg-primary-50 px-4 py-2.5 text-xs font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300"
+      @click="stationsStore.browseCity(stationsStore.activeCityId)"
+    >
+      返回{{ stationsStore.activeCity.shortName }}演示视野
+    </button>
+    <button
       v-if="stationsStore.searchQuery || stationsStore.activeFilterCount"
       class="mt-4 rounded-lg bg-primary-50 px-4 py-2.5 text-xs font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300"
       @click="stationsStore.resetFilters()"
