@@ -20,7 +20,6 @@ vi.mock('../services/mapService', () => ({
     updateMarkers: vi.fn(),
     closeInfoWindow: vi.fn(),
     clearRoute: vi.fn(),
-    cancelLocation: vi.fn(),
     destroy: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
@@ -79,6 +78,11 @@ const mountMapView = async () => {
 describe('MapView viewport pipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mapManager.locateUser.mockReset().mockResolvedValue({ lng: 117.28, lat: 31.86 })
+    fakeMap.getBounds.mockReturnValue({
+      getNorthEast: () => ({ lng: 117.5, lat: 32.0 }),
+      getSouthWest: () => ({ lng: 117.0, lat: 31.6 })
+    })
     vi.useFakeTimers()
     mapHandlers.clear()
     vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -167,41 +171,56 @@ describe('MapView viewport pipeline', () => {
     wrapper.unmount()
   })
 
-  it('starts in Shanghai without requesting location or inventing a device fix', async () => {
+  it('automatically requests device location and accepts a Shanghai fix without any city choice', async () => {
+    mapManager.locateUser.mockResolvedValueOnce({ lng: 121.4728, lat: 31.2331, accuracy: 30 })
     const { wrapper, store, setLoading } = await mountMapView()
-    expect(initialMapOptions).toMatchObject({ center: [121.4737, 31.2304], zoom: 12 })
-    expect(mapManager.locateUser).not.toHaveBeenCalled()
-    expect(store.userLocation).toBe(null)
-    expect(store.locationStatus).toBe('idle')
+    expect(initialMapOptions).toMatchObject({ center: [117.283042, 31.86119], zoom: 13 })
+    expect(mapManager.locateUser).toHaveBeenCalledTimes(1)
+    expect(store.userLocation).toEqual({ lng: 121.4728, lat: 31.2331, accuracy: 30 })
+    expect(store.locationStatus).toBe('ready')
     expect(setLoading).not.toHaveBeenCalled()
     expect(wrapper.find('[aria-label="正在加载地图"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
-  it('does not move the map on manual location failure', async () => {
+  it('does not block station browsing while initial location is pending', async () => {
+    mapManager.locateUser.mockImplementationOnce(() => new Promise(() => {}))
+    const { wrapper, store, setLoading } = await mountMapView()
+    expect(store.locationStatus).toBe('locating')
+    expect(setLoading).not.toHaveBeenCalled()
+    expect(wrapper.find('[aria-label="正在加载地图"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('does not move the map or invent a fix when initial geolocation is denied', async () => {
     mapManager.locateUser.mockRejectedValueOnce(
       Object.assign(new Error('定位权限被拒绝'), { code: 'PERMISSION_DENIED' })
     )
     fakeMap.setCenter.mockClear()
     const { wrapper, store } = await mountMapView()
-    await expect(store.requestUserLocation()).rejects.toMatchObject({ code: 'PERMISSION_DENIED' })
     expect(store.locationStatus).toBe('error')
     expect(store.locationErrorCode).toBe('PERMISSION_DENIED')
+    expect(store.userLocation).toBe(null)
     expect(fakeMap.setCenter).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
-  it('recenters even on a same-city return and synchronously precedes a favorite focus', async () => {
+  it('updates Shanghai markers solely from new map bounds, with no region state', async () => {
     const { wrapper, store } = await mountMapView()
-    store.browseCity('HF')
-    expect(fakeMap.setZoomAndCenter).toHaveBeenLastCalledWith(13, [117.283042, 31.86119], true)
-    store.browseCity('SH')
-    expect(fakeMap.setZoomAndCenter).toHaveBeenLastCalledWith(12, [121.4737, 31.2304], true)
-    fakeMap.setZoomAndCenter.mockClear()
-    store.browseCity('SH')
-    expect(fakeMap.setZoomAndCenter).toHaveBeenCalledTimes(1)
-    expect(fakeMap.setCenter).not.toHaveBeenCalled()
-    expect(store.viewportBounds).toBe(null)
+    store.stations = [
+      { stationId: 'HF000001', lng: 117.28, lat: 31.86, connectorTypes: ['GB/T'] },
+      { stationId: 'SH000001', lng: 121.47, lat: 31.23, connectorTypes: ['GB/T'] }
+    ]
+    fakeMap.getBounds.mockReturnValue({
+      getNorthEast: () => ({ lng: 121.5, lat: 31.26 }),
+      getSouthWest: () => ({ lng: 121.44, lat: 31.2 })
+    })
+    mapHandlers.get('moveend')()
+    await vi.advanceTimersByTimeAsync(200)
+    expect(store.filteredStations).toHaveLength(2)
+    expect(store.viewportStations.map((s) => s.stationId)).toEqual(['SH000001'])
+    expect(mapManager.updateMarkers).toHaveBeenLastCalledWith(store.viewportStations)
+    expect(store.$state).not.toHaveProperty('activeCityId')
     wrapper.unmount()
   })
 })

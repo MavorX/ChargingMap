@@ -33,10 +33,10 @@ const filesFor = (directory) => [
 ]
 
 describe('reproducible multi-city simulated data', () => {
-  it('reproduces the checked-in 500 + 500 dataset byte-for-byte', () => {
+  it('reproduces the checked-in Shanghai 1500 + Hefei 500 dataset byte-for-byte', () => {
     const directory = tempData()
     generate(directory)
-    expect(listFor(directory)).toHaveLength(1000)
+    expect(listFor(directory)).toHaveLength(2000)
     for (const file of filesFor(directory)) {
       expect(readFileSync(path.join(directory, file), 'utf8')).toBe(
         readFileSync(`public/data/${file}`, 'utf8')
@@ -56,10 +56,14 @@ describe('reproducible multi-city simulated data', () => {
     expect(new Set(shanghai.map((s) => s.district)).size).toBe(16)
     for (const city of CITIES) {
       const stations = list.filter((s) => s.cityId === city.id)
-      expect(stations).toHaveLength(500)
+      expect(stations).toHaveLength(city.id === 'SH' ? 1500 : 500)
       expect(
         stations.every((s) => cityAtLocation(s)?.id === city.id && s.cityName === city.name)
       ).toBe(true)
+    }
+    expect(new Set(shanghai.map((s) => s.road)).size).toBeGreaterThanOrEqual(70)
+    for (const district of new Set(shanghai.map((s) => s.district))) {
+      expect(shanghai.filter((s) => s.district === district).length).toBeGreaterThanOrEqual(30)
     }
     const details = JSON.parse(readFileSync('public/data/details/sh-part-01.json', 'utf8'))
     for (const station of shanghai.slice(0, 3)) {
@@ -88,7 +92,7 @@ describe('reproducible multi-city simulated data', () => {
       'details/part-01.json',
       'details/sh-part-01.json'
     ])
-    expect(listFor(directory).map((s) => s.stationId)).toEqual(['SH000001', 'HF000001'])
+    expect(listFor(directory).map((s) => s.stationId)).toEqual(['HF000001', 'SH000001'])
     expect(readFileSync(path.join(directory, 'details', 'keep.txt'), 'utf8')).toBe('user notes')
     const output = execFileSync(
       process.execPath,
@@ -100,12 +104,12 @@ describe('reproducible multi-city simulated data', () => {
 
   it('generates and validates the supported per-city maximum without namespace collisions', () => {
     const directory = tempData()
-    generate(directory, ['--count=1000', '--seed=0'])
+    generate(directory, ['--count=2000', '--seed=0'])
     const list = listFor(directory)
-    expect(list).toHaveLength(2000)
-    expect(new Set(list.map((s) => s.stationId)).size).toBe(2000)
-    expect(readdirSync(path.join(directory, 'details'))).toHaveLength(20)
-    for (const id of ['HF001000', 'SH001000']) {
+    expect(list).toHaveLength(4000)
+    expect(new Set(list.map((s) => s.stationId)).size).toBe(4000)
+    expect(readdirSync(path.join(directory, 'details'))).toHaveLength(40)
+    for (const id of ['HF002000', 'SH002000']) {
       const shard = JSON.parse(
         readFileSync(path.join(directory, 'details', `${partIdFor(id)}.json`), 'utf8')
       )
@@ -117,10 +121,22 @@ describe('reproducible multi-city simulated data', () => {
         ['scripts/validate-data.mjs', `--list=${path.join(directory, 'station_list.json')}`],
         { encoding: 'utf8' }
       )
-    ).toContain('[OK] 2000 stations')
+    ).toContain('[OK] 4000 stations')
   })
 
-  it.each(['0', '1001', 'NaN', '-1', '1.5'])(
+  it('allows independent Shanghai expansion without changing Hefei data', () => {
+    const directory = tempData()
+    generate(directory, ['--hefei-count=2', '--shanghai-count=101'])
+    const oldHF = listFor(directory).filter((s) => s.cityId === 'HF')
+    const oldDetail = readFileSync(path.join(directory, 'details/part-01.json'), 'utf8')
+    generate(directory, ['--hefei-count=2', '--shanghai-count=1500'])
+    expect(listFor(directory)).toHaveLength(1502)
+    expect(listFor(directory).filter((s) => s.cityId === 'HF')).toEqual(oldHF)
+    expect(readFileSync(path.join(directory, 'details/part-01.json'), 'utf8')).toBe(oldDetail)
+    expect(readdirSync(path.join(directory, 'details'))).toContain('sh-part-15.json')
+  })
+
+  it.each(['0', '2001', 'NaN', '-1', '1.5'])(
     'rejects invalid per-city count %s before writing',
     (count) => {
       const directory = tempData()
@@ -138,8 +154,9 @@ describe('reproducible multi-city simulated data', () => {
     const directory = tempData()
     generate(directory, ['--count=1'])
     const list = listFor(directory)
-    list[0].lng = 117.28
-    list[0].lat = 31.86
+    const shanghai = list.find((s) => s.cityId === 'SH')
+    shanghai.lng = 117.28
+    shanghai.lat = 31.86
     writeFileSync(path.join(directory, 'station_list.json'), JSON.stringify(list))
     const shDetail = JSON.parse(
       readFileSync(path.join(directory, 'details', 'sh-part-01.json'), 'utf8')

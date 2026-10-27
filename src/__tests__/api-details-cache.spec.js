@@ -111,10 +111,24 @@ describe('api loadStationDetail shard cache', () => {
     ['SH000001', 'sh-part-01'],
     ['SH000100', 'sh-part-01'],
     ['SH000101', 'sh-part-02'],
-    ['SH001000', 'sh-part-10']
+    ['SH001000', 'sh-part-10'],
+    ['SH001001', 'sh-part-11'],
+    ['SH001500', 'sh-part-15'],
+    ['SH002000', 'sh-part-20']
   ])('maps %s to its city-specific shard', async (id, part) => {
     const { partIdFor } = await import('../services/api')
     expect(partIdFor(id)).toBe(part)
+  })
+
+  it('loads Shanghai station 1500 under a deployment subpath', async () => {
+    vi.stubEnv('BASE_URL', '/ChargingMap/')
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ SH001500: { stationId: 'SH001500' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { loadStationDetail } = await import('../services/api')
+    expect(await loadStationDetail('SH001500')).toEqual({ stationId: 'SH001500' })
+    expect(fetchMock).toHaveBeenCalledWith('/ChargingMap/data/details/sh-part-15.json')
   })
 
   it('deduplicates concurrent requests for the same shard', async () => {
@@ -170,7 +184,7 @@ describe('api loadStationDetail shard cache', () => {
     'HF1',
     'SH000001\n',
     'SH000001junk',
-    'SH001001',
+    'SH002001',
     '../part-01'
   ])('rejects invalid id %s before fetching', async (id) => {
     const fetchMock = vi.fn()

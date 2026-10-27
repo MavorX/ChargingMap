@@ -125,6 +125,34 @@ describe('honest device geolocation', () => {
     expect(AMap.convertFrom).not.toHaveBeenCalled()
   })
 
+  it.each([false, 0])(
+    'accepts the real SDK html5 Convert Success result without a second conversion (flag %j)',
+    async (isConverted) => {
+      const pending = mapManager.locateUser()
+      await settle()
+      callbacks[0](
+        'complete',
+        location({
+          position: { lng: 121.472542, lat: 31.233075 },
+          accuracy: 20,
+          location_type: 'html5',
+          isConverted,
+          message: 'Get geolocation success.Convert Success.'
+        })
+      )
+      expect(await pending).toMatchObject({
+        lng: 121.472542,
+        lat: 31.233075,
+        source: 'html5',
+        quality: 'reported',
+        accuracy: 20
+      })
+      expect(AMap.convertFrom).not.toHaveBeenCalled()
+      expect(map.setCenter).toHaveBeenCalledWith([121.472542, 31.233075])
+      expect(map.setZoom).toHaveBeenCalledWith(15)
+    }
+  )
+
   it('labels a multi-kilometer device estimate and uses a wider map scale', async () => {
     const pending = mapManager.locateUser()
     await settle()

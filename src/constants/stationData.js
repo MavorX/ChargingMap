@@ -1,4 +1,4 @@
-export const STATIONS_PER_CITY_LIMIT = 1000
+export const STATIONS_PER_CITY_LIMIT = 2000
 export const DETAILS_PER_PART = 100
 export const STATION_ID_PATTERN = /^(HF|SH)\d{6}$/
 

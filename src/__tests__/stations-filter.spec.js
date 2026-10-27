@@ -151,32 +151,24 @@ describe('stations store on the generated dataset', () => {
     setActivePinia(createPinia())
   })
 
-  it.each(['SH', 'HF'])(
-    'keeps all 500 %s stations, and no other city, under default filters',
-    (cityId) => {
-      const store = useStationsStore()
-      store.stations = dataset
-      store.browseCity(cityId)
-
-      expect(dataset).toHaveLength(1000)
-      expect(store.filteredStations).toHaveLength(500)
-      expect(store.filteredStations.every((s) => s.cityId === cityId)).toBe(true)
-    }
-  )
-
-  it.each([
-    ['HF', 40],
-    ['SH', 50]
-  ])('filters %s by brand using the station name', (cityId, count) => {
+  it('keeps Shanghai 1500 and Hefei 500 together under default filters', () => {
     const store = useStationsStore()
     store.stations = dataset
-    store.browseCity(cityId)
+    expect(store.filteredStations).toHaveLength(2000)
+    expect(store.filteredStations.filter((s) => s.cityId === 'SH')).toHaveLength(1500)
+    expect(store.filteredStations.filter((s) => s.cityId === 'HF')).toHaveLength(500)
+  })
+
+  it('filters the unified dataset by brand, without a hidden city prerequisite', () => {
+    const store = useStationsStore()
+    store.stations = dataset
     store.filters.brand = '国家电网'
 
     const result = store.filteredStations
 
-    expect(result).toHaveLength(count)
-    expect(result.every((s) => s.cityId === cityId)).toBe(true)
+    expect(result).toHaveLength(168)
+    expect(result.filter((s) => s.cityId === 'HF')).toHaveLength(40)
+    expect(result.filter((s) => s.cityId === 'SH')).toHaveLength(128)
     expect(result.every((station) => station.stationName.includes('国家电网'))).toBe(true)
     expect(store.activeFilterCount).toBe(1)
   })

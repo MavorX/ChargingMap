@@ -595,10 +595,6 @@ class MapManager {
     this._locationRequest?.finish(locationError('LOCATION_CANCELLED', '定位请求已取消'))
   }
 
-  cancelLocation() {
-    this._cancelLocation()
-  }
-
   _isCurrentLocation(request) {
     return request.active && this._locationRequest === request && this.map === request.map
   }
@@ -688,9 +684,10 @@ class MapManager {
           this._userLocation = accepted
           request.finish(null, accepted)
         }
-        // AMap already converts H5 coordinates when convert=true. Convert only
-        // if the provider explicitly reports that this result is still raw.
-        if (result.isConverted === false || result.isConverted === 0) {
+        // The live SDK can report isConverted=false alongside "Convert Success."
+        // for HTML5 fixes that are already GCJ-02. Do not offset those twice.
+        const sdkConverted = /convert\s*success|转换成功/i.test(String(result.message || ''))
+        if ((result.isConverted === false || result.isConverted === 0) && !sdkConverted) {
           if (typeof AMap.convertFrom !== 'function')
             throw locationError('COORDINATE_CONVERSION_FAILED', '设备坐标未转换为地图坐标，请重试')
           AMap.convertFrom([location.lng, location.lat], 'gps', (conversionStatus, converted) => {

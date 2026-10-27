@@ -94,7 +94,7 @@ const detailIds = Object.keys(details);
 const listIdSet = new Set(listIds.filter((id) => typeof id === 'string'));
 const detailIdSet = new Set(detailIds);
 
-// 1. Up to 1000 per city, 2000 in the combined file.
+// 1. Bounded per-region counts; the default dataset is SH=1500 + HF=500.
 assert('记录数', (f) => {
   if (!listIsArray) {
     f.push(`station_list.json 不是数组（路径 ${LIST_PATH}）`);
@@ -205,7 +205,7 @@ assert('stationId 格式', (f) => {
   for (const id of [...listIds, ...detailIds]) {
     try { partIdFor(id); } catch { bad.push(String(id)); }
   }
-  if (bad.length > 0) f.push(`stationId 不符合 ${STATION_ID_PATTERN} 且序号应为 1..1000: ${sample(bad)}`);
+  if (bad.length > 0) f.push(`stationId 不符合 ${STATION_ID_PATTERN} 且序号应为 1..${STATIONS_PER_CITY_LIMIT}: ${sample(bad)}`);
 });
 
 assert('城市元数据', (f) => {

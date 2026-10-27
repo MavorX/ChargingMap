@@ -16,7 +16,7 @@ let rand = mulberry32(42);
 
 const REFERENCE_HOUR = 10;
 const REVIEW_YEAR = 2026;
-const DEFAULT_COUNT = 500;
+const DEFAULT_COUNTS = { HF: 500, SH: 1500 };
 const DEFAULT_SEED = 42;
 const MIN_COUNT = 1;
 const MAX_COUNT = STATIONS_PER_CITY_LIMIT;
@@ -505,7 +505,7 @@ function parseBoundedInt(flag, raw, min, max) {
 }
 
 function parseArgs(argv) {
-    const options = { count: DEFAULT_COUNT, seed: DEFAULT_SEED, outDir: path.join(__dirname, 'public', 'data'), help: false };
+    const options = { counts: { ...DEFAULT_COUNTS }, seed: DEFAULT_SEED, outDir: path.join(__dirname, 'public', 'data'), help: false };
 
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
@@ -521,7 +521,10 @@ function parseArgs(argv) {
         const raw = eq === -1 ? argv[++i] : arg.slice(eq + 1);
 
         if (key === 'count') {
-            options.count = parseBoundedInt('--count', raw, MIN_COUNT, MAX_COUNT);
+            const count = parseBoundedInt('--count', raw, MIN_COUNT, MAX_COUNT);
+            options.counts = { HF: count, SH: count };
+        } else if (key === 'shanghai-count' || key === 'hefei-count') {
+            options.counts[key === 'shanghai-count' ? 'SH' : 'HF'] = parseBoundedInt(`--${key}`, raw, MIN_COUNT, MAX_COUNT);
         } else if (key === 'seed') {
             options.seed = parseBoundedInt('--seed', raw, 0, MAX_SEED);
         } else if (key === 'out-dir') {
@@ -627,14 +630,14 @@ function main() {
         options = parseArgs(process.argv.slice(2));
     } catch (err) {
         console.error(`参数错误: ${err.message}`);
-        console.error('用法: node generate_stations.js [--count 每城1..1000] [--seed 0..4294967295] [--out-dir 目录]');
+        console.error('用法: node generate_stations.js [--shanghai-count 1..2000] [--hefei-count 1..2000] [--count 两城统一数量] [--seed 0..4294967295] [--out-dir 目录]');
         process.exitCode = 1;
         return;
     }
 
     if (options.help) {
-        console.log('用法: node generate_stations.js [--count 每城1..1000] [--seed 0..4294967295] [--out-dir 目录]');
-        console.log(`默认: --count ${DEFAULT_COUNT} --seed ${DEFAULT_SEED}；生成上海和合肥各 ${DEFAULT_COUNT} 站，全量覆盖输出目录内的生成数据。`);
+        console.log('用法: node generate_stations.js [--shanghai-count 1..2000] [--hefei-count 1..2000] [--count 两城统一数量] [--seed 0..4294967295] [--out-dir 目录]');
+        console.log(`默认: 上海 ${DEFAULT_COUNTS.SH} 站、合肥 ${DEFAULT_COUNTS.HF} 站，seed=${DEFAULT_SEED}；全量覆盖输出目录内的生成数据。`);
         return;
     }
 
@@ -643,9 +646,10 @@ function main() {
         // Independent streams keep all original HF values stable and prevent
         // another city's station count from changing this city's random input.
         rand = mulberry32(city.id === 'HF' ? options.seed : (options.seed ^ 0x5348) >>> 0);
-        const cityStations = generateStationList(options.count, city);
+        const count = options.counts[city.id];
+        const cityStations = generateStationList(count, city);
         if (city.id === 'SH') {
-            shanghaiShowcaseSites.slice(0, options.count).forEach((site, index) => {
+            shanghaiShowcaseSites.slice(0, count).forEach((site, index) => {
                 Object.assign(cityStations[index], site, {
                     openStatus: 1, openTime: '00:00-24:00', reservationAvailable: true,
                     quickAvailableNum: cityStations[index].quickChargeNum,
@@ -675,8 +679,7 @@ function main() {
         stations.push(...cityStations);
         Object.assign(details, cityDetails);
     }
-    // Shanghai first in the unlocated list; original Hefei ids and shards stay valid.
-    stations.sort((a, b) => (a.cityId === b.cityId ? 0 : a.cityId === 'SH' ? -1 : 1));
+    // Records from every region share one list; the UI uses location + viewport.
     const { listPath, detailPaths } = writeDataFiles(stations, details, options.outDir);
 
     printSummary(stations, listPath, detailPaths, options.seed);
