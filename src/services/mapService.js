@@ -1,6 +1,5 @@
 import { formatPrice } from '../utils/format'
-
-const LOCATE_TIMEOUT_MS = 8000
+import { LOCATION_TIMEOUT_MS, locationError, normalizeLocation } from '../utils/location'
 
 // Small DOM builder: station fields only ever travel through textContent, never
 // through a markup string, so names/addresses cannot inject markup.
@@ -17,6 +16,7 @@ class MapManager {
     this.markerClusterer = null
     this.stations = []
     this._geolocation = null
+    this._locationRequest = null
     this._currentInfoWindow = null
     this._infoWindow = null
     this._activeStationId = null
@@ -30,6 +30,7 @@ class MapManager {
   }
 
   setMap(mapInstance) {
+    if (this.map !== mapInstance) this._cancelLocation()
     this.map = mapInstance
     this._markerSignature = ''
     if (import.meta.env.DEV) console.log('[MapManager] Map instance set')
@@ -550,8 +551,9 @@ class MapManager {
 
     if (this._accuracyCircle) {
       this.map.remove(this._accuracyCircle)
+      this._accuracyCircle = null
     }
-    if (accuracy && accuracy > 0) {
+    if (Number.isFinite(accuracy) && accuracy > 0) {
       this._accuracyCircle = new AMap.Circle({
         center: [lng, lat],
         radius: accuracy,
@@ -567,26 +569,68 @@ class MapManager {
   }
 
   locateUser() {
-    if (!this.map) {
-      return Promise.reject(new Error('地图未初始化'))
+    if (!this.map) return Promise.reject(locationError('MAP_UNAVAILABLE', '地图未初始化'))
+    if (this._locationRequest?.map === this.map) return this._locationRequest.promise
+
+    const request = { map: this.map, active: true, timer: null }
+    request.promise = new Promise((resolve, reject) => {
+      request.finish = (error, location) => {
+        if (!request.active) return
+        request.active = false
+        clearTimeout(request.timer)
+        if (this._locationRequest === request) this._locationRequest = null
+        if (error) reject(error)
+        else resolve(location)
+      }
+    })
+    this._locationRequest = request
+    request.timer = setTimeout(() => {
+      request.finish(locationError('LOCATION_TIMEOUT', '定位超时，请检查系统位置服务或网络后重试'))
+    }, LOCATION_TIMEOUT_MS)
+    this._startLocation(request).catch((error) => request.finish(error))
+    return request.promise
+  }
+
+  _cancelLocation() {
+    this._locationRequest?.finish(locationError('LOCATION_CANCELLED', '定位请求已取消'))
+  }
+
+  _isCurrentLocation(request) {
+    return request.active && this._locationRequest === request && this.map === request.map
+  }
+
+  async _startLocation(request) {
+    if (globalThis.isSecureContext === false)
+      throw locationError(
+        'INSECURE_CONTEXT',
+        '定位需要 HTTPS 或 localhost，请不要使用普通 HTTP 局域网地址'
+      )
+    if (!globalThis.navigator?.geolocation)
+      throw locationError(
+        'LOCATION_UNSUPPORTED',
+        '当前浏览器没有提供设备定位，请在支持定位的普通浏览器中打开'
+      )
+    let permission
+    try {
+      permission = await navigator.permissions?.query({ name: 'geolocation' })
+    } catch {
+      /* Some browsers do not expose geolocation in the Permissions API. */
     }
-
-    const locatePromise = new Promise((resolve, reject) => {
-      if (this._geolocation) {
-        this._doLocate(resolve, reject)
-        return
-      }
-
-      if (typeof AMap === 'undefined' || typeof AMap.plugin !== 'function') {
-        reject(new Error('定位插件加载失败'))
-        return
-      }
-
-      AMap.plugin(['AMap.Geolocation'], () => {
-        if (!this.map) {
-          reject(new Error('地图已销毁'))
-          return
-        }
+    if (!this._isCurrentLocation(request)) return
+    if (permission?.state === 'denied')
+      throw locationError(
+        'PERMISSION_DENIED',
+        '定位权限被拒绝，请允许浏览器与系统位置访问；内嵌预览无法授权时请在普通浏览器打开'
+      )
+    if (this._geolocation) {
+      this._doLocate(request)
+      return
+    }
+    if (typeof AMap === 'undefined' || typeof AMap.plugin !== 'function')
+      throw locationError('LOCATION_PLUGIN_FAILED', '定位插件加载失败，请重试')
+    AMap.plugin(['AMap.Geolocation'], () => {
+      if (!this._isCurrentLocation(request)) return
+      try {
         this._geolocation = new AMap.Geolocation({
           enableHighAccuracy: true,
           timeout: 15000,
@@ -597,78 +641,70 @@ class MapManager {
           showCircle: false,
           panToLocation: false,
           zoomToAccuracy: false,
-          useNative: true,
           GeoLocationFirst: true,
-          noIpLocate: 0,
+          noIpLocate: 3,
+          noGeoLocation: 0,
+          getCityWhenFail: false,
           needAddress: false
         })
-        this.map.addControl(this._geolocation)
-        if (import.meta.env.DEV) console.log('[MapManager] Geolocation plugin loaded')
-        this._doLocate(resolve, reject)
-      })
-    })
-
-    let timeoutId = null
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error('定位超时，请检查定位权限或网络'))
-      }, LOCATE_TIMEOUT_MS)
-    })
-
-    return Promise.race([locatePromise, timeoutPromise]).finally(() => {
-      if (timeoutId) clearTimeout(timeoutId)
+        request.map.addControl(this._geolocation)
+        this._doLocate(request)
+      } catch (error) {
+        request.finish(error)
+      }
     })
   }
 
-  _doLocate(resolve, reject) {
-    if (!this._geolocation) {
-      reject(new Error('定位插件加载失败'))
-      return
-    }
-
+  _doLocate(request) {
     this._geolocation.getCurrentPosition((status, result) => {
-      if (import.meta.env.DEV) console.log('[MapManager] Geolocation result:', status, result)
-      if (status === 'complete') {
-        if (!this.map) {
-          reject(new Error('地图已销毁'))
-          return
+      if (!this._isCurrentLocation(request)) return
+      if (status !== 'complete') {
+        const message = String(result?.message || result?.info || '')
+        const denied = result?.code === 1 || /permission|denied|权限/i.test(message)
+        request.finish(
+          locationError(
+            denied ? 'PERMISSION_DENIED' : 'LOCATION_FAILED',
+            denied
+              ? '定位权限被拒绝，请检查浏览器和系统位置访问；内嵌预览无法授权时请在普通浏览器打开'
+              : '未能获取设备位置，请检查系统位置服务或网络后重试；不会改用 IP 城市冒充当前位置'
+          )
+        )
+        return
+      }
+      try {
+        const location = normalizeLocation(result)
+        const applyLocation = (normalized) => {
+          if (!this._isCurrentLocation(request)) return
+          const accepted = { ...normalized, coordinateSystem: 'GCJ-02', receivedAt: Date.now() }
+          this._addUserMarker(accepted.lng, accepted.lat, accepted.accuracy)
+          request.map.setCenter([accepted.lng, accepted.lat])
+          request.map.setZoom(
+            accepted.quality === 'reported' ? 15 : accepted.accuracy > 1000 ? 11 : 13
+          )
+          this._userLocation = accepted
+          request.finish(null, accepted)
         }
-        const userLocation = {
-          lng: result.position.lng,
-          lat: result.position.lat,
-          accuracy: result.accuracy || 0
-        }
-        this._userLocation = userLocation
-        this._addUserMarker(userLocation.lng, userLocation.lat, userLocation.accuracy)
-
-        if (userLocation.accuracy > 0 && userLocation.accuracy <= 200) {
-          this.map.setCenter([userLocation.lng, userLocation.lat])
-          this.map.setZoom(15)
-        } else {
-          this.map.setCenter([userLocation.lng, userLocation.lat])
-          this.map.setZoom(14)
-        }
-
-        resolve(userLocation)
-      } else {
-        console.warn('[MapManager] AMap geolocation failed:', result)
-        let errorMsg = '定位失败'
-        if (result && result.message) {
-          if (
-            result.message.includes('permission') ||
-            result.message.includes('denied') ||
-            result.message.includes('权限')
-          ) {
-            errorMsg = '定位权限被拒绝，请在浏览器设置中允许位置访问'
-          } else if (result.message.includes('timeout') || result.message.includes('超时')) {
-            errorMsg = '定位请求超时，请重试'
-          } else if (result.message.includes('unavailable') || result.message.includes('不可用')) {
-            errorMsg = '无法获取位置信息'
-          } else {
-            errorMsg = '定位失败：' + result.message
-          }
-        }
-        reject(new Error(errorMsg))
+        // AMap already converts H5 coordinates when convert=true. Convert only
+        // if the provider explicitly reports that this result is still raw.
+        if (result.isConverted === false || result.isConverted === 0) {
+          if (typeof AMap.convertFrom !== 'function')
+            throw locationError('COORDINATE_CONVERSION_FAILED', '设备坐标未转换为地图坐标，请重试')
+          AMap.convertFrom([location.lng, location.lat], 'gps', (conversionStatus, converted) => {
+            if (!this._isCurrentLocation(request)) return
+            try {
+              if (conversionStatus !== 'complete' || !converted?.locations?.length)
+                throw locationError(
+                  'COORDINATE_CONVERSION_FAILED',
+                  '设备坐标转换失败，未移动地图，请重试'
+                )
+              applyLocation(normalizeLocation({ ...result, position: converted.locations[0] }))
+            } catch (error) {
+              request.finish(error)
+            }
+          })
+        } else applyLocation(location)
+      } catch (error) {
+        request.finish(error)
       }
     })
   }
@@ -697,6 +733,7 @@ class MapManager {
 
     const doDriving = (startLng, startLat) => {
       if (!isCurrent()) return
+      const origin = this._userLocation ? { ...this._userLocation } : null
       if (import.meta.env.DEV) {
         console.log(
           '[MapManager] Planning route from [',
@@ -740,7 +777,7 @@ class MapManager {
                   const duration = Math.ceil(route.time / 60)
                   window.dispatchEvent(
                     new CustomEvent('routeResult', {
-                      detail: { distance, duration, station }
+                      detail: { distance, duration, station, origin }
                     })
                   )
                 } else {
@@ -786,10 +823,13 @@ class MapManager {
         .then((loc) => {
           doDriving(loc.lng, loc.lat)
         })
-        .catch(() => {
+        .catch((error) => {
           if (!isCurrent()) return
-          const center = this.map.getCenter()
-          doDriving(center.lng, center.lat)
+          window.dispatchEvent(
+            new CustomEvent('routeResult', {
+              detail: { error: `${error.message || '定位失败'}；未使用地图中心作为导航起点` }
+            })
+          )
         })
     }
   }
@@ -814,6 +854,7 @@ class MapManager {
   }
 
   destroy() {
+    this._cancelLocation()
     this.closeInfoWindow()
     this.clearRoute()
     this._clearDirectMarkers()

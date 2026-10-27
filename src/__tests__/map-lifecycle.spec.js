@@ -62,6 +62,10 @@ const loadManager = async () => {
 
 describe('MapManager lifecycle', () => {
   beforeEach(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: { getCurrentPosition: vi.fn() }
+    })
     delete globalThis.AMap
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -75,7 +79,7 @@ describe('MapManager lifecycle', () => {
     delete globalThis.AMap
   })
 
-  it('rejects locateUser after 8s when geolocation never responds', async () => {
+  it('rejects locateUser after the shared deadline when geolocation never responds', async () => {
     vi.useFakeTimers()
     installAMap()
     const manager = await loadManager()
@@ -91,7 +95,7 @@ describe('MapManager lifecycle', () => {
       .catch(() => {})
     const rejection = expect(pending).rejects.toThrow('定位超时')
 
-    await vi.advanceTimersByTimeAsync(9000)
+    await vi.advanceTimersByTimeAsync(21000)
     await rejection
 
     expect(finalized).toBe(true)

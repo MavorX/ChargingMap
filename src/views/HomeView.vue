@@ -23,30 +23,45 @@
               <i class="fa fa-sliders" aria-hidden="true"></i>
             </button>
           </div>
-          <span
-            class="mt-2 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-2 text-xs text-surface-600 shadow-sm dark:bg-surface-900/95 dark:text-surface-300"
+          <div
+            class="mt-2 inline-flex max-w-full flex-col items-start gap-1 rounded-xl bg-white/95 px-3 py-2 text-xs text-surface-600 shadow-sm dark:bg-surface-900/95 dark:text-surface-300"
+            role="status"
+            :title="stationsStore.locationError || stationsStore.locationPresentation.description"
           >
-            <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span
-            >{{ viewportStationCount }} 个站点在当前视野内
-          </span>
+            <span>{{ viewportStationCount }} 个站点在当前视野内</span>
+            <span class="text-[11px]"
+              >{{ stationsStore.locationPresentation.title
+              }}<template v-if="stationsStore.locationStatus === 'ready'">
+                · {{ locationAccuracyText(stationsStore.userLocation) }}</template
+              ></span
+            >
+          </div>
         </div>
 
         <button
           v-if="!isNavigating"
-          class="glass-card absolute left-4 top-4 z-10 hidden items-center gap-3 px-4 py-3 text-left lg:flex"
+          class="glass-card absolute left-4 top-4 z-10 hidden max-w-[calc(100%_-_2rem)] items-center gap-3 px-4 py-3 text-left disabled:cursor-wait lg:flex"
           aria-label="定位当前位置"
+          :disabled="stationsStore.isLocating"
+          :aria-busy="stationsStore.isLocating"
+          :title="stationsStore.locationError || stationsStore.locationPresentation.description"
           @click="locateUser"
         >
           <span
             class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-            ><i class="fa fa-location-arrow" aria-hidden="true"></i
+            ><i
+              :class="
+                stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
+              "
+              aria-hidden="true"
+            ></i
           ></span>
-          <span
+          <span class="min-w-0"
             ><span class="block text-sm font-semibold text-surface-800 dark:text-surface-100">{{
-              stationsStore.userLocation ? '已获取你的位置' : '合肥市 · 默认视野'
+              stationsStore.locationPresentation.title
             }}</span
             ><span class="block text-[11px] text-surface-500 dark:text-surface-400">{{
-              stationsStore.userLocation ? '点击重新定位' : '点击定位，发现身边的好站'
+              stationsStore.locationPresentation.description
             }}</span></span
           >
         </button>
@@ -101,9 +116,16 @@
             class="map-tool text-primary-600 dark:text-primary-400"
             title="定位当前位置"
             aria-label="定位当前位置"
+            :disabled="stationsStore.isLocating"
+            :aria-busy="stationsStore.isLocating"
             @click="locateUser"
           >
-            <i class="fa fa-location-arrow" aria-hidden="true"></i>
+            <i
+              :class="
+                stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
+              "
+              aria-hidden="true"
+            ></i>
           </button>
         </div>
 
@@ -283,6 +305,7 @@ import { useUiStore } from '../store/modules/ui'
 import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
 import { formatDuration } from '../utils/format'
+import { locationAccuracyText } from '../utils/location'
 import MapView from '../components/map/MapView.vue'
 import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
@@ -493,12 +516,14 @@ const handleHeaderEvent = (event) => {
     case 'locateUser':
       mapManager.clearRoute()
       stationsStore.stopNavigation()
-      mapManager
-        .locateUser()
+      stationsStore
+        .requestUserLocation()
         .then((loc) => {
-          stationsStore.userLocation = loc
-          stationsStore.recalculateDistances()
-          showToast('已定位到当前位置', 'success')
+          const estimated = loc.quality !== 'reported'
+          showToast(
+            `${estimated ? '仅获得估算位置' : '已获取设备位置'}，${locationAccuracyText(loc)}${estimated ? '；电脑定位可能有明显偏差' : ''}`,
+            estimated ? 'info' : 'success'
+          )
         })
         .catch((err) => {
           showToast(err.message || '定位失败，请检查位置权限', 'error')
@@ -516,12 +541,12 @@ const handleHeaderEvent = (event) => {
 }
 
 const handleRouteResult = (event) => {
-  const { distance, duration, error, station } = event.detail
+  const { distance, duration, error, station, origin } = event.detail
   if (error) {
     showToast(error, 'error')
   } else if (distance && duration) {
     const durationText = formatDuration(duration * 60, 'hm-verbose')
-    stationsStore.startNavigation({ distance, duration, station })
+    stationsStore.startNavigation({ distance, duration, station, origin })
     showToast(`导航路线：${distance}公里，约${durationText}`, 'success')
   }
 }

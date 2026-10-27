@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { loadStationsList, loadStationDetail } from '../../services/api'
 import { currentPriceFor } from '../../utils/pricing'
+import mapManager from '../../services/mapService'
+import { locationPresentation } from '../../utils/location'
 
 const DEFAULT_CONNECTORS = ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']
 
@@ -40,6 +42,10 @@ export const useStationsStore = defineStore('stations', {
     loadRequestId: 0,
     currentStation: null,
     userLocation: null,
+    locationStatus: 'idle',
+    locationRequestId: 0,
+    locationError: '',
+    locationErrorCode: '',
     isNavigating: false,
     routeInfo: null,
     filters: {
@@ -61,6 +67,30 @@ export const useStationsStore = defineStore('stations', {
   }),
 
   actions: {
+    async requestUserLocation() {
+      const requestId = ++this.locationRequestId
+      this.locationStatus = 'locating'
+      this.locationError = ''
+      this.locationErrorCode = ''
+      try {
+        const location = await mapManager.locateUser()
+        if (requestId !== this.locationRequestId) return location
+        this.userLocation = location
+        this.locationStatus = 'ready'
+        this.recalculateDistances()
+        return location
+      } catch (error) {
+        if (requestId !== this.locationRequestId) throw error
+        if (error.code === 'LOCATION_CANCELLED')
+          this.locationStatus = this.userLocation ? 'ready' : 'idle'
+        else {
+          this.locationStatus = 'error'
+          this.locationError = error.message || '定位失败，请重试'
+          this.locationErrorCode = error.code || 'LOCATION_FAILED'
+        }
+        throw error
+      }
+    },
     async loadStations() {
       const requestId = ++this.loadRequestId
       this.isLoading = true
@@ -233,6 +263,8 @@ export const useStationsStore = defineStore('stations', {
   },
 
   getters: {
+    isLocating: (state) => state.locationStatus === 'locating',
+    locationPresentation: (state) => locationPresentation(state),
     activeFilterCount: (state) => {
       let count = 0
       if (state.filters.quickAvailable) count++

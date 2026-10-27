@@ -159,4 +159,16 @@ describe('MapView viewport pipeline', () => {
     expect(wrapper.find('[aria-label="正在加载地图"]').exists()).toBe(false)
     wrapper.unmount()
   })
+
+  it('does not jump back to Hefei when the initial location request fails', async () => {
+    mapManager.locateUser.mockRejectedValueOnce(
+      Object.assign(new Error('定位权限被拒绝'), { code: 'PERMISSION_DENIED' })
+    )
+    fakeMap.setCenter.mockClear()
+    const { wrapper, store } = await mountMapView()
+    expect(store.locationStatus).toBe('error')
+    expect(store.locationErrorCode).toBe('PERMISSION_DENIED')
+    expect(fakeMap.setCenter).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
 })

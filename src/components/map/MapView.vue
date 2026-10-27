@@ -169,15 +169,9 @@ const onMapViewportChange = () => {
 }
 
 const doInitialGeolocation = () => {
-  mapManager
-    .locateUser()
-    .then((loc) => {
-      stationsStore.userLocation = loc
-      stationsStore.recalculateDistances()
-    })
-    .catch(() => {
-      if (map) map.setCenter([117.283042, 31.86119])
-    })
+  stationsStore.requestUserLocation().catch(() => {
+    // Keep the user's viewport; failure is visible in the shared location status.
+  })
 }
 
 const loadStations = async () => {

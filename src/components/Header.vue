@@ -53,9 +53,16 @@
           class="icon-button hidden text-surface-500 sm:block"
           aria-label="定位当前位置"
           title="定位当前位置"
+          :disabled="stationsStore.isLocating"
+          :aria-busy="stationsStore.isLocating"
           @click="emitHeaderEvent('locateUser')"
         >
-          <i class="fa fa-location-arrow" aria-hidden="true"></i>
+          <i
+            :class="
+              stationsStore.isLocating ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-location-arrow'
+            "
+            aria-hidden="true"
+          ></i>
         </button>
         <button
           class="icon-button text-surface-500"
@@ -108,10 +115,12 @@
 import { computed } from 'vue'
 import { useUserStore } from '../store/modules/user'
 import { useUiStore } from '../store/modules/ui'
+import { useStationsStore } from '../store/modules/stations'
 import logoUrl from '../assets/logo.webp'
 
 const userStore = useUserStore()
 const ui = useUiStore()
+const stationsStore = useStationsStore()
 const unreadNotificationsCount = computed(() => userStore.unreadNotificationsCount)
 
 const emitHeaderEvent = (type) => {
