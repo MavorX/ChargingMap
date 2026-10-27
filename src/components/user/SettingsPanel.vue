@@ -1,27 +1,51 @@
 <template>
   <AccountPanel title="设置" subtitle="个人资料与本地偏好" @close="emit('close')">
     <section>
-      <h3 class="account-heading">个人资料</h3>
+      <h3 class="account-heading">{{ t('个人资料') }}</h3>
       <div class="account-card flex items-center gap-3">
         <span class="account-icon"><i class="fa fa-user-o" aria-hidden="true"></i></span>
         <div class="min-w-0 flex-1">
-          <p class="break-words text-sm font-semibold">{{ user.userInfo.name }}</p>
-          <p class="account-caption">{{ user.userInfo.level }} · 仅保存在此浏览器</p>
+          <p class="break-words text-sm font-semibold">{{ t(user.userInfo.name) }}</p>
+          <p class="account-caption">{{ t(user.userInfo.level) }} · {{ t('仅保存在此浏览器') }}</p>
         </div>
         <button class="action-secondary min-h-10 px-3 py-2 text-xs" @click="openName">
-          编辑昵称
+          {{ t('编辑昵称') }}
         </button>
       </div>
     </section>
     <section>
-      <h3 class="account-heading">外观与提醒</h3>
+      <h3 class="account-heading">{{ t('界面语言') }}</h3>
+      <div class="account-card">
+        <div class="segmented-control" role="group" :aria-label="t('界面语言')">
+          <button
+            class="segmented-item"
+            lang="zh-CN"
+            :aria-pressed="locale === 'zh-CN'"
+            @click="setLocale('zh-CN')"
+          >
+            简体中文
+          </button>
+          <button
+            class="segmented-item"
+            lang="en"
+            :aria-pressed="locale === 'en-US'"
+            @click="setLocale('en-US')"
+          >
+            English
+          </button>
+        </div>
+        <p class="account-caption mt-2">{{ t('语言切换后自动保存') }}</p>
+      </div>
+    </section>
+    <section>
+      <h3 class="account-heading">{{ t('外观与提醒') }}</h3>
       <div class="account-group">
         <div v-for="item in preferences" :key="item.key" class="flex items-center gap-4 p-4">
           <div class="min-w-0 flex-1">
             <label :id="`settings-${item.key}`" class="block text-sm font-semibold">{{
-              item.label
+              t(item.label)
             }}</label>
-            <p class="account-caption mt-1">{{ item.description }}</p>
+            <p class="account-caption mt-1">{{ t(item.description) }}</p>
           </div>
           <ToggleSwitch
             :label-id="`settings-${item.key}`"
@@ -31,60 +55,67 @@
         </div>
       </div>
       <p class="account-caption mt-2">
-        仅提供页面内提醒，不申请系统推送权限。订单需要手动确认支付。
+        {{ t('仅提供页面内提醒，不申请系统推送权限。订单需要手动确认支付。') }}
       </p>
     </section>
     <section>
-      <h3 class="account-heading">本地数据与项目</h3>
+      <h3 class="account-heading">{{ t('本地数据与项目') }}</h3>
       <div class="account-group">
         <button class="account-row" @click="clearCache">
           <span class="account-icon"><i class="fa fa-refresh" aria-hidden="true"></i></span
           ><span class="min-w-0 flex-1"
-            ><strong class="block text-sm">清除站点请求缓存</strong
-            ><span class="account-caption">不删除车辆、余额、订单或收藏</span></span
+            ><strong class="block text-sm">{{ t('清除站点请求缓存') }}</strong
+            ><span class="account-caption">{{ t('不删除车辆、余额、订单或收藏') }}</span></span
           ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i></button
         ><button class="account-row" @click="showAbout = true">
           <span class="account-icon"><i class="fa fa-info-circle" aria-hidden="true"></i></span
-          ><span class="flex-1 text-sm font-semibold">关于项目</span
+          ><span class="flex-1 text-sm font-semibold">{{ t('关于项目') }}</span
           ><i class="fa fa-angle-right text-surface-400" aria-hidden="true"></i>
         </button>
       </div>
     </section>
     <p class="account-caption text-center">
-      本地演示账户，无需登录或退出。清理浏览器数据会丢失本地记录。
+      {{ t('本地演示账户，无需登录或退出。清理浏览器数据会丢失本地记录。') }}
     </p>
     <template #dialogs
       ><DialogModal v-if="showName" title="修改昵称" @close="showName = false"
-        ><label for="account-name" class="mb-2 block text-sm font-semibold">昵称</label
+        ><label for="account-name" class="mb-2 block text-sm font-semibold">{{ t('昵称') }}</label
         ><input
           id="account-name"
           v-model="editName"
           maxlength="24"
           type="text"
-          aria-label="新昵称"
+          :aria-label="t('新昵称')"
           class="input-premium"
           @keydown.enter.prevent="saveName"
         />
-        <p class="account-caption mt-2">1–24 个字符，前后空格会自动去除。</p>
+        <p class="account-caption mt-2">{{ t('1–24 个字符，前后空格会自动去除。') }}</p>
         <div class="mt-5 flex gap-3">
-          <button class="action-secondary flex-1" @click="showName = false">取消</button
+          <button class="action-secondary flex-1" @click="showName = false">{{ t('取消') }}</button
           ><button class="action-primary flex-1" :disabled="!canSaveName" @click="saveName">
-            保存
+            {{ t('保存') }}
           </button>
         </div></DialogModal
       ><DialogModal v-if="showAbout" title="关于项目" @close="showAbout = false"
         ><span class="account-icon mb-4"><i class="fa fa-bolt" aria-hidden="true"></i></span>
         <h3 class="text-lg font-bold">VWer Charging</h3>
         <p class="account-caption mt-3">
-          充电服务演示项目：使用假设站点，演示选桩、接枪、检测、充电、拔枪与结算，不连接真实设备或支付渠道。
+          {{
+            t(
+              '充电服务演示项目：使用假设站点，演示选桩、接枪、检测、充电、拔枪与结算，不连接真实设备或支付渠道。'
+            )
+          }}
         </p>
-        <button class="action-primary mt-5" @click="showAbout = false">知道了</button></DialogModal
+        <button class="action-primary mt-5" @click="showAbout = false">
+          {{ t('知道了') }}
+        </button></DialogModal
       ></template
     >
   </AccountPanel>
 </template>
 <script setup>
 import { computed, inject, ref } from 'vue'
+import { locale, setLocale, t } from '../../i18n'
 import AccountPanel from './AccountPanel.vue'
 import DialogModal from '../common/DialogModal.vue'
 import ToggleSwitch from '../common/ToggleSwitch.vue'

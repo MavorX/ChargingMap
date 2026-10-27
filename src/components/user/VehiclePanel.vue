@@ -9,45 +9,47 @@
   >
     <template v-if="!showForm">
       <section v-if="user.vehicles.length" class="account-card">
-        <p class="account-caption">已登记车辆</p>
+        <p class="account-caption">{{ t('已登记车辆') }}</p>
         <p class="mt-1 text-2xl font-bold">
-          {{ user.vehicles.length
-          }}<span class="ml-1 text-sm font-normal text-surface-500">辆</span>
+          {{ t('{count} 辆', { count: user.vehicles.length }) }}
         </p>
-        <p class="account-caption mt-2">第一辆为默认车辆，进入充电设置时优先匹配兼容车辆。</p>
+        <p class="account-caption mt-2">
+          {{ t('第一辆为默认车辆，进入充电设置时优先匹配兼容车辆。') }}
+        </p>
       </section>
       <article v-for="vehicle in user.vehicles" :key="vehicle.id" class="account-card">
         <div class="flex items-start gap-3">
           <span class="account-icon"><i class="fa fa-car" aria-hidden="true"></i></span>
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
-              <h3 class="break-words text-sm font-bold">{{ vehicle.model }}</h3>
+              <h3 class="break-words text-sm font-bold">{{ dataText(vehicle.model) }}</h3>
               <span
                 v-if="vehicle.id === defaultVehicleId"
                 class="rounded-md bg-primary-50 px-2 py-1 text-[10px] font-semibold text-primary-700 dark:bg-primary-900/25 dark:text-primary-300"
-                >默认</span
+                >{{ t('默认') }}</span
               >
             </div>
-            <p class="account-caption mt-1">{{ vehicle.brand }}</p>
+            <p class="account-caption mt-1">{{ dataText(vehicle.brand) }}</p>
           </div>
         </div>
         <dl
           class="mt-4 grid grid-cols-2 gap-3 border-t border-surface-100 pt-3 text-xs dark:border-surface-800"
         >
           <div>
-            <dt class="account-caption">充电接口</dt>
+            <dt class="account-caption">{{ t('充电接口') }}</dt>
             <dd class="mt-1 font-semibold">{{ vehicle.connectorType }}</dd>
           </div>
           <div>
-            <dt class="account-caption">电池 / 功率</dt>
+            <dt class="account-caption">{{ t('电池 / 功率') }}</dt>
             <dd class="mt-1 font-semibold">
-              {{ vehicle.batteryCapacityKwh ? `${vehicle.batteryCapacityKwh} kWh` : '容量未填' }} /
-              {{ vehicle.maxPower ? `${vehicle.maxPower} kW` : '功率未填' }}
+              {{ vehicle.batteryCapacityKwh ? `${vehicle.batteryCapacityKwh} kWh` : t('容量未填') }}
+              /
+              {{ vehicle.maxPower ? `${vehicle.maxPower} kW` : t('功率未填') }}
             </dd>
           </div>
         </dl>
         <p v-if="isInUse(vehicle.id)" class="account-caption mt-3">
-          正在用于当前充电会话，结束并结算后可编辑或删除。
+          {{ t('正在用于当前充电会话，结束并结算后可编辑或删除。') }}
         </p>
         <div class="mt-4 flex flex-wrap items-center gap-2">
           <button
@@ -55,61 +57,67 @@
             :disabled="vehicle.id === defaultVehicleId"
             :aria-label="
               vehicle.id === defaultVehicleId
-                ? `当前默认车辆 ${vehicle.model}`
-                : `设为默认车辆 ${vehicle.model}`
+                ? t('当前默认车辆 {model}', { model: dataText(vehicle.model) })
+                : t('设为默认车辆 {model}', { model: dataText(vehicle.model) })
             "
             @click="setDefaultVehicle(vehicle.id)"
           >
-            {{ vehicle.id === defaultVehicleId ? '默认车辆' : '设为默认' }}</button
+            {{ t(vehicle.id === defaultVehicleId ? '默认车辆' : '设为默认') }}</button
           ><button
             class="action-secondary min-h-10 px-3 py-2 text-xs"
             :disabled="isInUse(vehicle.id)"
-            :aria-label="`编辑车辆 ${vehicle.model}`"
+            :aria-label="t('编辑车辆 {model}', { model: dataText(vehicle.model) })"
             @click="openEditForm(vehicle)"
           >
-            编辑</button
+            {{ t('编辑') }}</button
           ><button
             class="action-secondary min-h-10 px-3 py-2 text-xs text-danger-600 dark:text-danger-400"
             :disabled="isInUse(vehicle.id)"
-            :aria-label="`删除车辆 ${vehicle.model}`"
+            :aria-label="t('删除车辆 {model}', { model: dataText(vehicle.model) })"
             @click="confirmRemove(vehicle.id)"
           >
-            删除
+            {{ t('删除') }}
           </button>
         </div>
       </article>
       <div v-if="!user.vehicles.length" class="account-empty">
         <span class="account-icon"><i class="fa fa-car" aria-hidden="true"></i></span>
-        <h3 class="text-sm font-semibold">暂无车辆</h3>
-        <p class="account-caption">添加车辆接口与规格，便于选择兼容的充电桩。</p>
+        <h3 class="text-sm font-semibold">{{ t('暂无车辆') }}</h3>
+        <p class="account-caption">{{ t('添加车辆接口与规格，便于选择兼容的充电桩。') }}</p>
       </div>
     </template>
     <form v-else class="space-y-5" @submit.prevent="submitForm">
       <div>
-        <label for="vehicle-brand" class="mb-2 block text-sm font-semibold">车辆品牌</label
+        <label for="vehicle-brand" class="mb-2 block text-sm font-semibold">{{
+          t('车辆品牌')
+        }}</label
         ><input
           id="vehicle-brand"
           ref="brandRef"
           v-model="formData.brand"
           maxlength="36"
           class="input-premium"
-          placeholder="例如：大众、比亚迪"
+          :placeholder="t('例如：大众、比亚迪')"
           autocomplete="off"
         />
       </div>
       <div>
-        <label for="vehicle-model" class="mb-2 block text-sm font-semibold">车辆型号</label
+        <label for="vehicle-model" class="mb-2 block text-sm font-semibold">{{
+          t('车辆型号')
+        }}</label
         ><input
           id="vehicle-model"
           v-model="formData.model"
           maxlength="50"
           class="input-premium"
-          placeholder="例如：ID.3"
+          :placeholder="t('例如：ID.3')"
           autocomplete="off"
         />
       </div>
       <section>
-        <h3 id="vehicle-connector-label" class="mb-2 text-sm font-semibold">充电接口类型</h3>
+        <h3 id="vehicle-connector-label" class="mb-2 text-sm font-semibold">
+          {{ t('充电接口类型') }}
+        </h3>
         <div class="grid grid-cols-2 gap-2" role="group" aria-labelledby="vehicle-connector-label">
           <button
             v-for="type in connectorTypes"
@@ -124,8 +132,9 @@
         </div>
       </section>
       <div>
-        <label for="vehicle-capacity" class="mb-2 block text-sm font-semibold"
-          >电池容量（kWh，可选）</label
+        <label for="vehicle-capacity" class="mb-2 block text-sm font-semibold">{{
+          t('电池容量（kWh，可选）')
+        }}</label
         ><input
           id="vehicle-capacity"
           v-model.number="formData.batteryCapacityKwh"
@@ -138,12 +147,13 @@
         />
       </div>
       <div>
-        <label for="vehicle-power" class="mb-2 block text-sm font-semibold"
-          >最大充电功率（kW，可选）</label
+        <label for="vehicle-power" class="mb-2 block text-sm font-semibold">{{
+          t('最大充电功率（kW，可选）')
+        }}</label
         ><input
           id="vehicle-power"
           v-model.number="formData.maxPower"
-          aria-label="车辆最大充电功率 kW"
+          :aria-label="t('车辆最大充电功率 kW')"
           type="number"
           min="1"
           max="350"
@@ -152,11 +162,11 @@
           placeholder="1–350 kW"
         />
       </div>
-      <p class="account-caption">容量或功率可留空保存，但需补全后才能用于充电演示。</p>
+      <p class="account-caption">{{ t('容量或功率可留空保存，但需补全后才能用于充电演示。') }}</p>
       <p v-if="formError" class="text-xs text-danger-600 dark:text-danger-400" role="status">
-        {{ formError }}
+        {{ t(formError) }}
       </p>
-      <button type="submit" class="sr-only" tabindex="-1">保存车辆</button>
+      <button type="submit" class="sr-only" tabindex="-1">{{ t('保存车辆') }}</button>
     </form>
     <template #footer
       ><button
@@ -166,17 +176,17 @@
         class="action-primary"
         @click="openAddForm"
       >
-        <i class="fa fa-plus" aria-hidden="true"></i>添加车辆
+        <i class="fa fa-plus" aria-hidden="true"></i>{{ t('添加车辆') }}
       </button>
       <div v-else class="flex gap-3">
-        <button class="action-secondary flex-1" @click="handleBack">取消</button
+        <button class="action-secondary flex-1" @click="handleBack">{{ t('取消') }}</button
         ><button
           id="confirm-vehicle-btn"
           class="action-primary flex-1"
           :disabled="!!formError"
           @click="submitForm"
         >
-          {{ isEditing ? '保存修改' : '确认添加' }}
+          {{ t(isEditing ? '保存修改' : '确认添加') }}
         </button>
       </div></template
     >
@@ -187,16 +197,21 @@
         role="alertdialog"
         @close="showDeleteConfirm = false"
         ><p class="mb-5 text-sm leading-6">
-          确定删除 {{ deletingVehicle?.model || '这辆车' }}？历史订单与账单不会被删除。
+          {{
+            t('确定删除 {model}？历史订单与账单不会被删除。', {
+              model: dataText(deletingVehicle?.model) || t('这辆车')
+            })
+          }}
         </p>
         <div class="flex gap-3">
-          <button class="action-secondary flex-1" @click="showDeleteConfirm = false">取消</button
+          <button class="action-secondary flex-1" @click="showDeleteConfirm = false">
+            {{ t('取消') }}</button
           ><button
             class="action-primary flex-1 bg-danger-600 hover:bg-danger-700"
             :disabled="!deletingVehicle || isInUse(removingVehicleId)"
             @click="removeVehicle"
           >
-            删除
+            {{ t('删除') }}
           </button>
         </div></DialogModal
       ><DialogModal
@@ -204,10 +219,13 @@
         title="放弃未保存的修改？"
         role="alertdialog"
         @close="showDiscard = false"
-        ><p class="mb-5 text-sm leading-6">当前车辆信息尚未保存，返回后这些修改将丢失。</p>
+        ><p class="mb-5 text-sm leading-6">
+          {{ t('当前车辆信息尚未保存，返回后这些修改将丢失。') }}
+        </p>
         <div class="flex gap-3">
-          <button class="action-secondary flex-1" @click="showDiscard = false">继续编辑</button
-          ><button class="action-primary flex-1" @click="discardForm">放弃修改</button>
+          <button class="action-secondary flex-1" @click="showDiscard = false">
+            {{ t('继续编辑') }}</button
+          ><button class="action-primary flex-1" @click="discardForm">{{ t('放弃修改') }}</button>
         </div></DialogModal
       ></template
     >
@@ -215,6 +233,8 @@
 </template>
 <script setup>
 import { computed, inject, nextTick, reactive, ref, watch } from 'vue'
+import { t } from '../../i18n'
+import { dataText } from '../../i18n/data'
 import AccountPanel from './AccountPanel.vue'
 import DialogModal from '../common/DialogModal.vue'
 import { useUserStore } from '../../store/modules/user'

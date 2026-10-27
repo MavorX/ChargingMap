@@ -2,13 +2,13 @@
   <div class="flex h-full min-h-0 flex-col">
     <div class="space-y-3 px-5 pb-4">
       <StationListControls density="compact" />
-      <div class="flex items-center justify-between pt-1">
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1">
         <p class="text-xs text-surface-500 dark:text-surface-400" aria-live="polite">
           <span class="font-semibold text-surface-800 dark:text-surface-200">{{
-            stationsStore.viewportStationCount
+            t('{count} 个站点', { count: stationsStore.viewportStationCount })
           }}</span>
-          个站点 <span class="mx-1 text-surface-300 dark:text-surface-600">/</span
-          >{{ stationsStore.userLocation ? '距离优先' : '当前地图范围' }}
+          <span class="mx-1 text-surface-300 dark:text-surface-600">/</span
+          >{{ t(stationsStore.userLocation ? '距离优先' : '当前地图范围') }}
         </p>
         <div class="flex items-center gap-2">
           <button
@@ -16,13 +16,13 @@
             class="text-xs text-surface-500 hover:text-primary-600 dark:text-surface-400"
             @click="resetFilters"
           >
-            重置
+            {{ t('重置') }}
           </button>
           <button
             class="flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-surface-800"
             @click="emit('show-filter')"
           >
-            <i class="fa fa-sliders" aria-hidden="true"></i>高级筛选
+            <i class="fa fa-sliders" aria-hidden="true"></i>{{ t('高级筛选') }}
           </button>
         </div>
       </div>
@@ -45,16 +45,14 @@
           class="w-full rounded-xl border border-surface-200 bg-white py-3 text-xs font-medium text-surface-600 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
           @click="loadMore"
         >
-          加载更多 · 还有 {{ remainingCount }} 个站点<i
-            class="fa fa-angle-down ml-2"
-            aria-hidden="true"
-          ></i>
+          {{ t('加载更多 · 还有 {count} 个站点', { count: remainingCount })
+          }}<i class="fa fa-angle-down ml-2" aria-hidden="true"></i>
         </button>
         <p
           v-else-if="displayedStations.length"
           class="py-2 text-center text-[11px] text-surface-400"
         >
-          已展示当前范围内的全部站点
+          {{ t('已展示当前范围内的全部站点') }}
         </p>
       </div>
     </div>
@@ -62,6 +60,7 @@
 </template>
 
 <script setup>
+import { t } from '../../i18n'
 import { useStationList } from '../../composables/useStationList'
 import StationListCard from './StationListCard.vue'
 import StationListControls from './StationListControls.vue'

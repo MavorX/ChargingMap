@@ -9,14 +9,14 @@
       ref="inputRef"
       v-model="searchQuery"
       type="search"
-      placeholder="搜索站点名称或地址"
-      aria-label="搜索充电站名称或地址"
+      :placeholder="t('搜索站点名称或地址')"
+      :aria-label="t('搜索充电站名称或地址')"
       class="input-premium h-12 pl-11 pr-11 text-sm"
     />
     <button
       v-if="searchQuery"
       class="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700"
-      aria-label="清除搜索"
+      :aria-label="t('清除搜索')"
       @click="clearSearch"
     >
       <i class="fa fa-times" aria-hidden="true"></i>
@@ -26,6 +26,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { t } from '../../i18n'
 import { useStationList } from '../../composables/useStationList'
 
 defineProps({ inputId: { type: String, default: '' } })

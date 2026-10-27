@@ -13,40 +13,40 @@
         class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium"
         :class="status.tone"
       >
-        <span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ status.text }}
+        <span class="h-1.5 w-1.5 rounded-full bg-current"></span>{{ t(status.text) }}
       </span>
       <span class="flex items-center gap-1 text-xs text-surface-500 dark:text-surface-400">
         <i class="fa fa-location-arrow text-[10px]" aria-hidden="true"></i
-        >{{ Number.isFinite(station.distance) ? formatDistance(station.distance) : '待定位' }}
+        >{{ Number.isFinite(station.distance) ? formatDistance(station.distance) : t('待定位') }}
       </span>
     </div>
 
     <h3
       class="mb-1 line-clamp-2 text-[15px] font-bold leading-relaxed text-surface-900 group-hover:text-primary-600 dark:text-surface-100 dark:group-hover:text-primary-400"
     >
-      {{ station.stationName }}
+      {{ stationName(station.stationName) }}
     </h3>
     <p
       class="truncate text-xs leading-5 text-surface-500 dark:text-surface-400"
-      :title="station.address"
+      :title="stationAddress(station.address)"
     >
-      {{ station.address }}
+      {{ stationAddress(station.address) }}
     </p>
 
     <div class="my-4 flex items-end justify-between gap-2">
       <div class="flex items-baseline gap-1 text-primary-600 dark:text-primary-400">
-        <span class="sr-only">当前电价</span>
+        <span class="sr-only">{{ t('当前电价') }}</span>
         <span class="text-2xl font-bold tabular-nums leading-none tracking-tight">{{
           formatPrice(station.currentPrice)
         }}</span>
-        <span class="text-xs text-surface-500 dark:text-surface-400">/度</span>
+        <span class="text-xs text-surface-500 dark:text-surface-400">{{ t('/度') }}</span>
       </div>
       <span class="flex items-center gap-1 text-xs text-surface-500 dark:text-surface-400">
         <i class="fa fa-star text-warning-500" aria-hidden="true"></i>
         <span class="font-semibold text-surface-700 dark:text-surface-200">{{
           station.stationGradeScore
         }}</span
-        >评分
+        >{{ t('评分') }}
       </span>
     </div>
 
@@ -55,23 +55,36 @@
     >
       <span
         class="flex items-center gap-1.5 text-surface-500 dark:text-surface-400"
-        :aria-label="`快充空闲 ${station.quickAvailableNum} 个，共 ${station.quickChargeNum} 个`"
+        :aria-label="
+          t('快充空闲 {available} 个，共 {total} 个', {
+            available: station.quickAvailableNum,
+            total: station.quickChargeNum
+          })
+        "
       >
-        <i class="fa fa-bolt text-secondary-600 dark:text-secondary-400" aria-hidden="true"></i>快充
+        <i class="fa fa-bolt text-secondary-600 dark:text-secondary-400" aria-hidden="true"></i
+        >{{ t('快充') }}
         <span class="font-semibold tabular-nums text-surface-800 dark:text-surface-100"
           >{{ station.quickAvailableNum }}/{{ station.quickChargeNum }}</span
         >
       </span>
       <span
         class="flex items-center gap-1.5 text-surface-500 dark:text-surface-400"
-        :aria-label="`慢充空闲 ${station.slowAvailableNum} 个，共 ${station.slowChargeNum} 个`"
+        :aria-label="
+          t('慢充空闲 {available} 个，共 {total} 个', {
+            available: station.slowAvailableNum,
+            total: station.slowChargeNum
+          })
+        "
       >
-        <i class="fa fa-plug text-surface-400" aria-hidden="true"></i>慢充
+        <i class="fa fa-plug text-surface-400" aria-hidden="true"></i>{{ t('慢充') }}
         <span class="font-semibold tabular-nums text-surface-800 dark:text-surface-100"
           >{{ station.slowAvailableNum }}/{{ station.slowChargeNum }}</span
         >
       </span>
-      <span v-if="canReserve" class="ml-auto text-primary-600 dark:text-primary-400">可预约</span>
+      <span v-if="canReserve" class="ml-auto text-primary-600 dark:text-primary-400">{{
+        t('可预约')
+      }}</span>
       <span v-else class="ml-auto text-surface-400"
         ><i class="fa fa-angle-right" aria-hidden="true"></i
       ></span>
@@ -81,6 +94,8 @@
 
 <script setup>
 import { computed, watch } from 'vue'
+import { t } from '../../i18n'
+import { stationName, stationAddress } from '../../i18n/data'
 import { formatDistance, formatPrice } from '../../utils/format'
 import { stationStatus } from '../../utils/stationStatus'
 

@@ -1,20 +1,25 @@
 <template>
   <PanelShell title="预约充电桩" :busy="isSubmitting" @close="emit('close')">
     <div class="glass-effect flex shrink-0 items-center justify-between p-4">
-      <button class="icon-button" aria-label="返回" :disabled="isSubmitting" @click="emit('close')">
+      <button
+        class="icon-button"
+        :aria-label="t('返回')"
+        :disabled="isSubmitting"
+        @click="emit('close')"
+      >
         <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold">预约充电桩</h2>
+      <h2 class="text-lg font-bold">{{ t('预约充电桩') }}</h2>
       <span class="w-10"></span>
     </div>
     <div class="flex-1 space-y-6 overflow-y-auto p-5">
-      <p class="text-xs text-surface-400">模拟预约，不涉及真实枪位</p>
+      <p class="text-xs text-surface-400">{{ t('模拟预约，不涉及真实枪位') }}</p>
       <div class="premium-card p-4">
         <h3 class="mb-1 break-words font-bold">
-          {{ currentStation?.stationName || '请先选择站点' }}
+          {{ stationName(currentStation?.stationName) || t('请先选择站点') }}
         </h3>
         <p class="text-xs leading-6 text-surface-500 dark:text-surface-400">
-          {{ currentStation?.address }}
+          {{ stationAddress(currentStation?.address) }}
         </p>
       </div>
       <p
@@ -22,12 +27,12 @@
         class="text-sm text-surface-500"
         role="status"
       >
-        该站点暂不支持预约，请返回选择其他站点。
+        {{ t('该站点暂不支持预约，请返回选择其他站点。') }}
       </p>
       <fieldset class="min-w-0 space-y-6" :disabled="isSubmitting">
         <section>
-          <h3 class="section-title">选择充电桩</h3>
-          <div class="space-y-2" role="group" aria-label="选择充电桩">
+          <h3 class="section-title">{{ t('选择充电桩') }}</h3>
+          <div class="space-y-2" role="group" :aria-label="t('选择充电桩')">
             <button
               v-for="connector in availableConnectors"
               :key="connector.id"
@@ -38,7 +43,7 @@
               <i class="fa fa-bolt shrink-0 text-secondary-600" aria-hidden="true"></i
               ><span class="min-w-0 flex-1"
                 ><span class="block break-words text-sm font-semibold">{{
-                  connector.connectorName
+                  dataText(connector.connectorName)
                 }}</span
                 ><span class="mt-1 block text-xs text-surface-500"
                   >{{ connector.power }} kW · {{ connector.connectorType }}</span
@@ -54,13 +59,13 @@
               class="info-row text-sm text-surface-500"
               role="status"
             >
-              当前没有可用的充电桩，请返回站点详情检查。
+              {{ t('当前没有可用的充电桩，请返回站点详情检查。') }}
             </p>
           </div>
         </section>
         <section>
-          <h3 class="section-title">选择日期</h3>
-          <div class="flex gap-2 overflow-x-auto p-1 pb-3" role="group" aria-label="选择日期">
+          <h3 class="section-title">{{ t('选择日期') }}</h3>
+          <div class="flex gap-2 overflow-x-auto p-1 pb-3" role="group" :aria-label="t('选择日期')">
             <button
               v-for="date in dateOptions"
               :key="date.value"
@@ -73,14 +78,14 @@
               :aria-pressed="selectedDate === date.value"
               @click="selectedDate = date.value"
             >
-              <span class="block">{{ date.label }}</span
+              <span class="block">{{ t(date.label) }}</span
               ><span class="mt-1 block text-sm font-semibold">{{ date.day }}</span>
             </button>
           </div>
         </section>
         <section>
-          <h3 class="section-title">选择时间段</h3>
-          <div class="grid grid-cols-2 gap-2" role="group" aria-label="选择时间段">
+          <h3 class="section-title">{{ t('选择时间段') }}</h3>
+          <div class="grid grid-cols-2 gap-2" role="group" :aria-label="t('选择时间段')">
             <button
               v-for="slot in timeSlots"
               :key="slot.value"
@@ -95,7 +100,7 @@
               @click="selectedTimeSlot = slot.value"
             >
               <span class="block text-sm font-semibold tabular-nums">{{ slot.value }}</span
-              ><span class="mt-1 block text-xs text-surface-500">{{ slot.reason }}</span>
+              ><span class="mt-1 block text-xs text-surface-500">{{ t(slot.reason) }}</span>
             </button>
           </div>
           <p
@@ -103,12 +108,12 @@
             class="mt-3 text-xs leading-6 text-surface-500"
             role="status"
           >
-            该日期暂无可预约时段，请选择其他日期。
+            {{ t('该日期暂无可预约时段，请选择其他日期。') }}
           </p>
         </section>
         <section>
-          <h3 class="section-title">选择车辆</h3>
-          <div class="space-y-2" role="group" aria-label="选择车辆">
+          <h3 class="section-title">{{ t('选择车辆') }}</h3>
+          <div class="space-y-2" role="group" :aria-label="t('选择车辆')">
             <button
               v-for="vehicle in vehicles"
               :key="vehicle.id"
@@ -118,7 +123,9 @@
             >
               <i class="fa fa-car shrink-0 text-primary-500" aria-hidden="true"></i
               ><span class="min-w-0 flex-1"
-                ><span class="block break-words text-sm font-semibold">{{ vehicle.model }}</span
+                ><span class="block break-words text-sm font-semibold">{{
+                  dataText(vehicle.model)
+                }}</span
                 ><span class="mt-1 block text-xs text-surface-500">{{
                   vehicle.connectorType
                 }}</span></span
@@ -130,18 +137,18 @@
             </button>
           </div>
           <div v-if="!vehicles.length" class="info-row flex-col items-start gap-3 text-sm">
-            <p>预约前需要先添加车辆。</p>
+            <p>{{ t('预约前需要先添加车辆。') }}</p>
             <button class="text-primary-600 dark:text-primary-400" @click="emit('show-vehicles')">
-              前往添加车辆<i class="fa fa-angle-right ml-2" aria-hidden="true"></i>
+              {{ t('前往添加车辆') }}<i class="fa fa-angle-right ml-2" aria-hidden="true"></i>
             </button>
           </div>
         </section>
         <section>
-          <h3 class="section-title">预计充电量</h3>
+          <h3 class="section-title">{{ t('预计充电量') }}</h3>
           <div class="premium-card flex min-w-0 items-center gap-3 p-4">
             <button
               class="icon-button shrink-0 bg-surface-100 dark:bg-surface-800"
-              aria-label="减少充电量"
+              :aria-label="t('减少充电量')"
               :disabled="chargeAmount <= 10"
               @click="chargeAmount -= 10"
             >
@@ -152,7 +159,7 @@
               }}<span class="ml-1 text-xs font-normal text-surface-500">kWh</span></output
             ><button
               class="icon-button shrink-0 bg-surface-100 dark:bg-surface-800"
-              aria-label="增加充电量"
+              :aria-label="t('增加充电量')"
               :disabled="chargeAmount >= 100"
               @click="chargeAmount += 10"
             >
@@ -163,22 +170,22 @@
       </fieldset>
       <dl class="premium-card space-y-3 p-4 text-sm">
         <div class="flex flex-wrap justify-between gap-2">
-          <dt class="text-surface-500">预约日期</dt>
+          <dt class="text-surface-500">{{ t('预约日期') }}</dt>
           <dd>{{ selectedDate }}</dd>
         </div>
         <div class="flex flex-wrap justify-between gap-2">
-          <dt class="text-surface-500">时间段</dt>
-          <dd>{{ selectedTimeSlot || '请选择时间段' }}</dd>
+          <dt class="text-surface-500">{{ t('时间段') }}</dt>
+          <dd>{{ selectedTimeSlot || t('请选择时间段') }}</dd>
         </div>
         <div class="flex flex-wrap justify-between gap-2">
-          <dt class="text-surface-500">预计费用（含 10% 服务费）</dt>
+          <dt class="text-surface-500">{{ t('预计费用（含 10% 服务费）') }}</dt>
           <dd class="font-bold text-primary-600 dark:text-primary-400">
             {{ formatPrice(estimatedCost) }}
           </dd>
         </div>
       </dl>
       <p class="text-xs leading-6 text-surface-500">
-        当前为本地预约演示，不会锁定真实充电桩；已开始的时段不可预约。
+        {{ t('当前为本地预约演示，不会锁定真实充电桩；已开始的时段不可预约。') }}
       </p>
     </div>
     <div class="glass-effect shrink-0 border-t p-4">
@@ -189,13 +196,15 @@
         @click="submitReservation"
       >
         <i v-if="isSubmitting" class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i
-        >{{ isSubmitting ? '正在预约…' : '确认预约' }}
+        >{{ t(isSubmitting ? '正在预约…' : '确认预约') }}
       </button>
     </div>
   </PanelShell>
 </template>
 
 <script setup>
+import { t } from '../../i18n'
+import { stationName, stationAddress, dataText } from '../../i18n/data'
 import PanelShell from '../common/PanelShell.vue'
 import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'

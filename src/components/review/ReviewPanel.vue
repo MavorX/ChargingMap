@@ -9,38 +9,40 @@
       <button
         id="back-from-review"
         class="icon-button"
-        aria-label="返回"
+        :aria-label="t('返回')"
         :disabled="isSubmitting"
         @click="requestClose"
       >
         <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold">评价充电站</h2>
+      <h2 class="text-lg font-bold">{{ t('评价充电站') }}</h2>
       <span class="w-10"></span>
     </div>
     <div class="flex-1 space-y-5 overflow-y-auto p-5">
       <div class="text-center">
         <h3 id="review-station-name" class="mb-4 break-words font-semibold">
-          {{ currentStation?.stationName }}
+          {{ stationName(currentStation?.stationName) }}
         </h3>
         <fieldset :disabled="isSubmitting">
           <StarRating
             v-model="rating"
-            aria-label="充电站评分"
+            :aria-label="t('充电站评分')"
             class="rating-stars flex justify-center gap-1"
           />
         </fieldset>
-        <p class="mt-2 text-sm text-surface-500">{{ ratingTexts[rating - 1] }}</p>
+        <p class="mt-2 text-sm text-surface-500">{{ t(ratingTexts[rating - 1]) }}</p>
       </div>
       <fieldset class="min-w-0 space-y-5" :disabled="isSubmitting">
         <div>
-          <label for="review-content" class="mb-2 block text-sm font-semibold">评价内容</label
+          <label for="review-content" class="mb-2 block text-sm font-semibold">{{
+            t('评价内容')
+          }}</label
           ><textarea
             id="review-content"
             v-model="reviewContent"
             rows="4"
             maxlength="200"
-            placeholder="分享您的充电体验…"
+            :placeholder="t('分享您的充电体验…')"
             class="input-premium resize-y"
             aria-describedby="review-count"
           ></textarea>
@@ -49,7 +51,7 @@
           </p>
         </div>
         <div>
-          <h3 class="mb-3 text-sm font-semibold">设施评价</h3>
+          <h3 class="mb-3 text-sm font-semibold">{{ t('设施评价') }}</h3>
           <div class="grid grid-cols-2 gap-2">
             <label
               v-for="(label, key) in facilityOptions"
@@ -59,18 +61,18 @@
                 v-model="facilityRatings[key]"
                 type="checkbox"
                 class="h-4 w-4 shrink-0 accent-primary-600"
-              />{{ label }}</label
+              />{{ t(label) }}</label
             >
           </div>
         </div>
         <div>
-          <h3 class="mb-3 text-sm font-semibold">现场图片（可选）</h3>
+          <h3 class="mb-3 text-sm font-semibold">{{ t('现场图片（可选）') }}</h3>
           <button
             class="w-full rounded-xl border border-dashed border-surface-300 p-4 text-sm text-surface-500 dark:border-surface-600"
             :disabled="selectedImages.length >= 3"
             @click="fileInput?.click()"
           >
-            <i class="fa fa-camera mr-2" aria-hidden="true"></i>添加图片（最多 3 张）
+            <i class="fa fa-camera mr-2" aria-hidden="true"></i>{{ t('添加图片（最多 3 张）') }}
           </button>
           <input
             ref="fileInput"
@@ -78,11 +80,11 @@
             class="hidden"
             multiple
             accept="image/png,image/jpeg,image/webp,image/gif"
-            aria-label="选择现场图片"
+            :aria-label="t('选择现场图片')"
             @change="handleFileChange"
           />
           <p class="mt-2 text-xs leading-6 text-surface-500">
-            每张不超过 5MB。仅作本地演示预览，不会上传到服务器。
+            {{ t('每张不超过 5MB。仅作本地演示预览，不会上传到服务器。') }}
           </p>
           <div v-if="selectedImages.length" class="mt-3 grid grid-cols-3 gap-2">
             <div
@@ -96,7 +98,7 @@
                 class="h-full w-full object-cover"
               /><button
                 class="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-lg bg-black/65 text-white"
-                :aria-label="`移除图片 ${index + 1}`"
+                :aria-label="t('移除图片 {number}', { number: index + 1 })"
                 @click="removeImage(index)"
               >
                 <i class="fa fa-times" aria-hidden="true"></i>
@@ -106,7 +108,7 @@
         </div>
       </fieldset>
       <p v-if="chargingStore.reviewSubmitted" class="text-sm text-surface-500" role="status">
-        本次充电已评价，积分已发放。
+        {{ t('本次充电已评价，积分已发放。') }}
       </p>
     </div>
     <div class="glass-effect shrink-0 border-t p-4">
@@ -117,20 +119,20 @@
         @click="submitReview"
       >
         <i v-if="isSubmitting" class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i
-        >{{ isSubmitting ? '正在提交…' : '提交评价 · 获得 5 积分' }}
+        >{{ t(isSubmitting ? '正在提交…' : '提交评价 · 获得 5 积分') }}
       </button>
     </div>
     <DialogModal v-if="showDiscard" title="放弃本次评价？" @close="showDiscard = false"
       ><p class="mb-5 text-sm leading-6 text-surface-500">
-        离开后，尚未提交的文字和图片选择将丢失。
+        {{ t('离开后，尚未提交的文字和图片选择将丢失。') }}
       </p>
       <div class="flex gap-3">
-        <button class="action-primary" @click="showDiscard = false">继续编辑</button
+        <button class="action-primary" @click="showDiscard = false">{{ t('继续编辑') }}</button
         ><button
           class="w-full rounded-xl border border-surface-200 text-sm dark:border-surface-700"
           @click="emit('close')"
         >
-          放弃评价
+          {{ t('放弃评价') }}
         </button>
       </div></DialogModal
     >
@@ -138,6 +140,8 @@
 </template>
 
 <script setup>
+import { t } from '../../i18n'
+import { stationName } from '../../i18n/data'
 import PanelShell from '../common/PanelShell.vue'
 import DialogModal from '../common/DialogModal.vue'
 import StarRating from '../common/StarRating.vue'

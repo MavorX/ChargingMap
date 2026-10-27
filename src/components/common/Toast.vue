@@ -30,7 +30,7 @@
         </p>
         <button
           class="icon-button shrink-0 text-surface-500"
-          aria-label="关闭提示"
+          :aria-label="t('关闭提示')"
           @click="$emit('update:show', false)"
         >
           <i class="fa fa-times text-xs" :class="toastTextClass" aria-hidden="true"></i>
@@ -42,6 +42,7 @@
 
 <script setup>
 import { computed, onUnmounted, watch } from 'vue'
+import { t } from '../../i18n'
 
 const props = defineProps({
   portal: { type: Boolean, default: false },

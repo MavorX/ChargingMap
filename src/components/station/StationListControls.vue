@@ -1,6 +1,10 @@
 <template>
   <StationSearch :input-id="isCompact ? '' : 'search-station'" />
-  <div class="grid grid-cols-2 gap-2 min-[380px]:grid-cols-4" role="group" aria-label="快捷筛选">
+  <div
+    class="quick-filters grid grid-cols-2 gap-2 min-[380px]:grid-cols-4"
+    role="group"
+    :aria-label="t('快捷筛选')"
+  >
     <button
       v-for="(filter, key) in filterButtons"
       :key="key"
@@ -10,13 +14,14 @@
       @click="stationsStore.toggleFilter(key)"
     >
       <i :class="filter.icon" aria-hidden="true"></i>
-      <span>{{ filter.label }}</span>
+      <span>{{ t(filter.label) }}</span>
     </button>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { t } from '../../i18n'
 import { useStationList } from '../../composables/useStationList'
 import StationSearch from './StationSearch.vue'
 

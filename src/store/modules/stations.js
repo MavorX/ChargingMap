@@ -3,6 +3,7 @@ import { loadStationsList, loadStationDetail } from '../../services/api'
 import { currentPriceFor } from '../../utils/pricing'
 import mapManager from '../../services/mapService'
 import { locationPresentation } from '../../utils/location'
+import { stationSearchText } from '../../i18n/data'
 
 const DEFAULT_CONNECTORS = ['CCS Combo', 'GB/T', 'CHAdeMO', 'Type 2']
 
@@ -314,11 +315,7 @@ export const useStationsStore = defineStore('stations', {
           if (!filters.connectors.some((connector) => types.includes(connector))) return false
 
           if (query) {
-            if (
-              !station.stationName.toLowerCase().includes(query) &&
-              !station.address.toLowerCase().includes(query)
-            )
-              return false
+            if (!stationSearchText(station).includes(query.trim())) return false
           }
 
           return true

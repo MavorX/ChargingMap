@@ -1,5 +1,7 @@
 import { formatPrice } from '../utils/format'
 import { LOCATION_TIMEOUT_MS, locationError, normalizeLocation } from '../utils/location'
+import { isEnglish, locale, t } from '../i18n'
+import { stationName, stationAddress } from '../i18n/data'
 
 // Small DOM builder: station fields only ever travel through textContent, never
 // through a markup string, so names/addresses cannot inject markup.
@@ -47,6 +49,13 @@ class MapManager {
     if (import.meta.env.DEV) console.log('[MapManager] Stations set:', stationsData.length)
   }
 
+  refreshLanguage(visibleStations) {
+    if (!this.map) return
+    this.map.setLang?.(isEnglish.value ? 'en' : 'zh_cn')
+    this.updateMarkers(visibleStations)
+    if (this._activeStationId) this.refreshMarker(this._activeStationId)
+  }
+
   getStationColor(station) {
     if (station.openStatus === 0) {
       return '#6B7280'
@@ -75,7 +84,11 @@ class MapManager {
     const color = this.getStationColor(station)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
     const statusText =
-      station.openStatus === 0 ? '维护' : availableCount === 0 ? '已满' : `${availableCount}空`
+      station.openStatus === 0
+        ? t('维护')
+        : availableCount === 0
+          ? t('已满')
+          : t('{count}空', { count: availableCount })
 
     const div = document.createElement('div')
     div.style.cssText = 'cursor:pointer;display:flex;flex-direction:column;align-items:center;'
@@ -111,28 +124,30 @@ class MapManager {
     const color = this.getStationColor(station)
     const color2 = this.adjustColor(color, -15)
     const availableCount = station.quickAvailableNum + station.slowAvailableNum
-    const statusText = station.openStatus === 0 ? '维护中' : availableCount === 0 ? '已满' : '空闲'
+    const statusText = t(
+      station.openStatus === 0 ? '维护中' : availableCount === 0 ? '已满' : '空闲'
+    )
     const price = formatPrice(station.currentPrice, { withSymbol: false })
     const isFav = station.isFavorite
     const self = this
 
     const content = el(
       'div',
-      'background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);min-width:260px;max-width:300px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
+      'background:var(--map-marker-bg,white);color:var(--map-marker-text,#0f172a);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.18);width:min(340px,calc(100vw - 40px));overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;position:relative;'
     )
 
     const header = el(
       'div',
-      `background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;justify-content:space-between;align-items:center;`
+      `background:linear-gradient(135deg,${color},${color2});padding:12px 16px;display:flex;gap:8px;justify-content:space-between;align-items:flex-start;`
     )
     const title = el(
       'h3',
-      'margin:0;color:white;font-size:15px;font-weight:700;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
-      station.stationName
+      'margin:0;color:white;font-size:15px;font-weight:700;min-width:0;line-height:1.5;overflow-wrap:break-word;',
+      stationName(station.stationName)
     )
     const statusBadge = el(
       'span',
-      'background:rgba(255,255,255,0.25);color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;',
+      'background:rgba(255,255,255,0.25);color:white;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;',
       statusText
     )
     header.append(title, statusBadge)
@@ -148,7 +163,7 @@ class MapManager {
       'background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:8px 10px;text-align:center;'
     )
     quickBox.append(
-      el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', '快充')
+      el('div', 'color:#166534;font-size:11px;font-weight:600;margin-bottom:2px;', t('快充'))
     )
     const quickValue = el(
       'div',
@@ -165,7 +180,7 @@ class MapManager {
       'background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;text-align:center;'
     )
     slowBox.append(
-      el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', '慢充')
+      el('div', 'color:#1E40AF;font-size:11px;font-weight:600;margin-bottom:2px;', t('慢充'))
     )
     const slowValue = el(
       'div',
@@ -180,12 +195,16 @@ class MapManager {
     grid.append(quickBox, slowBox)
     body.append(
       grid,
-      el('p', 'margin:0 0 10px 0;color:#4B5563;font-size:12px;line-height:1.5;', station.address)
+      el(
+        'p',
+        'margin:0 0 10px 0;color:var(--map-marker-muted,#475569);font-size:12px;line-height:1.5;',
+        stationAddress(station.address)
+      )
     )
 
     const footer = el(
       'div',
-      'display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E5E7EB;'
+      'display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E5E7EB;'
     )
     const footerLeft = el('div', 'display:flex;gap:8px;')
 
@@ -197,7 +216,7 @@ class MapManager {
     favBtn.setAttribute('data-station-id', station.stationId)
     favBtn.append(
       el('span', 'font-size:14px;', isFav ? '♥' : '♡'),
-      el('span', '', isFav ? '已收藏' : '收藏')
+      el('span', '', t(isFav ? '已收藏' : '收藏'))
     )
     favBtn.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -220,7 +239,7 @@ class MapManager {
     )
     detailBtn.className = 'info-detail-btn'
     detailBtn.setAttribute('data-station-id', station.stationId)
-    detailBtn.append(el('span', '', '详情'))
+    detailBtn.append(el('span', '', t('详情')))
     detailBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       self.closeInfoWindow()
@@ -239,7 +258,7 @@ class MapManager {
     const navBtn = el(
       'div',
       'background:linear-gradient(135deg,#10B981,#059669);color:white;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:transform 0.15s;',
-      '导航'
+      t('导航')
     )
     navBtn.className = 'info-nav-btn'
     navBtn.setAttribute('data-station-id', station.stationId)
@@ -255,7 +274,11 @@ class MapManager {
       navBtn.style.transform = 'scale(1)'
     })
     footerRight.append(
-      el('span', 'color:#3B82F6;font-size:12px;font-weight:600;', `¥${price}/度`),
+      el(
+        'span',
+        'color:#3B82F6;font-size:12px;font-weight:600;white-space:nowrap;',
+        `¥${price}${t('/度')}`
+      ),
       navBtn
     )
 
@@ -327,7 +350,7 @@ class MapManager {
     const ids = points
       .map((point) => point.station?.stationId ?? `${point.lnglat[0]},${point.lnglat[1]}`)
       .sort()
-    return `${points.length}:${ids.join('|')}`
+    return `${locale.value}:${points.length}:${ids.join('|')}`
   }
 
   updateMarkers(filteredStations) {
@@ -427,7 +450,10 @@ class MapManager {
       div.tabIndex = 0
       div.setAttribute(
         'aria-label',
-        `${count} 个站点，${totalAvailable} 个空闲充电桩，放大地图查看`
+        t('{count} 个站点，{available} 个空闲充电桩，放大地图查看', {
+          count,
+          available: totalAvailable
+        })
       )
       div.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -444,7 +470,7 @@ class MapManager {
         const availDiv = document.createElement('div')
         availDiv.style.cssText =
           'font-size:9px;font-weight:500;margin-top:1px;color:var(--map-marker-muted,#475569);'
-        availDiv.textContent = `${totalAvailable}可用`
+        availDiv.textContent = t('{count}可用', { count: totalAvailable })
         div.appendChild(availDiv)
       }
 
@@ -480,7 +506,7 @@ class MapManager {
             position: point.lnglat,
             content: self.createStationMarkerContent(station),
             offset: new AMap.Pixel(-18, -50),
-            title: station.stationName,
+            title: stationName(station.stationName),
             extData: station
           })
           marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
@@ -524,7 +550,7 @@ class MapManager {
           position: point.lnglat,
           content: self.createStationMarkerContent(station),
           offset: new AMap.Pixel(-18, -50),
-          title: station.stationName,
+          title: stationName(station.stationName),
           extData: station
         })
         marker.on('click', () => self._openStationInfoWindow(station, marker.getPosition()))
@@ -794,9 +820,9 @@ class MapManager {
                 if (result === 'INVALID_USER_SCODE') {
                   errMsg = '安全密钥无效，路线规划服务不可用'
                 } else if (typeof result === 'string') {
-                  errMsg = '路线规划失败：' + result
+                  errMsg = t('路线规划失败：{error}', { error: result })
                 } else if (result && result.info) {
-                  errMsg = '路线规划失败：' + result.info
+                  errMsg = t('路线规划失败：{error}', { error: result.info })
                 }
                 window.dispatchEvent(
                   new CustomEvent('routeResult', {
@@ -810,7 +836,7 @@ class MapManager {
           console.error('[MapManager] Failed to create AMap.Driving:', e)
           window.dispatchEvent(
             new CustomEvent('routeResult', {
-              detail: { error: '导航服务初始化失败：' + e.message }
+              detail: { error: t('导航服务初始化失败：{error}', { error: t(e.message) }) }
             })
           )
         }
@@ -828,7 +854,9 @@ class MapManager {
           if (!isCurrent()) return
           window.dispatchEvent(
             new CustomEvent('routeResult', {
-              detail: { error: `${error.message || '定位失败'}；未使用地图中心作为导航起点` }
+              detail: {
+                error: `${t(error.message || '定位失败')}${isEnglish.value ? '. ' : '；'}${t('未使用地图中心作为导航起点')}`
+              }
             })
           )
         })

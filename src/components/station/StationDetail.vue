@@ -2,22 +2,25 @@
   <component
     :is="isInline ? 'div' : PanelShell"
     :class="isInline ? 'flex h-full flex-col' : undefined"
-    :title="isInline ? undefined : station?.stationName || '站点详情'"
+    :title="isInline ? undefined : stationName(station?.stationName) || t('站点详情')"
     @close="$emit('close')"
   >
     <div
       class="glass-effect z-10 flex flex-shrink-0 items-center justify-between border-b border-surface-200/50 p-4 dark:border-surface-700/50"
     >
-      <button class="icon-button" aria-label="返回" @click="$emit('close')">
+      <button class="icon-button shrink-0" :aria-label="t('返回')" @click="$emit('close')">
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
-      <h2 class="max-w-[60%] truncate text-lg font-bold text-surface-900 dark:text-surface-100">
-        {{ station?.stationName }}
+      <h2
+        class="line-clamp-2 min-w-0 flex-1 px-2 text-sm font-bold leading-5 text-surface-900 dark:text-surface-100 sm:text-base"
+        :title="stationName(station?.stationName)"
+      >
+        {{ stationName(station?.stationName) }}
       </h2>
-      <div class="flex space-x-1.5">
+      <div class="flex shrink-0 space-x-1.5">
         <button
           class="icon-button group relative"
-          :aria-label="station?.isFavorite ? '取消收藏' : '收藏站点'"
+          :aria-label="t(station?.isFavorite ? '取消收藏' : '收藏站点')"
           @click="toggleFavorite"
         >
           <i
@@ -28,7 +31,7 @@
             aria-hidden="true"
           ></i>
         </button>
-        <button class="icon-button group" aria-label="分享站点" @click="shareStation">
+        <button class="icon-button group" :aria-label="t('分享站点')" @click="shareStation">
           <i
             class="fa fa-share-alt text-surface-400 transition-all duration-300 group-hover:rotate-12 group-hover:text-primary-500"
             aria-hidden="true"
@@ -47,16 +50,18 @@
           <i class="fa fa-exclamation-triangle text-lg text-danger-500" aria-hidden="true"></i>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-semibold text-surface-800 dark:text-surface-100">
-              {{ stationsStore.detailsError }}
+              {{ t(stationsStore.detailsError) }}
             </p>
-            <p class="mt-0.5 text-xs text-surface-500 dark:text-surface-400">请检查网络后重试</p>
+            <p class="mt-0.5 text-xs text-surface-500 dark:text-surface-400">
+              {{ t('请检查网络后重试') }}
+            </p>
           </div>
           <button
             class="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isRetryingDetails"
             @click="retryDetails"
           >
-            重试
+            {{ t('重试') }}
           </button>
         </div>
       </div>
@@ -77,13 +82,13 @@
               class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
               :class="size.heroLabel"
             >
-              地址信息
+              {{ t('地址信息') }}
             </p>
             <p
               class="leading-relaxed text-surface-800 dark:text-surface-200"
               :class="size.heroTitle"
             >
-              {{ station.address }}
+              {{ stationAddress(station.address) }}
             </p>
           </div>
         </div>
@@ -103,10 +108,10 @@
               ></i>
             </div>
             <p
-              class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+              class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
               :class="size.tileLabel"
             >
-              距离
+              {{ t('距离') }}
             </p>
             <p class="gradient-text font-bold" :class="size.tileValue">
               {{ formatDistance(station.distance, { withUnit: false })
@@ -141,10 +146,10 @@
               ></i>
             </div>
             <p
-              class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+              class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
               :class="size.tileLabel"
             >
-              快充可用
+              {{ t('快充可用') }}
             </p>
             <p
               class="font-bold"
@@ -182,10 +187,10 @@
               ></i>
             </div>
             <p
-              class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+              class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
               :class="size.tileLabel"
             >
-              慢充可用
+              {{ t('慢充可用') }}
             </p>
             <p
               class="font-bold"
@@ -208,23 +213,27 @@
           <div class="grid grid-cols-3" :class="size.summaryGrid">
             <div class="text-center">
               <p
-                class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+                class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
                 :class="size.summaryLabel"
               >
-                当前电价
+                {{ t('当前电价') }}
               </p>
               <p class="font-bold text-primary-600" :class="size.summaryValue">
                 {{ formatPrice(station.currentPrice)
-                }}<span class="font-normal text-surface-400" :class="size.summaryUnit">/度</span>
+                }}<span
+                  class="station-rate-unit font-normal text-surface-400"
+                  :class="size.summaryUnit"
+                  >{{ t('/度') }}</span
+                >
               </p>
             </div>
             <div class="border-x border-surface-200 dark:border-surface-700">
               <div class="text-center" :class="size.ratingPad">
                 <p
-                  class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+                  class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
                   :class="size.summaryLabel"
                 >
-                  评分
+                  {{ t('评分') }}
                 </p>
                 <div class="flex items-center justify-center" :class="size.summaryRatingGap">
                   <i class="fa fa-star text-warning-400" :class="size.ratingIcon"></i>
@@ -236,15 +245,17 @@
             </div>
             <div class="text-center">
               <p
-                class="font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
+                class="station-detail-label font-medium uppercase tracking-wide text-surface-500 dark:text-surface-400"
                 :class="size.summaryLabel"
               >
-                状态
+                {{ t('状态') }}
               </p>
               <span
                 class="inline-flex items-center rounded-full font-bold"
                 :class="[size.statusBadge, stationStatus(station).tone]"
-                >{{ stationStatus(station).text }}</span
+                >{{
+                  t(isEnglish && station.openStatus === 0 ? '维护' : stationStatus(station).text)
+                }}</span
               >
             </div>
           </div>
@@ -262,7 +273,7 @@
           </div>
           <div class="flex-1">
             <p class="mb-0.5 text-surface-500 dark:text-surface-400" :class="size.rowLabel">
-              营业时间
+              {{ t('营业时间') }}
             </p>
             <p class="font-semibold text-surface-800 dark:text-surface-200" :class="size.rowValue">
               {{ station.openTime }}
@@ -276,7 +287,7 @@
             "
             class="status-badge-warning"
             :class="size.rowBadge"
-            >支持预约</span
+            >{{ t('支持预约') }}</span
           >
         </div>
         <div
@@ -290,10 +301,10 @@
           </div>
           <div class="flex-1">
             <p class="mb-0.5 text-surface-500 dark:text-surface-400" :class="size.rowLabel">
-              停车费用
+              {{ t('停车费用') }}
             </p>
             <p class="font-semibold text-surface-800 dark:text-surface-200" :class="size.rowValue">
-              {{ station.parkFee }}
+              {{ dataText(station.parkFee) }}
             </p>
           </div>
         </div>
@@ -308,7 +319,7 @@
           </div>
           <div class="flex-1">
             <p class="mb-0.5 text-surface-500 dark:text-surface-400" :class="size.rowLabel">
-              联系电话
+              {{ t('联系电话') }}
             </p>
             <p class="font-semibold text-surface-800 dark:text-surface-200" :class="size.rowValue">
               {{ station.stationTel }}
@@ -328,7 +339,7 @@
           >
             <i class="fa fa-bolt text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
-          快充桩详情
+          {{ t('快充桩详情') }}
         </h3>
         <div :class="size.sectionList">
           <div
@@ -355,7 +366,7 @@
                     class="mb-0.5 truncate font-bold text-surface-800 dark:text-surface-200"
                     :class="size.connectorName"
                   >
-                    {{ connector.connectorName }}
+                    {{ dataText(connector.connectorName) }}
                   </h4>
                   <p class="text-surface-500 dark:text-surface-400" :class="size.connectorMeta">
                     {{ connector.power }}kW · {{ connector.connectorType || 'CCS Combo' }}
@@ -365,7 +376,7 @@
               <span
                 class="whitespace-nowrap rounded-full font-bold"
                 :class="[size.connectorBadge, connectorStatus(connector.status).badgeClass]"
-                >{{ connectorStatus(connector.status).text }}</span
+                >{{ t(connectorStatus(connector.status).text) }}</span
               >
             </div>
           </div>
@@ -387,7 +398,7 @@
           >
             <i class="fa fa-plug text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
-          慢充桩详情
+          {{ t('慢充桩详情') }}
         </h3>
         <div :class="size.sectionList">
           <div
@@ -414,7 +425,7 @@
                     class="mb-0.5 truncate font-bold text-surface-800 dark:text-surface-200"
                     :class="size.connectorName"
                   >
-                    {{ connector.connectorName }}
+                    {{ dataText(connector.connectorName) }}
                   </h4>
                   <p class="text-surface-500 dark:text-surface-400" :class="size.connectorMeta">
                     {{ connector.power }}kW · {{ connector.connectorType || 'Type 2' }}
@@ -424,7 +435,7 @@
               <span
                 class="whitespace-nowrap rounded-full font-bold"
                 :class="[size.connectorBadge, connectorStatus(connector.status).badgeClass]"
-                >{{ connectorStatus(connector.status).text }}</span
+                >{{ t(connectorStatus(connector.status).text) }}</span
               >
             </div>
           </div>
@@ -442,7 +453,7 @@
           >
             <i class="fa fa-rmb text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
-          分时电价
+          {{ t('分时电价') }}
         </h3>
         <div class="premium-card overflow-hidden">
           <div
@@ -462,17 +473,17 @@
                 >{{ period.startTime }}~{{ period.endTime }}</span
               >
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
               <span
                 class="font-bold text-surface-900 dark:text-surface-100"
                 :class="size.periodPrice"
-                >¥{{ period.totalFee }}/度</span
+                >¥{{ period.totalFee }}{{ t('/度') }}</span
               >
               <span
                 v-if="period.memberPrice"
                 class="rounded-full bg-primary-100 font-bold text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
                 :class="size.periodBadge"
-                >会员¥{{ period.memberPrice }}</span
+                >{{ t('会员¥{price}', { price: period.memberPrice }) }}</span
               >
             </div>
           </div>
@@ -490,10 +501,12 @@
           >
             <i class="fa fa-comments text-white" :class="size.sectionGlyph" aria-hidden="true"></i>
           </div>
-          用户评价
-          <span class="font-normal text-surface-400" :class="size.reviewCount"
-            >({{ station.details.reviewsCount || station.details.reviews.length }}条)</span
-          >
+          {{ t('用户评价') }}
+          <span class="font-normal text-surface-400" :class="size.reviewCount">{{
+            t('({count}条)', {
+              count: station.details.reviewsCount || station.details.reviews.length
+            })
+          }}</span>
         </h3>
         <div :class="size.reviewList">
           <div
@@ -519,7 +532,7 @@
                   class="font-bold text-surface-800 dark:text-surface-200"
                   :class="size.reviewName"
                 >
-                  {{ review.userName }}
+                  {{ dataText(review.userName) }}
                 </p>
               </div>
               <div class="rating-stars flex" :class="size.reviewStarWrap">
@@ -537,7 +550,7 @@
               class="leading-relaxed text-surface-600 dark:text-surface-300"
               :class="size.reviewText"
             >
-              {{ review.content }}
+              {{ dataText(review.content) }}
             </p>
             <p class="text-surface-400" :class="size.reviewDate">{{ review.date }}</p>
           </div>
@@ -555,7 +568,7 @@
               aria-hidden="true"
             ></i>
           </div>
-          站点指引
+          {{ t('站点指引') }}
         </h3>
         <div class="premium-card" :class="size.guidePad">
           <div class="flex items-start">
@@ -573,7 +586,7 @@
               class="leading-relaxed text-surface-600 dark:text-surface-300"
               :class="size.guideText"
             >
-              {{ station.details.siteGuide || '暂无详细指引信息' }}
+              {{ siteGuide(station.details.siteGuide) }}
             </p>
           </div>
         </div>
@@ -593,7 +606,7 @@
         >
           <span class="relative z-10 flex items-center justify-center" :class="size.actionInner">
             <i class="fa fa-calendar-check-o" :class="size.actionGlyph" aria-hidden="true"></i>
-            <span>{{ canReserve ? '预约充电' : '暂不可预约' }}</span>
+            <span>{{ t(canReserve ? '预约充电' : '暂不可预约') }}</span>
           </span>
         </button>
         <button
@@ -603,7 +616,7 @@
         >
           <span class="relative z-10 flex items-center justify-center" :class="size.actionInner">
             <i class="fa fa-location-arrow" :class="size.actionGlyph" aria-hidden="true"></i>
-            <span>导航</span>
+            <span>{{ t('导航') }}</span>
           </span>
         </button>
       </div>
@@ -616,7 +629,9 @@
         <span class="relative z-10 flex items-center justify-center" :class="size.primaryInner">
           <i class="fa fa-bolt" :class="size.primaryGlyph" aria-hidden="true"></i>
           <span>{{
-            canCharge ? '选择充电桩' : station.detailsLoaded ? '暂无可用充电桩' : '正在加载充电桩'
+            t(
+              canCharge ? '选择充电桩' : station.detailsLoaded ? '暂无可用充电桩' : '正在加载充电桩'
+            )
           }}</span>
         </span>
       </button>
@@ -627,6 +642,8 @@
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
 import { computed, inject, ref } from 'vue'
+import { isEnglish, t } from '../../i18n'
+import { stationName, stationAddress, dataText, siteGuide } from '../../i18n/data'
 import { useStationsStore } from '../../store/modules/stations'
 import { formatDistance, formatPrice } from '../../utils/format'
 import { connectorStatus, periodDotClass, stationStatus } from '../../utils/stationStatus'
@@ -636,7 +653,7 @@ const SIZE_CLASSES = {
     contentPad: 'p-5',
     errorPad: 'p-4',
     cardMb: 'mb-6',
-    heroPad: 'p-5',
+    heroPad: 'p-4 sm:p-5',
     heroHead: 'mb-4',
     heroIcon: 'h-11 w-11',
     heroGlyph: 'text-base',
@@ -644,7 +661,7 @@ const SIZE_CLASSES = {
     heroTitle: 'font-semibold',
     tileGrid: 'mb-4 gap-3',
     tileRadius: 'rounded-xl',
-    tilePad: 'p-4',
+    tilePad: 'px-2 py-3 sm:p-4',
     tileIcon: 'mb-2 h-8 w-8',
     tileRoadGlyph: 'text-xs',
     tileBoltGlyph: 'text-sm',
@@ -655,11 +672,11 @@ const SIZE_CLASSES = {
     summaryLabel: 'mb-1.5 text-xs',
     summaryValue: 'text-lg',
     summaryUnit: 'text-xs',
-    ratingPad: 'px-4',
+    ratingPad: 'px-1 sm:px-4',
     ratingIcon: 'text-sm',
     ratingValue: 'text-lg',
     summaryRatingGap: 'space-x-1',
-    statusBadge: 'px-2.5 py-1 text-xs',
+    statusBadge: 'px-1.5 py-1 text-[11px] sm:px-2.5 sm:text-xs',
     rowsGap: 'space-y-3',
     rowIcon: 'mr-3.5 h-9 w-9 rounded-xl',
     rowGlyph: 'text-sm',
@@ -833,8 +850,11 @@ const shareStation = async () => {
 
   const url = window.location.href
   const shareData = {
-    title: station.value.stationName,
-    text: `推荐充电站: ${station.value.stationName} - ${station.value.address}`,
+    title: stationName(station.value.stationName),
+    text: t('推荐充电站: {name} - {address}', {
+      name: stationName(station.value.stationName),
+      address: stationAddress(station.value.address)
+    }),
     url
   }
 

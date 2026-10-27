@@ -1,66 +1,71 @@
 <template>
   <PanelShell title="确认支付" :busy="isPaying" @close="emit('close')">
     <div class="glass-effect flex shrink-0 items-center justify-between p-4">
-      <button class="icon-button" aria-label="返回" :disabled="isPaying" @click="emit('close')">
+      <button
+        class="icon-button"
+        :aria-label="t('返回')"
+        :disabled="isPaying"
+        @click="emit('close')"
+      >
         <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold">确认支付</h2>
+      <h2 class="text-lg font-bold">{{ t('确认支付') }}</h2>
       <span class="w-10"></span>
     </div>
     <div class="flex-1 space-y-6 overflow-y-auto p-5">
-      <p class="text-xs text-surface-400">演示结算，不会产生实际扣款</p>
+      <p class="text-xs text-surface-400">{{ t('演示结算，不会产生实际扣款') }}</p>
       <div class="premium-card p-4">
-        <span class="status-badge-success mb-3">充电已完成</span>
+        <span class="status-badge-success mb-3">{{ t('充电已完成') }}</span>
         <h3 class="mb-1 break-words font-bold">
-          {{ currentStation?.stationName || '暂无可结算站点' }}
+          {{ stationName(currentStation?.stationName) || t('暂无可结算站点') }}
         </h3>
         <p class="break-words text-xs leading-6 text-surface-500 dark:text-surface-400">
-          {{ currentStation?.address }}
+          {{ stationAddress(currentStation?.address) }}
         </p>
       </div>
       <section>
-        <h3 class="section-title">充电详情</h3>
+        <h3 class="section-title">{{ t('充电详情') }}</h3>
         <dl class="premium-card space-y-3 p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">充电时长</dt>
+            <dt class="text-surface-500">{{ t('充电时长') }}</dt>
             <dd>{{ formatDuration(chargingData.duration, 'hm-verbose') }}</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">充电电量</dt>
+            <dt class="text-surface-500">{{ t('充电电量') }}</dt>
             <dd>{{ chargingData.energy.toFixed(1) }} kWh</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">电价</dt>
-            <dd>{{ formatPrice(currentStation?.currentPrice) }}/度</dd>
+            <dt class="text-surface-500">{{ t('电价') }}</dt>
+            <dd>{{ formatPrice(currentStation?.currentPrice) }}{{ t('/度') }}</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">充电服务费（10%）</dt>
+            <dt class="text-surface-500">{{ t('充电服务费（10%）') }}</dt>
             <dd>{{ formatPrice(amounts.serviceFee) }}</dd>
           </div>
         </dl>
       </section>
       <fieldset :disabled="isPaying" class="min-w-0 space-y-6">
         <section>
-          <h3 class="section-title">优惠券</h3>
+          <h3 class="section-title">{{ t('优惠券') }}</h3>
           <button
             class="premium-card flex w-full items-center justify-between gap-3 p-4 text-left text-sm"
             :aria-expanded="showCouponList"
             aria-controls="payment-coupons"
             @click="showCouponList = !showCouponList"
           >
-            <span class="min-w-0 break-words">{{ selectedCoupon?.title || '选择优惠券' }}</span>
+            <span class="min-w-0 break-words">{{ t(selectedCoupon?.title || '选择优惠券') }}</span>
             <span class="shrink-0 text-primary-600 dark:text-primary-400"
               >{{
                 selectedCoupon
                   ? `-${formatPrice(amounts.couponDiscount)}`
-                  : `${coupons.length} 张可用`
+                  : t('{count} 张可用', { count: coupons.length })
               }}
               <i class="fa fa-angle-down" aria-hidden="true"></i
             ></span>
           </button>
           <div v-if="showCouponList" id="payment-coupons" class="mt-3 space-y-2">
             <p v-if="!coupons.length" class="p-3 text-xs text-surface-500" role="status">
-              暂无满足本次订单条件的优惠券
+              {{ t('暂无满足本次订单条件的优惠券') }}
             </p>
             <button
               v-for="coupon in coupons"
@@ -70,23 +75,23 @@
               @click="selectCoupon(coupon.id)"
             >
               <span class="min-w-0 flex-1"
-                ><span class="block text-sm font-semibold">{{ coupon.title }}</span
-                ><span class="mt-1 block text-xs text-surface-500"
-                  >有效期至 {{ coupon.expiryDate || '长期有效' }}</span
-                ></span
+                ><span class="block text-sm font-semibold">{{ t(coupon.title) }}</span
+                ><span class="mt-1 block text-xs text-surface-500">{{
+                  t('有效期至 {date}', { date: coupon.expiryDate || t('长期有效') })
+                }}</span></span
               >
               <span class="shrink-0 text-sm font-bold text-primary-600 dark:text-primary-400"
                 >-{{ formatPrice(discountFor(coupon)) }}</span
               >
             </button>
             <button class="min-h-11 w-full text-sm text-surface-500" @click="selectCoupon(null)">
-              不使用优惠券
+              {{ t('不使用优惠券') }}
             </button>
           </div>
         </section>
         <section>
-          <h3 class="section-title">支付方式</h3>
-          <div class="space-y-2" role="group" aria-label="支付方式">
+          <h3 class="section-title">{{ t('支付方式') }}</h3>
+          <div class="space-y-2" role="group" :aria-label="t('支付方式')">
             <button
               v-for="method in paymentMethods"
               :key="method.id"
@@ -101,10 +106,10 @@
                 aria-hidden="true"
               ></i>
               <span class="min-w-0 flex-1"
-                ><span class="block text-sm font-semibold">{{ method.name }}</span
+                ><span class="block text-sm font-semibold">{{ t(method.name) }}</span
                 ><span
                   class="mt-1 block break-words text-xs text-surface-500 dark:text-surface-400"
-                  >{{ method.desc }}</span
+                  >{{ t(method.desc) }}</span
                 ></span
               >
               <i
@@ -118,28 +123,28 @@
       </fieldset>
       <div class="premium-card space-y-3 p-4 text-sm">
         <div class="flex justify-between gap-3">
-          <span class="text-surface-500">充电费用</span
+          <span class="text-surface-500">{{ t('充电费用') }}</span
           ><span>{{ formatPrice(amounts.chargeCost) }}</span>
         </div>
         <div class="flex justify-between gap-3">
-          <span class="text-surface-500">服务费</span
+          <span class="text-surface-500">{{ t('服务费') }}</span
           ><span>{{ formatPrice(amounts.serviceFee) }}</span>
         </div>
         <div v-if="selectedCoupon" class="flex justify-between gap-3">
-          <span class="text-surface-500">优惠券抵扣</span
+          <span class="text-surface-500">{{ t('优惠券抵扣') }}</span
           ><span>-{{ formatPrice(amounts.couponDiscount) }}</span>
         </div>
         <div
           class="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-3 dark:border-surface-700"
         >
-          <span class="font-semibold">实付金额</span
+          <span class="font-semibold">{{ t('实付金额') }}</span
           ><span class="text-2xl font-bold tabular-nums text-primary-600 dark:text-primary-400">{{
             formatPrice(finalAmount)
           }}</span>
         </div>
       </div>
       <p class="text-xs leading-6 text-surface-500 dark:text-surface-400">
-        当前为演示支付，不会发起真实扣款。关闭面板后，可通过地图上的「去结算」继续。
+        {{ t('当前为演示支付，不会发起真实扣款。关闭面板后，可通过地图上的「去结算」继续。') }}
       </p>
     </div>
     <div class="glass-effect shrink-0 border-t p-4">
@@ -150,7 +155,11 @@
         @click="handlePayment"
       >
         <i v-if="isPaying" class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i
-        >{{ isPaying ? '正在处理，请稍候…' : `确认支付 ${formatPrice(finalAmount)}` }}
+        >{{
+          isPaying
+            ? t('正在处理，请稍候…')
+            : t('确认支付 {amount}', { amount: formatPrice(finalAmount) })
+        }}
       </button>
     </div>
   </PanelShell>
@@ -158,6 +167,8 @@
 
 <script setup>
 import { ref, computed, inject, watch, onBeforeUnmount } from 'vue'
+import { t } from '../../i18n'
+import { stationName, stationAddress } from '../../i18n/data'
 import PanelShell from '../common/PanelShell.vue'
 import { useStationsStore } from '../../store/modules/stations'
 import {
@@ -228,7 +239,7 @@ const paymentMethods = computed(() => [
   {
     id: 'wallet',
     name: '钱包余额',
-    desc: `余额 ${formatPrice(userStore.userInfo.balance)}${insufficientBalance.value ? ' · 余额不足' : ''}`,
+    desc: `${t('余额 {amount}', { amount: formatPrice(userStore.userInfo.balance) })}${insufficientBalance.value ? t(' · 余额不足') : ''}`,
     icon: 'fa fa-credit-card text-primary-600'
   }
 ])

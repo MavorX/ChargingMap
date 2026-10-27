@@ -11,15 +11,15 @@
       <button
         :id="backId || undefined"
         class="icon-button shrink-0"
-        :aria-label="backLabel"
+        :aria-label="t(backLabel)"
         :disabled="busy"
         @click="$emit('close')"
       >
         <i class="fa fa-arrow-left" aria-hidden="true"></i>
       </button>
       <div class="min-w-0 flex-1">
-        <h2 class="text-base font-bold">{{ title }}</h2>
-        <p v-if="subtitle" class="account-caption mt-0.5">{{ subtitle }}</p>
+        <h2 class="text-base font-bold">{{ t(title) }}</h2>
+        <p v-if="subtitle" class="account-caption mt-0.5">{{ t(subtitle) }}</p>
       </div>
       <slot name="header-action" />
     </div>
@@ -30,6 +30,7 @@
 </template>
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
+import { t } from '../../i18n'
 defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },

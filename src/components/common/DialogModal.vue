@@ -12,11 +12,11 @@
       <section ref="contentRef" class="dialog-content" tabindex="-1">
         <div class="mb-4 flex items-center justify-between gap-3">
           <h3 :id="titleId" class="text-lg font-bold text-surface-900 dark:text-surface-100">
-            {{ title }}
+            {{ t(title) }}
           </h3>
           <button
             class="icon-button shrink-0 text-surface-500"
-            aria-label="关闭弹窗"
+            :aria-label="t('关闭弹窗')"
             :disabled="busy"
             @click="close"
           >
@@ -31,6 +31,7 @@
 
 <script setup>
 import { ref, useId } from 'vue'
+import { t } from '../../i18n'
 import { useDialogFocus } from '../../composables/useDialogFocus'
 const props = defineProps({
   title: { type: String, required: true },

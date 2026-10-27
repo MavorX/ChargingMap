@@ -1,5 +1,5 @@
 <template>
-  <div role="radiogroup" :aria-label="ariaLabel" :aria-labelledby="labelId || undefined">
+  <div role="radiogroup" :aria-label="t(ariaLabel)" :aria-labelledby="labelId || undefined">
     <button
       v-for="i in max"
       :key="i"
@@ -7,7 +7,7 @@
       type="button"
       role="radio"
       :aria-checked="i === modelValue"
-      :aria-label="`${i} 星`"
+      :aria-label="t('{count} 星', { count: i })"
       :tabindex="i === (modelValue || 1) ? 0 : -1"
       class="star flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-2xl transition-colors hover:bg-warning-50 focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-surface-800"
       :class="{ active: i <= modelValue }"
@@ -21,6 +21,7 @@
 
 <script setup>
 import { nextTick, ref } from 'vue'
+import { t } from '../../i18n'
 
 const props = defineProps({
   modelValue: {

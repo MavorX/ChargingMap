@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 z-fab" role="region" aria-label="导航路线概览">
+  <div class="absolute bottom-0 left-0 right-0 z-fab" role="region" :aria-label="t('导航路线概览')">
     <div class="glass-effect border-t border-surface-200/50 dark:border-surface-700/50">
       <div class="px-5 py-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))]">
         <div
@@ -13,14 +13,14 @@
             </div>
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-bold text-surface-900 dark:text-surface-100">
-                {{ routeInfo?.station?.stationName || '导航中' }}
+                {{ stationName(routeInfo?.station?.stationName) || t('导航中') }}
               </p>
               <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span
                   class="flex items-center whitespace-nowrap text-xs font-semibold text-primary-600 dark:text-primary-400"
                 >
                   <i class="fa fa-road mr-1" aria-hidden="true"></i>
-                  {{ routeInfo?.distance || '0' }}公里
+                  {{ routeInfo?.distance || '0' }} {{ t('公里') }}
                 </span>
                 <span
                   class="flex items-center whitespace-nowrap text-xs font-semibold text-secondary-600 dark:text-secondary-400"
@@ -33,7 +33,7 @@
                 v-if="routeInfo?.origin?.quality === 'approximate'"
                 class="mt-1 text-xs text-warning-700 dark:text-warning-400"
               >
-                起点为估算位置 · {{ locationAccuracyText(routeInfo.origin) }}
+                {{ t('起点为估算位置') }} · {{ locationAccuracyText(routeInfo.origin) }}
               </p>
             </div>
           </div>
@@ -42,7 +42,7 @@
             @click="$emit('cancel')"
           >
             <i class="fa fa-times mr-1.5" aria-hidden="true"></i>
-            取消导航
+            {{ t('取消导航') }}
           </button>
         </div>
       </div>
@@ -52,6 +52,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import { t } from '../../i18n'
+import { stationName } from '../../i18n/data'
 import { useStationsStore } from '../../store/modules/stations'
 import { formatDuration } from '../../utils/format'
 import { locationAccuracyText } from '../../utils/location'

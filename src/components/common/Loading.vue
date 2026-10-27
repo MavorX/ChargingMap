@@ -47,7 +47,9 @@
           </div>
         </div>
 
-        <p class="text-sm font-bold tracking-wide text-surface-800 dark:text-surface-200">加载中</p>
+        <p class="text-sm font-bold tracking-wide text-surface-800 dark:text-surface-200">
+          {{ t('加载中') }}
+        </p>
         <div class="mt-3 flex space-x-1">
           <div
             class="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-500"
@@ -67,4 +69,6 @@
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+import { t } from '../../i18n'
+</script>

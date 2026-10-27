@@ -5,19 +5,19 @@
         ref="searchRef"
         v-model="search"
         type="search"
-        aria-label="搜索常见问题"
+        :aria-label="t('搜索常见问题')"
         class="input-premium pr-12"
-        placeholder="搜索充电、支付或账户问题"
+        :placeholder="t('搜索充电、支付或账户问题')"
       /><button
         v-if="search"
         class="icon-button absolute right-1 top-1"
-        aria-label="清除问题搜索"
+        :aria-label="t('清除问题搜索')"
         @click="clearSearch"
       >
         <i class="fa fa-times" aria-hidden="true"></i>
       </button>
     </div>
-    <div class="segmented-control" role="group" aria-label="问题分类">
+    <div class="segmented-control" role="group" :aria-label="t('问题分类')">
       <button
         v-for="category in categories"
         :key="category"
@@ -25,7 +25,7 @@
         :aria-pressed="activeCategory === category"
         @click="activeCategory = category"
       >
-        {{ category }}
+        {{ t(category) }}
       </button>
     </div>
     <div v-for="faq in filteredFaqs" :key="faq.id" class="account-group">
@@ -35,7 +35,7 @@
         :aria-controls="`help-answer-${faq.id}`"
         @click="expandedId = expandedId === faq.id ? null : faq.id"
       >
-        <span class="min-w-0 flex-1 text-sm font-semibold">{{ faq.question }}</span
+        <span class="min-w-0 flex-1 text-sm font-semibold">{{ t(faq.question) }}</span
         ><i
           :class="expandedId === faq.id ? 'fa fa-angle-up' : 'fa fa-angle-down'"
           class="text-surface-400"
@@ -47,25 +47,30 @@
         :id="`help-answer-${faq.id}`"
         class="px-4 py-4 text-sm leading-7 text-surface-600 dark:text-surface-300"
       >
-        {{ faq.answer }}
+        {{ t(faq.answer) }}
       </div>
     </div>
     <div v-if="!filteredFaqs.length" class="account-empty">
       <span class="account-icon"><i class="fa fa-search" aria-hidden="true"></i></span>
-      <h3 class="text-sm font-semibold">未找到相关问题</h3>
-      <p class="account-caption">换个关键词，或清除搜索与分类。</p>
-      <button class="action-secondary" @click="resetSearch">查看全部问题</button>
+      <h3 class="text-sm font-semibold">{{ t('未找到相关问题') }}</h3>
+      <p class="account-caption">{{ t('换个关键词，或清除搜索与分类。') }}</p>
+      <button class="action-secondary" @click="resetSearch">{{ t('查看全部问题') }}</button>
     </div>
     <section class="account-card">
-      <h3 class="text-sm font-semibold">关于这次体验</h3>
+      <h3 class="text-sm font-semibold">{{ t('关于这次体验') }}</h3>
       <p class="account-caption mt-2">
-        站点、枪位、充电与支付均为模拟；接枪与检测效果用于演示合理的操作顺序，不连接真实设备。没有在线客服或维修派单功能。
+        {{
+          t(
+            '站点、枪位、充电与支付均为模拟；接枪与检测效果用于演示合理的操作顺序，不连接真实设备。没有在线客服或维修派单功能。'
+          )
+        }}
       </p>
     </section>
   </AccountPanel>
 </template>
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
+import { t } from '../../i18n'
 import AccountPanel from './AccountPanel.vue'
 const emit = defineEmits(['close'])
 const search = ref(''),
@@ -149,7 +154,9 @@ const filteredFaqs = computed(() =>
   faqs.filter(
     (faq) =>
       (activeCategory.value === '全部' || faq.category === activeCategory.value) &&
-      `${faq.question} ${faq.answer}`.toLowerCase().includes(search.value.trim().toLowerCase())
+      `${faq.question} ${faq.answer} ${t(faq.question)} ${t(faq.answer)}`
+        .toLowerCase()
+        .includes(search.value.trim().toLowerCase())
   )
 )
 watch(filteredFaqs, (list) => {

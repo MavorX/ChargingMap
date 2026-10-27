@@ -2,8 +2,8 @@
   <PanelShell title="支付成功" @close="$emit('close')">
     <div class="glass-effect flex shrink-0 items-center justify-between p-4">
       <span class="w-10"></span>
-      <h2 class="text-lg font-bold">支付结果</h2>
-      <button class="icon-button" aria-label="关闭支付结果" @click="$emit('close')">
+      <h2 class="text-lg font-bold">{{ t('支付结果') }}</h2>
+      <button class="icon-button" :aria-label="t('关闭支付结果')" @click="$emit('close')">
         <i class="fa fa-times" aria-hidden="true"></i>
       </button>
     </div>
@@ -14,21 +14,21 @@
         >
           <i class="fa fa-check text-3xl" aria-hidden="true"></i>
         </div>
-        <h3 class="mb-2 text-2xl font-bold">支付成功</h3>
-        <p class="mb-6 text-sm text-surface-500">感谢使用充电服务</p>
+        <h3 class="mb-2 text-2xl font-bold">{{ t('支付成功') }}</h3>
+        <p class="mb-6 text-sm text-surface-500">{{ t('感谢使用充电服务') }}</p>
         <dl class="premium-card space-y-4 p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">充电电量</dt>
+            <dt class="text-surface-500">{{ t('充电电量') }}</dt>
             <dd>{{ chargingData.energy.toFixed(1) }} kWh</dd>
           </div>
           <div class="flex flex-wrap justify-between gap-2">
-            <dt class="text-surface-500">充电时长</dt>
+            <dt class="text-surface-500">{{ t('充电时长') }}</dt>
             <dd>{{ formatDuration(chargingData.duration, 'hm-verbose') }}</dd>
           </div>
           <div
             class="flex flex-wrap items-center justify-between gap-2 border-t border-surface-200 pt-4 dark:border-surface-700"
           >
-            <dt>支付金额</dt>
+            <dt>{{ t('支付金额') }}</dt>
             <dd class="text-2xl font-bold text-primary-600 dark:text-primary-400">
               {{ formatPrice(paidAmount) }}
             </dd>
@@ -37,19 +37,20 @@
       </div>
     </div>
     <div class="glass-effect shrink-0 space-y-2 border-t p-4">
-      <button class="action-primary" @click="$emit('close')">返回地图</button
+      <button class="action-primary" @click="$emit('close')">{{ t('返回地图') }}</button
       ><button
         v-if="!chargingStore.reviewSubmitted"
         class="min-h-11 w-full text-sm font-semibold text-primary-600 dark:text-primary-400"
         @click="$emit('review')"
       >
-        评价本次充电
+        {{ t('评价本次充电') }}
       </button>
     </div>
   </PanelShell>
 </template>
 
 <script setup>
+import { t } from '../../i18n'
 import PanelShell from '../common/PanelShell.vue'
 import { computed } from 'vue'
 import { useChargingStore } from '../../store/modules/charging'

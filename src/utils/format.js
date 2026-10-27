@@ -5,6 +5,8 @@
  * units and empty-state copy stay identical across panels.
  */
 
+import { locale } from '../i18n'
+
 const EMPTY = '—'
 
 function toFiniteNumber(value) {
@@ -71,9 +73,10 @@ export function formatPrice(value, { withSymbol = true } = {}) {
  *   - `hms`: `HH:MM:SS` (live charging clock)
  * @returns {string}
  */
-export function formatDuration(seconds, mode = 'hm') {
+export function formatDuration(seconds, mode = 'hm', language = locale.value) {
+  const english = language === 'en-US'
   const total = toFiniteNumber(seconds)
-  if (total === null || total < 0) return mode === 'hms' ? '00:00:00' : '0分钟'
+  if (total === null || total < 0) return mode === 'hms' ? '00:00:00' : english ? '0 min' : '0分钟'
 
   const whole = Math.floor(total)
 
@@ -90,6 +93,12 @@ export function formatDuration(seconds, mode = 'hm') {
 
   const hours = Math.floor(whole / 3600)
   const minutes = Math.floor((whole % 3600) / 60)
+
+  if (english) {
+    if (hours > 0)
+      return `${hours} hr${mode === 'hm-verbose' || minutes > 0 ? ` ${minutes} min` : ''}`
+    return `${minutes} min`
+  }
 
   if (hours > 0) {
     if (mode === 'hm-verbose' || minutes > 0) return `${hours}小时${minutes}分钟`

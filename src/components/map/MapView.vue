@@ -10,14 +10,14 @@
       >
         <i class="fa fa-exclamation-circle text-lg text-danger-500" aria-hidden="true"></i>
         <p class="flex-1 text-sm font-medium text-surface-800 dark:text-surface-100">
-          {{ stationsStore.error }}
+          {{ t(stationsStore.error) }}
         </p>
         <button
           class="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="stationsStore.isLoading"
           @click="loadStations"
         >
-          重试
+          {{ t('重试') }}
         </button>
       </div>
     </div>
@@ -26,12 +26,12 @@
       v-if="isMapLoading"
       class="absolute inset-0 z-10 flex items-center justify-center"
       role="status"
-      aria-label="正在加载地图"
+      :aria-label="t('正在加载地图')"
     >
       <span
         class="glass-card flex items-center gap-3 px-5 py-3 text-sm text-surface-600 dark:text-surface-300"
         ><i class="fa fa-circle-o-notch fa-spin text-primary-500" aria-hidden="true"></i
-        >正在加载地图…</span
+        >{{ t('正在加载地图…') }}</span
       >
     </div>
     <div
@@ -46,9 +46,11 @@
         >
           <i class="fa fa-map-marked-alt text-2xl text-primary-500" aria-hidden="true"></i>
         </div>
-        <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">地图加载失败</h2>
+        <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">
+          {{ t('地图加载失败') }}
+        </h2>
         <p class="mt-2 break-words text-sm leading-relaxed text-surface-500 dark:text-surface-400">
-          {{ mapError }}
+          {{ t(mapError) }}
         </p>
         <button
           class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -59,7 +61,7 @@
             :class="isMapLoading ? 'fa fa-spinner fa-spin' : 'fa fa-rotate-right'"
             aria-hidden="true"
           ></i>
-          {{ isMapLoading ? '正在重新加载…' : '重新加载' }}
+          {{ t(isMapLoading ? '正在重新加载…' : '重新加载') }}
         </button>
       </div>
     </div>
@@ -72,6 +74,7 @@ import { useStationsStore } from '../../store/modules/stations'
 import { useUserStore } from '../../store/modules/user'
 import mapManager from '../../services/mapService'
 import { amapLoader } from '../../services/amapLoader'
+import { isEnglish, locale, t } from '../../i18n'
 
 const stationsStore = useStationsStore()
 const userStore = useUserStore()
@@ -95,6 +98,7 @@ const initMap = async () => {
       zoom: stationsStore.userLocation ? 15 : 13,
       resizeEnable: true,
       viewMode: '3D',
+      lang: isEnglish.value ? 'en' : 'zh_cn',
       mapStyle: userStore.isDarkMode ? 'amap://styles/dark' : 'amap://styles/whitesmoke',
       center: stationsStore.userLocation
         ? [stationsStore.userLocation.lng, stationsStore.userLocation.lat]
@@ -219,6 +223,11 @@ watch(
     }
   }
 )
+
+watch(locale, () => {
+  // Keep the map, selected station, route and charging session in place.
+  if (map) mapManager.refreshLanguage(stationsStore.viewportStations)
+})
 
 onMounted(() => {
   initMap()

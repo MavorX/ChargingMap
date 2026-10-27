@@ -53,8 +53,7 @@ const createInitialState = () => ({
     notificationEnabled: true,
     chargingReminder: true,
     promotionNotification: false,
-    autoPay: false,
-    language: 'zh-CN'
+    autoPay: false
   },
   notifications: isDemoMode ? cloneRecords(demoNotifications) : [{ ...welcomeNotification }],
   isDarkMode: false

@@ -2,7 +2,7 @@
   <main
     class="h-screen overflow-hidden bg-white pt-16 supports-[height:100dvh]:h-[100dvh] dark:bg-surface-900"
   >
-    <h1 class="sr-only">探索附近充电站</h1>
+    <h1 class="sr-only">{{ t('探索附近充电站') }}</h1>
     <div class="flex h-full lg:gap-4 lg:p-4 lg:pl-0">
       <div
         class="relative min-w-0 flex-1 overflow-hidden bg-surface-100 dark:bg-surface-950 lg:rounded-2xl lg:border lg:border-surface-200 dark:lg:border-surface-800"
@@ -17,7 +17,7 @@
             <StationSearch class="flex-1" />
             <button
               class="icon-button h-12 w-12 shrink-0 text-primary-600 dark:text-primary-400"
-              aria-label="高级筛选"
+              :aria-label="t('高级筛选')"
               @click="uiStore.open('vehicleFilter')"
             >
               <i class="fa fa-sliders" aria-hidden="true"></i>
@@ -26,9 +26,11 @@
           <div
             class="mt-2 inline-flex max-w-full flex-col items-start gap-1 rounded-xl bg-white/95 px-3 py-2 text-xs text-surface-600 shadow-sm dark:bg-surface-900/95 dark:text-surface-300"
             role="status"
-            :title="stationsStore.locationError || stationsStore.locationPresentation.description"
+            :title="
+              t(stationsStore.locationError) || stationsStore.locationPresentation.description
+            "
           >
-            <span>{{ viewportStationCount }} 个站点在当前视野内</span>
+            <span>{{ t('{count} 个站点在当前视野内', { count: viewportStationCount }) }}</span>
             <span class="text-[11px]"
               >{{ stationsStore.locationPresentation.title
               }}<template v-if="stationsStore.locationStatus === 'ready'">
@@ -41,10 +43,10 @@
         <button
           v-if="!isNavigating"
           class="glass-card absolute left-4 top-4 z-10 hidden max-w-[calc(100%_-_2rem)] items-center gap-3 px-4 py-3 text-left disabled:cursor-wait lg:flex"
-          aria-label="定位当前位置"
+          :aria-label="t('定位当前位置')"
           :disabled="stationsStore.isLocating"
           :aria-busy="stationsStore.isLocating"
-          :title="stationsStore.locationError || stationsStore.locationPresentation.description"
+          :title="t(stationsStore.locationError) || stationsStore.locationPresentation.description"
           @click="locateUser"
         >
           <span
@@ -69,19 +71,19 @@
         <div
           v-if="!isNavigating"
           class="glass-card absolute bottom-4 left-4 z-10 hidden flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-[11px] text-surface-600 dark:text-surface-300 sm:flex"
-          aria-label="地图状态图例"
+          :aria-label="t('地图状态图例')"
         >
           <span class="flex items-center gap-1.5"
-            ><span class="h-2 w-2 rounded-full bg-secondary-500"></span>有空闲</span
+            ><span class="h-2 w-2 rounded-full bg-secondary-500"></span>{{ t('有空闲') }}</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="h-2 w-2 rounded-full bg-warning-500"></span>余位紧张</span
+            ><span class="h-2 w-2 rounded-full bg-warning-500"></span>{{ t('余位紧张') }}</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="h-2 w-2 rounded-full bg-danger-500"></span>已满</span
+            ><span class="h-2 w-2 rounded-full bg-danger-500"></span>{{ t('已满') }}</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="h-2 w-2 rounded-full bg-surface-500"></span>维护中</span
+            ><span class="h-2 w-2 rounded-full bg-surface-500"></span>{{ t('维护中') }}</span
           >
         </div>
 
@@ -89,13 +91,23 @@
           v-if="!isNavigating"
           class="map-tools absolute bottom-28 right-4 z-fab flex flex-col gap-2 pb-[env(safe-area-inset-bottom)] lg:bottom-5"
         >
-          <button class="map-tool" title="放大地图" aria-label="放大地图" @click="handleZoomIn">
+          <button
+            class="map-tool"
+            :title="t('放大地图')"
+            :aria-label="t('放大地图')"
+            @click="handleZoomIn"
+          >
             <i
               class="fa fa-plus text-primary-500 transition-all duration-200 group-hover:scale-110 group-hover:text-primary-600"
               aria-hidden="true"
             ></i>
           </button>
-          <button class="map-tool" title="缩小地图" aria-label="缩小地图" @click="handleZoomOut">
+          <button
+            class="map-tool"
+            :title="t('缩小地图')"
+            :aria-label="t('缩小地图')"
+            @click="handleZoomOut"
+          >
             <i
               class="fa fa-minus text-surface-600 transition-all duration-200 group-hover:scale-110 group-hover:text-primary-500 dark:text-surface-300"
               aria-hidden="true"
@@ -103,8 +115,8 @@
           </button>
           <button
             class="map-tool"
-            title="我的车辆"
-            aria-label="我的车辆"
+            :title="t('我的车辆')"
+            :aria-label="t('我的车辆')"
             @click="uiStore.open('vehicle')"
           >
             <i
@@ -114,8 +126,8 @@
           </button>
           <button
             class="map-tool text-primary-600 dark:text-primary-400"
-            title="定位当前位置"
-            aria-label="定位当前位置"
+            :title="t('定位当前位置')"
+            :aria-label="t('定位当前位置')"
             :disabled="stationsStore.isLocating"
             :aria-busy="stationsStore.isLocating"
             @click="locateUser"
@@ -149,8 +161,8 @@
             ></i>
             <span>{{
               uiStore.activePanel === 'stationsList'
-                ? '关闭列表'
-                : `查看 ${viewportStationCount} 个站点`
+                ? t('关闭列表')
+                : t('查看 {count} 个站点', { count: viewportStationCount })
             }}</span>
           </span>
         </button>
@@ -163,20 +175,20 @@
         id="station-explorer"
         class="order-first hidden flex-shrink-0 flex-col overflow-hidden bg-white dark:bg-surface-900 lg:flex"
         :class="desktopSidebarOpen ? 'w-[380px] xl:w-[400px]' : 'w-16'"
-        aria-label="站点探索"
+        :aria-label="t('站点探索')"
       >
         <div v-if="!desktopSidebarOpen" class="flex flex-col items-center pt-3">
           <button
             ref="expandSidebarRef"
             class="flex min-h-16 w-12 flex-col items-center justify-center gap-2 rounded-xl text-primary-700 transition-colors hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-surface-800"
-            aria-label="展开站点列表"
-            title="展开站点列表"
+            :aria-label="t('展开站点列表')"
+            :title="t('展开站点列表')"
             aria-controls="station-explorer-content"
             :aria-expanded="false"
             @click="expandSidebar"
           >
             <i class="fa fa-angles-right text-base" aria-hidden="true"></i>
-            <span class="text-xs font-semibold">站点</span>
+            <span class="text-xs font-semibold">{{ isEnglish ? t('列表') : t('站点') }}</span>
           </button>
         </div>
         <div
@@ -197,18 +209,18 @@
                     <h2
                       class="text-2xl font-bold tracking-tight text-surface-900 dark:text-surface-100"
                     >
-                      附近充电站
+                      {{ t('附近充电站') }}
                     </h2>
-                    <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400"
-                      >演示项目 · 站点与充电数据为模拟数据</span
-                    >
+                    <span class="mt-2 block text-xs text-surface-500 dark:text-surface-400">{{
+                      t('演示项目 · 站点与充电数据为模拟数据')
+                    }}</span>
                   </div>
                 </div>
                 <button
                   ref="collapseSidebarRef"
                   class="icon-button"
-                  title="收起站点列表"
-                  aria-label="收起站点列表"
+                  :title="t('收起站点列表')"
+                  :aria-label="t('收起站点列表')"
                   aria-controls="station-explorer-content"
                   :aria-expanded="true"
                   @click="collapseSidebar"
@@ -248,10 +260,10 @@
       ></i>
       {{
         chargingStore.isCharging
-          ? '正在充电 · 查看进度'
+          ? t('正在充电 · 查看进度')
           : ['awaiting_unplug', 'interrupted'].includes(chargingStore.phase)
-            ? '充电已结束 · 完成收尾'
-            : '待支付订单 · 查看账单'
+            ? t('充电已结束 · 完成收尾')
+            : t('待支付订单 · 查看账单')
       }}
     </button>
 
@@ -306,6 +318,7 @@ import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
 import { formatDuration } from '../utils/format'
 import { locationAccuracyText } from '../utils/location'
+import { isEnglish, t } from '../i18n'
 import MapView from '../components/map/MapView.vue'
 import NavigationBar from '../components/map/NavigationBar.vue'
 import StationsList from '../components/station/StationsList.vue'
@@ -521,7 +534,7 @@ const handleHeaderEvent = (event) => {
         .then((loc) => {
           const estimated = loc.quality !== 'reported'
           showToast(
-            `${estimated ? '仅获得估算位置' : '已获取设备位置'}，${locationAccuracyText(loc)}${estimated ? '；电脑定位可能有明显偏差' : ''}`,
+            `${t(estimated ? '仅获得估算位置' : '已获取设备位置')}${isEnglish.value ? ' · ' : '，'}${locationAccuracyText(loc)}${estimated ? `${isEnglish.value ? '. ' : '；'}${t('电脑定位可能有明显偏差')}` : ''}`,
             estimated ? 'info' : 'success'
           )
         })
@@ -548,7 +561,10 @@ const handleRouteResult = (event) => {
   } else if (distance && duration) {
     const durationText = formatDuration(duration * 60, 'hm-verbose')
     stationsStore.startNavigation({ distance, duration, station, origin })
-    showToast(`导航路线：${distance}公里，约${durationText}`, 'success')
+    showToast(
+      t('导航路线：{distance}公里，约{duration}', { distance, duration: durationText }),
+      'success'
+    )
   }
 }
 

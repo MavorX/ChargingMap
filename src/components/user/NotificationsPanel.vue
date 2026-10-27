@@ -1,7 +1,7 @@
 <template>
   <AccountPanel
     title="通知中心"
-    :subtitle="`${user.unreadNotificationsCount} 条未读消息`"
+    :subtitle="t('{count} 条未读消息', { count: user.unreadNotificationsCount })"
     content-id="notifications-panel"
     back-id="back-from-notifications"
     @close="emit('close')"
@@ -12,18 +12,18 @@
         :disabled="!user.unreadNotificationsCount"
         @click="user.markAllNotificationsAsRead()"
       >
-        全部已读
+        {{ t('全部已读') }}
       </button></template
     >
-    <div class="segmented-control" role="group" aria-label="通知筛选">
+    <div class="segmented-control" role="group" :aria-label="t('通知筛选')">
       <button class="segmented-item" :aria-pressed="filter === 'all'" @click="filter = 'all'">
-        全部通知</button
+        {{ t('全部通知') }}</button
       ><button
         class="segmented-item"
         :aria-pressed="filter === 'unread'"
         @click="filter = 'unread'"
       >
-        未读消息
+        {{ t('未读消息') }}
       </button>
     </div>
     <article
@@ -40,46 +40,52 @@
           ></i
         ></span>
         <div class="min-w-0 flex-1">
-          <h3 class="text-sm font-semibold">{{ notification.title }}</h3>
-          <p class="account-caption mt-1">{{ notification.time }}</p>
+          <h3 class="text-sm font-semibold">{{ t(notification.title) }}</h3>
+          <p class="account-caption mt-1">{{ dataText(notification.time) }}</p>
         </div>
         <span
           v-if="!notification.read"
           class="h-2 w-2 shrink-0 rounded-full bg-primary-500"
-          aria-label="未读"
+          :aria-label="t('未读')"
         ></span>
       </div>
       <p class="mt-3 break-words text-sm leading-7 text-surface-600 dark:text-surface-300">
-        {{ notification.content }}
+        {{ dataText(notification.content) }}
       </p>
       <button
         v-if="!notification.read"
         class="mt-2 min-h-10 text-xs font-semibold text-primary-600 dark:text-primary-400"
-        :aria-label="`标为已读 ${notification.title}`"
+        :aria-label="t('标为已读 {title}', { title: t(notification.title) })"
         @click="user.markNotificationAsRead(notification.id)"
       >
-        标为已读
+        {{ t('标为已读') }}
       </button>
-      <p v-else class="account-caption mt-2">已读</p>
+      <p v-else class="account-caption mt-2">{{ t('已读') }}</p>
     </article>
     <div v-if="!notifications.length" class="account-empty">
       <span class="account-icon"><i class="fa fa-bell-o" aria-hidden="true"></i></span>
-      <h3 class="text-sm font-semibold">{{ filter === 'unread' ? '没有未读消息' : '暂无通知' }}</h3>
+      <h3 class="text-sm font-semibold">
+        {{ t(filter === 'unread' ? '没有未读消息' : '暂无通知') }}
+      </h3>
       <p class="account-caption">
         {{
-          !user.settings.notificationEnabled
-            ? '消息通知已关闭，可在设置中开启。'
-            : '新订单通知会显示在这里。'
+          t(
+            !user.settings.notificationEnabled
+              ? '消息通知已关闭，可在设置中开启。'
+              : '新订单通知会显示在这里。'
+          )
         }}
       </p>
       <button v-if="filter === 'unread'" class="action-secondary" @click="filter = 'all'">
-        查看全部通知
+        {{ t('查看全部通知') }}
       </button>
     </div>
   </AccountPanel>
 </template>
 <script setup>
 import { computed, ref } from 'vue'
+import { t } from '../../i18n'
+import { dataText } from '../../i18n/data'
 import AccountPanel from './AccountPanel.vue'
 import { useUserStore } from '../../store/modules/user'
 const emit = defineEmits(['close'])

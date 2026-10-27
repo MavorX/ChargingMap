@@ -624,7 +624,9 @@ export const useChargingStore = defineStore('charging', {
       userStore.addChargingHistory({
         stationName: station.stationName,
         stationAddress: station.address,
-        duration: formatDuration(this.chargingData.duration, 'hm-verbose'),
+        // Local records remain language-neutral/canonical when paid in English.
+        duration: formatDuration(this.chargingData.duration, 'hm-verbose', 'zh-CN'),
+        durationSeconds: this.chargingData.duration,
         energy: `${Number(this.chargingData.energy).toFixed(1)} kWh`,
         cost: finalAmount,
         vehicleModel: this.sessionVehicle?.model || '未登记车型',

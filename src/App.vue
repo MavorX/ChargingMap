@@ -5,7 +5,7 @@
     <Loading v-if="isLoading" />
     <Toast
       portal
-      :message="toastMessage"
+      :message="t(toastMessage)"
       :type="toastType"
       :show="showToast"
       :revision="toastRevision"
@@ -20,6 +20,7 @@ import { useUserStore } from './store/modules/user'
 import Header from './components/Header.vue'
 import Loading from './components/common/Loading.vue'
 import Toast from './components/common/Toast.vue'
+import { t } from './i18n'
 
 const userStore = useUserStore()
 watch(

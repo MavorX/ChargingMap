@@ -1,6 +1,6 @@
 <template>
   <AccountPanel title="优惠券" subtitle="核对有效期与消费门槛，结算时抵扣" @close="emit('close')">
-    <div class="segmented-control" role="group" aria-label="优惠券状态">
+    <div class="segmented-control" role="group" :aria-label="t('优惠券状态')">
       <button
         v-for="tab in tabs"
         :key="tab.value"
@@ -8,7 +8,7 @@
         :aria-pressed="activeTab === tab.value"
         @click="activeTab = tab.value"
       >
-        {{ tab.label }} · {{ tab.count }}
+        {{ t(tab.label) }} · {{ tab.count }}
       </button>
     </div>
     <div v-for="coupon in filteredCoupons" :key="coupon.id" class="account-card">
@@ -17,48 +17,64 @@
           class="w-20 shrink-0 rounded-xl bg-primary-50 px-2 py-4 text-center text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
         >
           <strong class="text-xl tabular-nums">{{
-            coupon.type === 'percent' ? `${coupon.percent / 10}折` : `¥${coupon.value}`
+            coupon.type === 'percent'
+              ? t('{percent}折', { percent: coupon.percent / 10, discount: 100 - coupon.percent })
+              : `¥${coupon.value}`
           }}</strong>
-          <p class="mt-1 text-[11px]">{{ coupon.type === 'percent' ? '折扣券' : '抵扣额度' }}</p>
+          <p class="mt-1 text-[11px]">{{ t(coupon.type === 'percent' ? '折扣券' : '抵扣额度') }}</p>
         </div>
         <div class="min-w-0 flex-1">
-          <h3 class="text-sm font-bold">{{ coupon.title }}</h3>
-          <p class="account-caption mt-1">{{ coupon.description }}</p>
+          <h3 class="text-sm font-bold">{{ t(coupon.title) }}</h3>
+          <p class="account-caption mt-1">{{ t(coupon.description) }}</p>
           <p class="account-caption mt-2">
-            {{ coupon.minSpend ? `满 ${coupon.minSpend} 元可用` : '无最低消费'
-            }}{{ coupon.type === 'percent' ? ` · 最多抵扣 ${coupon.value} 元` : '' }}
+            {{
+              coupon.minSpend
+                ? t('满 {amount} 元可用', { amount: coupon.minSpend })
+                : t('无最低消费')
+            }}{{
+              coupon.type === 'percent'
+                ? t(' · 最多抵扣 {amount} 元', { amount: coupon.value })
+                : ''
+            }}
           </p>
         </div>
       </div>
       <div
         class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-surface-100 pt-3 dark:border-surface-800"
       >
-        <span class="account-caption">有效期至 {{ coupon.expiryDate || '未指定' }}</span
+        <span class="account-caption">{{
+          t('有效期至 {date}', { date: coupon.expiryDate || t('未指定') })
+        }}</span
         ><button
           v-if="couponState(coupon, now) === 'available'"
           class="action-secondary min-h-10 px-3 py-2 text-xs text-primary-700 dark:text-primary-300"
           @click="useCoupon(coupon)"
         >
-          去使用</button
+          {{ t('去使用') }}</button
         ><span v-else class="account-caption">{{
-          couponState(coupon, now) === 'used' ? '已使用' : '已过期'
+          t(couponState(coupon, now) === 'used' ? '已使用' : '已过期')
         }}</span>
       </div>
     </div>
     <div v-if="!filteredCoupons.length" class="account-empty">
       <span class="account-icon"><i class="fa fa-ticket" aria-hidden="true"></i></span>
-      <h3 class="text-sm font-semibold">{{ emptyText }}</h3>
+      <h3 class="text-sm font-semibold">{{ t(emptyText) }}</h3>
       <p class="account-caption">
         {{
-          activeTab === 'available' ? '优惠券不是开始充电的必要条件。' : '这里会保留对应的券状态。'
+          t(
+            activeTab === 'available'
+              ? '优惠券不是开始充电的必要条件。'
+              : '这里会保留对应的券状态。'
+          )
         }}
       </p>
-      <button class="action-secondary" @click="emit('explore')">去找充电站</button>
+      <button class="action-secondary" @click="emit('explore')">{{ t('去找充电站') }}</button>
     </div>
   </AccountPanel>
 </template>
 <script setup>
 import { computed, inject, ref } from 'vue'
+import { t } from '../../i18n'
 import AccountPanel from './AccountPanel.vue'
 import { useUserStore } from '../../store/modules/user'
 import { couponState } from '../../utils/coupons'

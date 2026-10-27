@@ -7,17 +7,17 @@
     <div class="flex shrink-0 items-center justify-between px-5 pb-3 pt-3">
       <div>
         <h2 class="text-xl font-bold tracking-tight text-surface-900 dark:text-surface-100">
-          附近充电站
+          {{ t('附近充电站') }}
         </h2>
         <p class="mt-1 text-xs text-surface-500 dark:text-surface-400" aria-live="polite">
-          当前视野内 {{ stationsStore.viewportStationCount }} 个站点
+          {{ t('当前视野内 {count} 个站点', { count: stationsStore.viewportStationCount }) }}
         </p>
-        <p class="mt-1 text-[11px] text-surface-400">演示数据</p>
+        <p class="mt-1 text-[11px] text-surface-400">{{ t('演示数据') }}</p>
       </div>
       <button
         id="close-list"
         class="icon-button text-surface-500"
-        aria-label="关闭列表"
+        :aria-label="t('关闭列表')"
         @click="emit('close')"
       >
         <i class="fa fa-times" aria-hidden="true"></i>
@@ -27,7 +27,7 @@
       <StationListControls density="comfortable" />
       <div class="flex items-center justify-between text-xs">
         <span class="text-surface-500 dark:text-surface-400">{{
-          stationsStore.userLocation ? '距离优先' : '当前地图范围'
+          t(stationsStore.userLocation ? '距离优先' : '当前地图范围')
         }}</span>
         <div class="flex items-center gap-3">
           <button
@@ -35,13 +35,13 @@
             class="min-h-8 text-surface-500 dark:text-surface-400"
             @click="resetFilters"
           >
-            清除筛选
+            {{ t('清除筛选') }}
           </button>
           <button
             class="flex min-h-8 items-center gap-1.5 font-medium text-primary-600 dark:text-primary-400"
             @click="emit('show-filter')"
           >
-            <i class="fa fa-sliders" aria-hidden="true"></i>高级筛选
+            <i class="fa fa-sliders" aria-hidden="true"></i>{{ t('高级筛选') }}
           </button>
         </div>
       </div>
@@ -64,10 +64,8 @@
           class="w-full rounded-xl border border-surface-200 bg-white py-3 text-xs font-medium text-surface-600 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
           @click="loadMore"
         >
-          加载更多 · 还有 {{ remainingCount }} 个站点<i
-            class="fa fa-angle-down ml-2"
-            aria-hidden="true"
-          ></i>
+          {{ t('加载更多 · 还有 {count} 个站点', { count: remainingCount })
+          }}<i class="fa fa-angle-down ml-2" aria-hidden="true"></i>
         </button>
       </div>
     </div>
@@ -75,6 +73,7 @@
 </template>
 
 <script setup>
+import { t } from '../../i18n'
 import PanelShell from '../common/PanelShell.vue'
 import { useStationList } from '../../composables/useStationList'
 import StationListCard from './StationListCard.vue'

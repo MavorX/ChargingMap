@@ -5,7 +5,7 @@
     :class="{ 'panel-fullscreen': fullscreen, 'panel-sheet': placement === 'sheet' }"
     role="dialog"
     :aria-modal="allowNavigation && !busy ? undefined : 'true'"
-    :aria-label="title || undefined"
+    :aria-label="t(title) || undefined"
     :aria-busy="busy || undefined"
   >
     <div v-if="!fullscreen" class="panel-backdrop" @click="requestClose"></div>
@@ -22,6 +22,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { t } from '../../i18n'
 import { useDialogFocus } from '../../composables/useDialogFocus'
 
 const props = defineProps({

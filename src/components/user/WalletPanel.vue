@@ -1,36 +1,38 @@
 <template>
   <AccountPanel title="我的钱包" subtitle="演示资金，不涉及真实收付款" @close="emit('close')">
     <section class="account-card">
-      <p class="account-caption">可用余额</p>
+      <p class="account-caption">{{ t('可用余额') }}</p>
       <p class="mt-2 break-all text-3xl font-bold tabular-nums">
         {{ formatPrice(user.userInfo.balance) }}
       </p>
       <div class="mt-5 grid grid-cols-2 gap-3">
         <button class="action-primary" @click="showRechargeModal = true">
-          <i class="fa fa-plus" aria-hidden="true"></i>充值</button
+          <i class="fa fa-plus" aria-hidden="true"></i>{{ t('充值') }}</button
         ><button
           class="action-secondary"
           :disabled="user.userInfo.balance <= 0"
           @click="showWithdrawModal = true"
         >
-          提现
+          {{ t('提现') }}
         </button>
       </div>
       <p v-if="user.userInfo.balance <= 0" class="account-caption mt-3">
-        暂无可提现余额，可先体验演示充值。
+        {{ t('暂无可提现余额，可先体验演示充值。') }}
       </p>
     </section>
     <section>
       <div class="mb-3 flex items-center justify-between gap-2">
-        <h3 ref="transactionsRef" tabindex="-1" class="text-sm font-semibold">交易记录</h3>
+        <h3 ref="transactionsRef" tabindex="-1" class="text-sm font-semibold">
+          {{ t('交易记录') }}
+        </h3>
         <button
           class="text-xs font-semibold text-primary-600 dark:text-primary-400"
           @click="showTransactions"
         >
-          查看全部账单
+          {{ t('查看全部账单') }}
         </button>
       </div>
-      <div class="segmented-control mb-3" role="group" aria-label="交易类型">
+      <div class="segmented-control mb-3" role="group" :aria-label="t('交易类型')">
         <button
           v-for="filter in filters"
           :key="filter.value"
@@ -38,7 +40,7 @@
           :aria-pressed="activeFilter === filter.value"
           @click="activeFilter = filter.value"
         >
-          {{ filter.label }}
+          {{ t(filter.label) }}
         </button>
       </div>
       <div v-if="transactions.length" class="account-group">
@@ -48,14 +50,18 @@
           ></span>
           <div class="min-w-0 flex-1">
             <p class="break-words text-sm font-semibold">
-              {{ tx.description || typeLabels[tx.type] || '钱包交易' }}
+              {{ dataText(tx.description || typeLabels[tx.type] || '钱包交易') }}
             </p>
-            <p class="account-caption mt-1">{{ tx.date }}</p>
+            <p class="account-caption mt-1">{{ dataText(tx.date) }}</p>
             <p
               v-if="tx.type === 'payment' && tx.method && tx.method !== 'wallet'"
               class="account-caption"
             >
-              {{ tx.method === 'wechat' ? '微信' : '支付宝' }}演示支付 · 不扣钱包
+              {{
+                t('{method}演示支付 · 不扣钱包', {
+                  method: t(tx.method === 'wechat' ? '微信' : '支付宝')
+                })
+              }}
             </p>
           </div>
           <div class="min-w-0 text-right">
@@ -65,22 +71,24 @@
             >
               {{ isIncome(tx) ? '+' : '−' }}{{ formatPrice(Math.abs(tx.amount)) }}
             </p>
-            <p class="account-caption mt-1">余额 {{ formatPrice(tx.balance) }}</p>
+            <p class="account-caption mt-1">
+              {{ t('余额 {amount}', { amount: formatPrice(tx.balance) }) }}
+            </p>
           </div>
         </article>
       </div>
       <div v-else class="account-empty">
         <span class="account-icon"><i class="fa fa-file-text-o" aria-hidden="true"></i></span>
         <h3 class="text-sm font-semibold">
-          {{ user.walletTransactions.length ? '此分类暂无交易' : '暂无交易记录' }}
+          {{ t(user.walletTransactions.length ? '此分类暂无交易' : '暂无交易记录') }}
         </h3>
-        <p class="account-caption">充值、提现或完成充电结算后会显示在这里。</p>
+        <p class="account-caption">{{ t('充值、提现或完成充电结算后会显示在这里。') }}</p>
         <button
           v-if="activeFilter !== 'all'"
           class="action-secondary"
           @click="activeFilter = 'all'"
         >
-          查看全部
+          {{ t('查看全部') }}
         </button>
       </div>
     </section>
@@ -100,7 +108,9 @@
             ¥{{ amount }}
           </button>
         </div>
-        <label for="wallet-recharge" class="mb-2 block text-sm font-semibold">自定义金额</label
+        <label for="wallet-recharge" class="mb-2 block text-sm font-semibold">{{
+          t('自定义金额')
+        }}</label
         ><input
           id="wallet-recharge"
           v-model.number="customAmount"
@@ -108,31 +118,38 @@
           min="0.01"
           max="100000"
           step="0.01"
-          placeholder="最多 100000 元，支持两位小数"
-          aria-label="自定义充值金额"
+          :placeholder="t('最多 100000 元，支持两位小数')"
+          :aria-label="t('自定义充值金额')"
           class="input-premium"
           @input="customAmountActive = true"
           @keydown.enter.prevent="handleRecharge"
         />
         <p v-if="rechargeError" class="mt-2 text-xs text-danger-600" role="status">
-          {{ rechargeError }}
+          {{ t(rechargeError) }}
         </p>
         <div class="mt-5 flex gap-3">
-          <button class="action-secondary flex-1" @click="showRechargeModal = false">取消</button
+          <button class="action-secondary flex-1" @click="showRechargeModal = false">
+            {{ t('取消') }}</button
           ><button
             class="action-primary flex-1"
             :disabled="!!rechargeError"
             @click="handleRecharge"
           >
-            确认充值
+            {{ t('确认充值') }}
           </button>
         </div></DialogModal
       >
       <DialogModal v-if="showWithdrawModal" title="提现（演示）" @close="showWithdrawModal = false"
         ><p class="account-caption mb-3">
-          可提现余额 {{ formatPrice(user.userInfo.balance) }}，仅模拟减少钱包余额。
+          {{
+            t('可提现余额 {amount}，仅模拟减少钱包余额。', {
+              amount: formatPrice(user.userInfo.balance)
+            })
+          }}
         </p>
-        <label for="wallet-withdraw" class="mb-2 block text-sm font-semibold">提现金额</label
+        <label for="wallet-withdraw" class="mb-2 block text-sm font-semibold">{{
+          t('提现金额')
+        }}</label
         ><input
           id="wallet-withdraw"
           v-model.number="withdrawAmount"
@@ -140,22 +157,23 @@
           min="0.01"
           :max="user.userInfo.balance"
           step="0.01"
-          placeholder="输入提现金额"
-          aria-label="提现金额"
+          :placeholder="t('输入提现金额')"
+          :aria-label="t('提现金额')"
           class="input-premium"
           @keydown.enter.prevent="handleWithdraw"
         />
         <p v-if="withdrawError" class="mt-2 text-xs text-danger-600" role="status">
-          {{ withdrawError }}
+          {{ t(withdrawError) }}
         </p>
         <div class="mt-5 flex gap-3">
-          <button class="action-secondary flex-1" @click="showWithdrawModal = false">取消</button
+          <button class="action-secondary flex-1" @click="showWithdrawModal = false">
+            {{ t('取消') }}</button
           ><button
             class="action-primary flex-1"
             :disabled="!!withdrawError"
             @click="handleWithdraw"
           >
-            确认提现
+            {{ t('确认提现') }}
           </button>
         </div></DialogModal
       >
@@ -164,6 +182,8 @@
 </template>
 <script setup>
 import { computed, inject, ref, watch } from 'vue'
+import { t } from '../../i18n'
+import { dataText } from '../../i18n/data'
 import AccountPanel from './AccountPanel.vue'
 import DialogModal from '../common/DialogModal.vue'
 import { useUserStore } from '../../store/modules/user'
@@ -255,7 +275,7 @@ const handleRecharge = () => {
   try {
     user.addWalletTransaction({ type: 'recharge', amount, operationId: operationId.value })
     showRechargeModal.value = false
-    toast(`成功充值 ${formatPrice(amount)}（演示）`, 'success')
+    toast(t('成功充值 {amount}（演示）', { amount: formatPrice(amount) }), 'success')
   } catch (error) {
     toast(error.message, 'error')
   }
@@ -266,7 +286,7 @@ const handleWithdraw = () => {
   try {
     user.addWalletTransaction({ type: 'withdraw', amount: -amount, operationId: operationId.value })
     showWithdrawModal.value = false
-    toast(`成功提现 ${formatPrice(amount)}（演示）`, 'success')
+    toast(t('成功提现 {amount}（演示）', { amount: formatPrice(amount) }), 'success')
   } catch (error) {
     toast(error.message, 'error')
   }

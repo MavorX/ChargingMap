@@ -6,26 +6,26 @@
       <button
         id="back-from-vehicle-filter"
         class="icon-button"
-        aria-label="返回"
+        :aria-label="t('返回')"
         @click="$emit('close')"
       >
         <i class="fa fa-arrow-left text-surface-600 dark:text-surface-300" aria-hidden="true"></i>
       </button>
-      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">筛选条件</h2>
+      <h2 class="text-lg font-bold text-surface-900 dark:text-surface-100">{{ t('筛选条件') }}</h2>
       <button
         id="reset-vehicle-filter"
         class="rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-600 transition-all duration-200 hover:bg-primary-50 active:scale-95 dark:text-primary-400 dark:hover:bg-primary-900/20"
         @click="resetFilters"
       >
-        重置
+        {{ t('重置') }}
       </button>
     </div>
 
     <div class="flex-1 overflow-y-auto p-5">
       <div class="mb-6">
-        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >充电公司</label
-        >
+        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300">{{
+          t('充电公司')
+        }}</label>
         <div class="grid grid-cols-3 gap-2.5">
           <button
             v-for="brand in chargingBrands"
@@ -38,15 +38,15 @@
             "
             @click="selectedBrand = selectedBrand === brand.value ? '' : brand.value"
           >
-            {{ brand.label }}
+            {{ t(brand.label) }}
           </button>
         </div>
       </div>
 
       <div class="mb-6">
-        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >充电接口类型</label
-        >
+        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300">{{
+          t('充电接口类型')
+        }}</label>
         <div class="grid grid-cols-2 gap-2.5">
           <label
             v-for="connector in connectorTypes"
@@ -86,18 +86,19 @@
       </div>
 
       <div class="mb-6">
-        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300"
-          >最大充电功率</label
-        >
+        <label class="mb-3 block text-sm font-bold text-surface-700 dark:text-surface-300">{{
+          t('最大充电功率')
+        }}</label>
         <div
           class="rounded-2xl bg-gradient-to-br from-white to-surface-50 p-5 shadow-soft dark:from-surface-800 dark:to-surface-900"
         >
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-sm text-surface-500 dark:text-surface-400">最低功率</span>
+            <span class="text-sm text-surface-500 dark:text-surface-400">{{ t('最低功率') }}</span>
             <span class="gradient-text text-lg font-black">{{ selectedPower }}kW</span>
           </div>
           <input
             v-model.number="selectedPower"
+            :aria-label="t('最低功率')"
             type="range"
             min="50"
             max="300"
@@ -126,7 +127,7 @@
         ></div>
         <span class="relative z-10 flex items-center justify-center space-x-2">
           <i class="fa fa-filter" aria-hidden="true"></i>
-          <span>应用筛选</span>
+          <span>{{ t('应用筛选') }}</span>
         </span>
       </button>
     </div>
@@ -136,6 +137,7 @@
 <script setup>
 import PanelShell from '../common/PanelShell.vue'
 import { ref, inject } from 'vue'
+import { t } from '../../i18n'
 import { useStationsStore } from '../../store/modules/stations'
 
 const emit = defineEmits(['close'])
