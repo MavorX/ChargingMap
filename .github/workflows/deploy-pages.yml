@@ -46,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pages: read # configure-pages reads the enabled site's publishing settings.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
