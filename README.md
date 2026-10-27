@@ -281,7 +281,7 @@ CustomEvent ←→ mapService.js ←→ HomeView.vue (地图交互)
 
 ### 环境要求
 
-- Node.js >= 18
+- Node.js 满足 `package.json` 的 `engines` 要求；本地、CI 与部署统一使用 `.nvmrc` 的 **22.23.2**，不再支持 Node 18/20
 - npm >= 9
 
 ### 安装与运行
@@ -304,6 +304,10 @@ npm run lint
 npm run test -- --run
 npm run check:data
 ```
+
+本地使用 Node 版本管理器时可运行 `nvm install` / `nvm use`（或按所用工具读取 `.nvmrc`）。当前 `jsdom` 等开发依赖要求 Node `^22.22.2 || ^24.15.0 || >=26.0.0`；只修改工作流或只看本地测试结果会导致环境不一致。
+
+Git 推送成功、GitHub CI 通过和部署完成是三个不同状态：推送后还需确认**同一提交**的 CI 结果；GitHub Pages 仍须手动触发部署，不能把推送成功当作网站已更新。
 
 ### 数据生成
 

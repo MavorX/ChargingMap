@@ -17,7 +17,7 @@
     "format:check": "prettier --check \"src/**/*.{vue,js}\""
   },
   "engines": {
-    "node": ">=18"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
