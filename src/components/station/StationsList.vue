@@ -27,7 +27,13 @@
       <StationListControls density="comfortable" />
       <div class="flex items-center justify-between text-xs">
         <span class="text-surface-500 dark:text-surface-400">{{
-          t(stationsStore.userLocation ? '距离优先' : '当前地图范围')
+          t(
+            advisor.ranked.length
+              ? '补能推荐优先'
+              : stationsStore.userLocation
+                ? '距离优先'
+                : '当前地图范围'
+          )
         }}</span>
         <div class="flex items-center gap-3">
           <button
@@ -48,11 +54,19 @@
     </div>
     <div
       id="stations-container"
+      ref="resultsRef"
       class="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-surface-100 bg-surface-50/70 p-4 dark:border-surface-800 dark:bg-surface-950/30"
     >
+      <ChargingAdvisor @select="selectStation" @show-vehicles="emit('show-vehicles')" />
       <StationListState />
       <div v-if="!stationsStore.isLoading && !stationsStore.error" class="space-y-3">
-        <StationListCard
+        <h3
+          v-if="advisor.isCurrent"
+          class="pb-1 text-xs font-semibold text-surface-500 dark:text-surface-400"
+        >
+          {{ t('全部匹配站点') }}
+        </h3>
+        <StationResultCard
           v-for="(station, index) in displayedStations"
           :key="station.stationId"
           :station="station"
@@ -69,18 +83,30 @@
         </button>
       </div>
     </div>
+    <ComparisonBar @show="showComparison" />
   </PanelShell>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { t } from '../../i18n'
 import PanelShell from '../common/PanelShell.vue'
 import { useStationList } from '../../composables/useStationList'
-import StationListCard from './StationListCard.vue'
+import StationResultCard from './StationResultCard.vue'
+import ChargingAdvisor from './ChargingAdvisor.vue'
+import ComparisonBar from './ComparisonBar.vue'
+import { useRecommendationsStore } from '../../store/modules/recommendations'
+import { useChargingStore } from '../../store/modules/charging'
 import StationListControls from './StationListControls.vue'
 import StationListState from './StationListState.vue'
 
-const emit = defineEmits(['close', 'show-filter'])
+const emit = defineEmits(['close', 'show-filter', 'show-vehicles'])
+const advisor = useRecommendationsStore()
+const resultsRef = ref(null)
+const showComparison = () =>
+  resultsRef.value
+    ?.querySelector('[data-testid="station-comparison"]')
+    ?.scrollIntoView({ block: 'nearest' })
 const {
   stationsStore,
   activeFilterCount,
@@ -91,6 +117,9 @@ const {
   resetFilters
 } = useStationList()
 const selectStation = (station) => {
+  const draft = advisor.setupForStation(station.stationId)
+  if (draft && !useChargingStore().isCharging && !useChargingStore().paymentPending)
+    useChargingStore().setupDraft = draft
   stationsStore.setCurrentStation(station)
   emit('close')
 }

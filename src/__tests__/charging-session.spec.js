@@ -9,6 +9,7 @@ import HomeView from '../views/HomeView.vue'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
 import PaymentSuccess from '../components/payment/PaymentSuccess.vue'
 import { installSandbox, start, stop } from './helpers/charging'
+import { chargingDurationSeconds } from '../utils/chargingModel'
 
 let wrapper
 beforeEach(() => {
@@ -81,7 +82,7 @@ describe('charging order lifecycle', () => {
     expect(store.phase).toBe('stopping')
     expect(store.isCharging).toBe(true)
     expect(store.chargingData.elapsedRealSeconds).toBe(3601)
-    expect(store.chargingData.duration).toBe(2160)
+    expect(store.chargingData.duration).toBeCloseTo(chargingDurationSeconds(store.sessionModel))
     expect(store.chargingData.energy).toBe(36)
     expect(store.chargingData.battery).toBe(80)
     expect(() => store.disconnectPlug()).toThrow('禁止拔枪')

@@ -278,4 +278,33 @@ describe('MapManager markers', () => {
     manager.refreshMarker(station.stationId)
     expect(AMap.MarkerCluster.instances[0].setPoints).toHaveBeenCalledTimes(2)
   })
+
+  it('keeps recommended pins outside clusters and restores ordinary markers when cleared', async () => {
+    const AMap = installAMap()
+    const manager = await loadManager()
+    const map = makeMap()
+    manager.setMap(map)
+    const stations = [makeStation('HF000001', 117.1, 31.8), makeStation('HF000002', 117.2, 31.9)]
+    manager.setStations(stations)
+    manager.updateMarkers(stations)
+    manager.setRecommendations([
+      { station: stations[0], label: '本次推荐', durationSeconds: 600, totalAmount: 30 }
+    ])
+    expect(manager._recommendationMarkers).toHaveLength(1)
+    expect(AMap.MarkerCluster.instances[0].points).toHaveLength(1)
+    const marker = manager._recommendationMarkers[0]
+    expect(marker.content.textContent).toContain('本次推荐')
+    expect(marker.content.textContent).toContain('¥30.00')
+    expect(map.setCenter).not.toHaveBeenCalled()
+    const open = vi.spyOn(manager, '_openStationInfoWindow').mockImplementation(() => {})
+    marker.content.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    expect(open).toHaveBeenCalledOnce()
+    manager.refreshMarker(stations[0].stationId)
+    expect(marker.content.className).toBe('map-recommendation-marker')
+    manager.setRecommendations([])
+    expect(manager._recommendationMarkers).toHaveLength(0)
+    expect(map.removed).toContain(marker)
+    expect(AMap.MarkerCluster.instances[0].points).toHaveLength(2)
+    manager.destroy()
+  })
 })

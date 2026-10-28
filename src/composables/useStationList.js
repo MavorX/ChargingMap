@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useStationsStore } from '../store/modules/stations'
+import { useRecommendationsStore } from '../store/modules/recommendations'
 
 /**
  * Toggle chips shared by the mobile sheet and the desktop sidebar.
@@ -32,6 +33,7 @@ const filterButtons = {
  */
 export function useStationList() {
   const stationsStore = useStationsStore()
+  const advisor = useRecommendationsStore()
 
   const searchQuery = computed({
     get: () => stationsStore.searchQuery,
@@ -40,7 +42,9 @@ export function useStationList() {
 
   const filters = computed(() => stationsStore.filters)
   const activeFilterCount = computed(() => stationsStore.activeFilterCount)
-  const displayedStations = computed(() => stationsStore.pagedStations)
+  const displayedStations = computed(() =>
+    advisor.orderedStations.slice(0, stationsStore.listPage * stationsStore.listPageSize)
+  )
   const hasMore = computed(() => stationsStore.hasMoreStations)
 
   const remainingCount = computed(() => {

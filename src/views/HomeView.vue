@@ -23,6 +23,15 @@
               <i class="fa fa-sliders" aria-hidden="true"></i>
             </button>
           </div>
+          <button
+            class="mt-2 flex w-full items-center justify-between gap-3 rounded-xl border border-primary-200 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-primary-800 shadow-sm dark:border-primary-800 dark:bg-surface-900/95 dark:text-primary-200"
+            @click="uiStore.open('stationsList')"
+          >
+            <span
+              ><i class="fa fa-wand-magic-sparkles mr-2" aria-hidden="true"></i
+              >{{ t('按车况，找到适合的站') }}</span
+            ><i class="fa fa-arrow-right shrink-0" aria-hidden="true"></i>
+          </button>
           <div
             class="mt-2 inline-flex max-w-full flex-col items-start gap-1 rounded-xl bg-white/95 px-3 py-2 text-xs text-surface-600 shadow-sm dark:bg-surface-900/95 dark:text-surface-300"
             role="status"
@@ -202,6 +211,7 @@
                 <DesktopStationList
                   @select-station="selectStationFromSidebar"
                   @show-filter="uiStore.open('vehicleFilter')"
+                  @show-vehicles="uiStore.open('vehicle')"
                 />
               </div>
             </div>
@@ -284,6 +294,7 @@ import { useStationsStore } from '../store/modules/stations'
 import { useChargingStore } from '../store/modules/charging'
 import { useUserStore } from '../store/modules/user'
 import { useUiStore } from '../store/modules/ui'
+import { useRecommendationsStore } from '../store/modules/recommendations'
 import { HEADER_PANEL_EVENTS } from '../constants/headerEvents'
 import mapManager from '../services/mapService'
 import { formatDuration } from '../utils/format'
@@ -323,6 +334,7 @@ const stationsStore = useStationsStore()
 const chargingStore = useChargingStore()
 const uiStore = useUiStore()
 const userStore = useUserStore()
+const advisor = useRecommendationsStore()
 const showToast = inject('showToast')
 
 const overlayComponents = {
@@ -436,6 +448,9 @@ const expandSidebar = async () => {
 }
 
 const selectStationFromSidebar = (station) => {
+  const draft = advisor.setupForStation(station.stationId)
+  if (draft && !chargingStore.isCharging && !chargingStore.paymentPending)
+    chargingStore.setupDraft = draft
   stationsStore.setCurrentStation(station)
   if (Number.isFinite(station.lng) && Number.isFinite(station.lat)) {
     mapManager.map?.setCenter([station.lng, station.lat])
@@ -630,7 +645,14 @@ watch(
   }
 )
 
+let analysisClock = null
+const refreshAnalysisClock = () => {
+  advisor.now = Date.now()
+}
 onMounted(() => {
+  advisor.loadGoal()
+  analysisClock = setInterval(refreshAnalysisClock, 30000)
+  document.addEventListener('visibilitychange', refreshAnalysisClock)
   chargingStore.loadSettings()
   chargingStore.restoreSession()
   window.addEventListener('headerEvent', handleHeaderEvent)
@@ -652,6 +674,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearInterval(analysisClock)
+  document.removeEventListener('visibilitychange', refreshAnalysisClock)
   window.removeEventListener('headerEvent', handleHeaderEvent)
   window.removeEventListener('routeResult', handleRouteResult)
   window.removeEventListener('mapClickClose', handleMapClick)

@@ -1,6 +1,7 @@
 import { errors } from './errors'
 import { demoText } from './demo'
 import { networks } from './places'
+import { energy } from './energy'
 
 // Keep English concise in controls; explanatory copy belongs in the body.
 // Arrays provide singular/plural forms for messages with a `count` parameter.
@@ -8,6 +9,7 @@ export const english = {
   ...errors,
   ...demoText,
   ...networks,
+  ...energy,
   关闭提示: 'Dismiss notification',
   已过时段: 'Past',
   已收藏: 'Saved',

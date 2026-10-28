@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useChargingStore } from '../store/modules/charging'
 import ChargingPanel from '../components/charging/ChargingPanel.vue'
 import { installSandbox, start, stop } from './helpers/charging'
+import { chargingDurationSeconds } from '../utils/chargingModel'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -63,7 +64,7 @@ describe('physical sandbox metering', () => {
     expect(store.phase).toBe('awaiting_unplug')
     expect(store.chargingData.energy).toBeCloseTo(0.6)
     expect(store.chargingData.battery).toBeCloseTo(80)
-    expect(store.chargingData.duration).toBeCloseTo(36)
+    expect(store.chargingData.duration).toBeCloseTo(chargingDurationSeconds(store.sessionModel))
   })
 
   it('does not accumulate intervals across paid sessions', async () => {

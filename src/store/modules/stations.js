@@ -143,6 +143,7 @@ export const useStationsStore = defineStore('stations', {
 
       if (station.detailsLoaded && station.details) {
         this.detailsError = null
+        station.currentPrice = currentPriceFor(station)
         return station.details
       }
 

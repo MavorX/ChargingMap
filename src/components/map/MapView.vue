@@ -71,11 +71,13 @@
 <script setup>
 import { onMounted, onUnmounted, watch, inject, ref } from 'vue'
 import { useStationsStore } from '../../store/modules/stations'
+import { useRecommendationsStore } from '../../store/modules/recommendations'
 import mapManager from '../../services/mapService'
 import { amapLoader } from '../../services/amapLoader'
 import { isEnglish, locale, t } from '../../i18n'
 
 const stationsStore = useStationsStore()
+const advisor = useRecommendationsStore()
 const showToast = inject('showToast')
 
 const mapError = ref(null)
@@ -238,6 +240,12 @@ watch(locale, () => {
   // Keep the map, selected station, route and charging session in place.
   if (map) mapManager.refreshLanguage(stationsStore.viewportStations)
 })
+
+watch(
+  () => advisor.highlights,
+  (entries) => mapManager.setRecommendations(entries),
+  { immediate: true }
+)
 
 onMounted(() => {
   initMap()

@@ -129,6 +129,10 @@
     @apply border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/40 dark:text-primary-300;
   }
 
+  .filter-chip:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
   .filter-chip-idle {
     @apply border-surface-200 bg-white text-surface-600 hover:border-primary-300 hover:text-primary-600 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300 dark:hover:border-primary-500;
   }
@@ -175,6 +179,46 @@
 
   .map-cluster:hover {
     box-shadow: 0 3px 12px rgb(0 39 51 / 24%);
+  }
+
+  .map-station-pin-muted {
+    opacity: 0.65;
+  }
+
+  .map-station-pin-muted:hover {
+    opacity: 1;
+  }
+
+  .map-recommendation-marker {
+    @apply relative flex w-40 cursor-pointer flex-col gap-1 rounded-xl border-2 border-primary-600 bg-white px-3 py-2 text-surface-900 shadow-soft-lg dark:border-primary-400 dark:bg-surface-900 dark:text-surface-100;
+  }
+
+  .map-recommendation-marker::after {
+    content: '';
+    @apply absolute -bottom-2 left-[72px] h-3 w-3 rotate-45 border-b-2 border-r-2 border-primary-600 bg-white dark:border-primary-400 dark:bg-surface-900;
+  }
+
+  .map-recommendation-label {
+    @apply text-[10px] font-bold text-primary-700 dark:text-primary-300;
+  }
+
+  .map-recommendation-name {
+    @apply truncate text-xs;
+  }
+
+  .map-recommendation-estimate {
+    @apply text-[11px] tabular-nums text-surface-600 dark:text-surface-300;
+  }
+
+  .charging-workspace {
+    @apply bg-surface-50 dark:bg-surface-950;
+  }
+
+  @media (min-width: 1024px) {
+    .panel-content.charging-workspace {
+      width: 760px;
+      max-width: calc(100vw - 2rem);
+    }
   }
 
   .map-info {
@@ -536,6 +580,10 @@
   ::before,
   ::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    /* A nonzero duration creates transitions on otherwise non-animated
+       elements too (the default property is "all"). Sidebar width can then
+       remain at 64px until the next paint after its content is revealed. */
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
   }
 }

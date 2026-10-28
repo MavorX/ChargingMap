@@ -18,6 +18,12 @@
         <p class="text-xs leading-5 text-surface-500 dark:text-surface-400">
           {{ stationAddress(station?.address) }}
         </p>
+        <p
+          v-if="suggestedConnectorId"
+          class="rounded-xl bg-primary-50 p-3 text-xs leading-5 text-primary-800 dark:bg-primary-900/20 dark:text-primary-200"
+        >
+          {{ t('已沿用补能目标；推荐估算枪位已标注，请核对现场后亲自选择。') }}
+        </p>
       </div>
       <fieldset
         class="min-w-0 space-y-5"
@@ -36,6 +42,7 @@
               type="button"
               class="choice-card min-w-0 p-3"
               :aria-pressed="connectorId === connector.id"
+              :data-suggested="connector.id === suggestedConnectorId || undefined"
               @click="connectorId = connector.id"
             >
               <i
@@ -48,6 +55,10 @@
                 }}</span
                 ><span class="mt-1 block text-xs text-surface-500 dark:text-surface-400"
                   >{{ connector.power }} kW · {{ connector.connectorType }}</span
+                ><span
+                  v-if="connector.id === suggestedConnectorId"
+                  class="mt-1 inline-block rounded-md bg-primary-50 px-1.5 py-1 text-[10px] font-semibold leading-4 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200"
+                  >{{ t('推荐估算枪位') }}</span
                 ></span
               >
               <i
@@ -130,6 +141,18 @@
           </div>
         </section>
         <dl v-if="model" class="premium-card space-y-3 p-4 text-sm">
+          <div class="mb-1 flex items-center justify-between gap-2">
+            <h3 class="font-bold">{{ t('这次补能，心中有数') }}</h3>
+            <i class="fa fa-bolt text-primary-600 dark:text-primary-400" aria-hidden="true"></i>
+          </div>
+          <div class="flex justify-between gap-2">
+            <dt class="text-surface-500 dark:text-surface-400">{{ t('预计充电时长') }}</dt>
+            <dd class="font-semibold tabular-nums">
+              {{
+                t('约 {minutes} 分钟', { minutes: Math.ceil(chargingDurationSeconds(model) / 60) })
+              }}
+            </dd>
+          </div>
           <div class="flex justify-between gap-2">
             <dt class="text-surface-500 dark:text-surface-400">{{ t('预计充入') }}</dt>
             <dd class="font-semibold tabular-nums">{{ model.targetEnergy.toFixed(1) }} kWh</dd>
@@ -142,10 +165,15 @@
           </div>
           <p class="text-xs leading-5 text-surface-500 dark:text-surface-400">
             {{
-              t('按 {power} kW 估算，约 {minutes} 分钟，以结束时的电量结算。', {
-                power: model.powerKw,
-                minutes: Math.ceil((model.targetEnergy / model.powerKw) * 60)
+              t('车辆与枪位共同限功率，最高 {power} kW', {
+                power: model.powerKw
               })
+            }}
+          </p>
+          <ChargingCurve :model="model" />
+          <p class="text-xs leading-5 text-surface-500 dark:text-surface-400">
+            {{
+              t('按模拟降功率曲线估时，不含接枪和排队；费用以结束时的电量结算，不含停车费及优惠。')
             }}
           </p>
         </dl>
@@ -274,8 +302,9 @@ import { useStationsStore } from '../../store/modules/stations'
 import { useChargingStore, calculatePaymentAmounts } from '../../store/modules/charging'
 import { useUserStore } from '../../store/modules/user'
 import { useAvailableConnectors } from '../../composables/useAvailableConnectors'
-import { validateChargingSetup } from '../../utils/chargingModel'
+import { validateChargingSetup, chargingDurationSeconds } from '../../utils/chargingModel'
 import { formatPrice } from '../../utils/format'
+import ChargingCurve from './ChargingCurve.vue'
 
 const emit = defineEmits(['close', 'start-charging', 'show-vehicles'])
 const stations = useStationsStore()
@@ -286,6 +315,7 @@ const station = computed(() => stations.currentStation)
 const connectors = useAvailableConnectors(station)
 const draft = store.setupDraft?.stationId === station.value?.stationId ? store.setupDraft : null
 const connectorId = ref(draft?.connectorId || '')
+const suggestedConnectorId = draft?.suggestedConnectorId || ''
 const vehicleId = ref(
   draft?.vehicleId ||
     user.vehicles.find((vehicle) =>
@@ -352,6 +382,7 @@ watch(
     store.setupDraft = {
       stationId: station.value?.stationId,
       connectorId: connectorId.value,
+      suggestedConnectorId,
       vehicleId: vehicleId.value,
       initialBattery: initialBattery.value,
       targetBattery: targetBattery.value,

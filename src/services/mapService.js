@@ -32,6 +32,9 @@ class MapManager {
     this._stationMarkerBindings = new WeakMap()
     this._visibleStations = []
     this._markerSignature = ''
+    this._recommendations = new Map()
+    this._recommendationMarkers = []
+    this._recommendationSignature = ''
   }
 
   setMap(mapInstance) {
@@ -86,6 +89,9 @@ class MapManager {
           : t('{count}空', { count: availableCount })
 
     const div = document.createElement('div')
+    div.className = this._recommendations.size
+      ? 'map-station-pin map-station-pin-muted'
+      : 'map-station-pin'
     div.style.cssText = 'cursor:pointer;display:flex;flex-direction:column;align-items:center;'
 
     const circle = document.createElement('div')
@@ -112,6 +118,72 @@ class MapManager {
     div.appendChild(label)
     div.appendChild(stem)
     return div
+  }
+
+  setRecommendations(entries) {
+    const next = entries
+      .slice(0, 3)
+      .filter(
+        (entry) =>
+          entry.station &&
+          Number.isFinite(entry.durationSeconds) &&
+          Number.isFinite(entry.totalAmount)
+      )
+    const signature = JSON.stringify(
+      next.map((entry) => [
+        entry.station.stationId,
+        entry.label,
+        entry.durationSeconds,
+        entry.totalAmount
+      ])
+    )
+    if (signature === this._recommendationSignature) return
+    this._recommendationSignature = signature
+    this._recommendations = new Map(next.map((entry) => [entry.station.stationId, entry]))
+    if (this.map) this.updateMarkers(this._visibleStations)
+  }
+
+  _clearRecommendationMarkers() {
+    this._recommendationMarkers.forEach((marker) => this.map?.remove(marker))
+    this._recommendationMarkers = []
+  }
+
+  _renderRecommendationMarkers(points) {
+    this._clearRecommendationMarkers()
+    points.forEach(({ station, lnglat }) => {
+      const entry = this._recommendations.get(station.stationId)
+      if (!entry) return
+      const content = el('div', 'map-recommendation-marker')
+      content.setAttribute('role', 'button')
+      content.tabIndex = 0
+      content.dataset.stationId = station.stationId
+      content.setAttribute('aria-label', `${t(entry.label)}: ${stationName(station.stationName)}`)
+      content.append(
+        el('span', 'map-recommendation-label', t(entry.label)),
+        el('strong', 'map-recommendation-name', stationName(station.stationName)),
+        el(
+          'span',
+          'map-recommendation-estimate',
+          `${t('约 {minutes} 分钟', { minutes: Math.ceil(entry.durationSeconds / 60) })} · ${formatPrice(entry.totalAmount)}`
+        )
+      )
+      content.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          this._openStationInfoWindow(station, lnglat)
+        }
+      })
+      const marker = new AMap.Marker({
+        position: lnglat,
+        content,
+        offset: new AMap.Pixel(-80, -88),
+        zIndex: 180,
+        title: stationName(station.stationName)
+      })
+      this._bindStationMarker(marker, station)
+      this.map.add(marker)
+      this._recommendationMarkers.push(marker)
+    })
   }
 
   buildInfoWindowContent(station) {
@@ -253,7 +325,11 @@ class MapManager {
     // The value signature makes unchanged/favorite-only refreshes a no-op.
     if (this.map) this.updateMarkers(this._visibleStations)
     const marker = this._markersByStationId.get(stationId)
-    if (marker && typeof marker.setContent === 'function') {
+    if (
+      marker &&
+      !this._recommendations.has(stationId) &&
+      typeof marker.setContent === 'function'
+    ) {
       marker.setContent(this.createStationMarkerContent(station))
     }
     if (this._infoWindow && this._activeStationId === stationId) {
@@ -331,7 +407,7 @@ class MapManager {
 
     this._visibleStations = filteredStations.slice()
 
-    const points = filteredStations
+    const visiblePoints = filteredStations
       .filter((station) => station.lng && station.lat)
       .map((station) => ({
         lnglat: [station.lng, station.lat],
@@ -339,15 +415,22 @@ class MapManager {
         station: station
       }))
 
-    const signature = this._markerSignatureFor(points)
+    const signature = `${this._markerSignatureFor(visiblePoints)}:${this._recommendationSignature}`
     if (signature === this._markerSignature) {
       return
     }
     this._markerSignature = signature
 
+    this._markersByStationId = new Map()
+    this._renderRecommendationMarkers(visiblePoints)
+    // Featured pins stay visible even at clustered zoom levels; don't also
+    // count/draw the same station inside an ordinary cluster.
+    const points = visiblePoints.filter(
+      ({ station }) => !this._recommendations.has(station.stationId)
+    )
+
     if (points.length === 0) {
       this._clearDirectMarkers()
-      this._markersByStationId = new Map()
       if (this.markerClusterer) {
         if (typeof this.markerClusterer.setPoints === 'function') {
           this.markerClusterer.setPoints([])
@@ -360,7 +443,6 @@ class MapManager {
     }
 
     const self = this
-    this._markersByStationId = new Map()
 
     const renderMarker = (context) => {
       const data = context.data
@@ -413,7 +495,9 @@ class MapManager {
       const fontSize = count >= 50 ? '18px' : '15px'
 
       const div = document.createElement('div')
-      div.className = 'map-cluster'
+      div.className = self._recommendations.size
+        ? 'map-cluster map-station-pin-muted'
+        : 'map-cluster'
       div.style.cssText = `background:var(--map-marker-bg,white);width:${size}px;height:${size}px;border:2px solid ${statusColor};border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--map-marker-text,${brand.ink});font-weight:700;font-size:${fontSize};cursor:pointer;`
       div.setAttribute('role', 'button')
       div.tabIndex = 0
@@ -852,6 +936,7 @@ class MapManager {
     this.closeInfoWindow()
     this.clearRoute()
     this._clearDirectMarkers()
+    this._clearRecommendationMarkers()
     if (this.markerClusterer) {
       this.markerClusterer.setMap(null)
       this.markerClusterer = null
@@ -880,6 +965,8 @@ class MapManager {
     this._stationMarkerBindings = new WeakMap()
     this._visibleStations = []
     this._markerSignature = ''
+    this._recommendations = new Map()
+    this._recommendationSignature = ''
     this.map = null
     this.stations = []
   }

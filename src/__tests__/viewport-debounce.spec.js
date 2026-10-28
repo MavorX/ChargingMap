@@ -19,6 +19,7 @@ vi.mock('../services/mapService', () => ({
   default: {
     setMap: vi.fn(),
     setStations: vi.fn(),
+    setRecommendations: vi.fn(),
     updateMarkers: vi.fn(),
     closeInfoWindow: vi.fn(),
     clearRoute: vi.fn(),

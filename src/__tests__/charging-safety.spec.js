@@ -153,8 +153,11 @@ describe('device acknowledgement safety boundaries', () => {
     useUserStore().vehicles[0].maxPower = 30
     const store = await start()
     await vi.advanceTimersByTimeAsync(3600000)
-    expect(store.chargingData.energy).toBeCloseTo(30)
-    expect(store.chargingData.battery).toBeCloseTo(70)
+    expect(store.sessionModel.powerKw).toBe(30)
+    expect(store.chargingData.energy).toBeLessThanOrEqual(30)
+    expect(store.chargingData.energy).toBeGreaterThan(29)
+    expect(store.chargingData.battery).toBeLessThan(70)
+    expect(store.chargingData.speed).toBeLessThanOrEqual(30)
   })
 
   it('does not resurrect a pending start after the simulator is disposed', async () => {

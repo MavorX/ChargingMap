@@ -4,10 +4,16 @@ import { useUserStore } from './user'
 import { formatDuration, formatPrice } from '../../utils/format'
 import { createRecordId } from '../../utils/id'
 import { createSandboxCharger } from '../../services/chargerGateway'
-import { validateChargingSetup, meterAt } from '../../utils/chargingModel'
+import {
+  validateChargingSetup,
+  meterAt,
+  powerAtBattery,
+  chargingDurationSeconds
+} from '../../utils/chargingModel'
 import { couponState } from '../../utils/coupons'
+import { energyAmounts, roundAmount } from '../../utils/chargingCost'
 
-export const SERVICE_FEE_RATE = 0.1
+export { SERVICE_FEE_RATE } from '../../utils/chargingCost'
 
 const toAmount = (value) => {
   const number = Number(value)
@@ -38,10 +44,7 @@ const couponDiscountFor = (coupon, totalAmount, now = new Date()) => {
 }
 
 export function calculatePaymentAmounts({ energy = 0, price = 0, coupon = null } = {}) {
-  const roundAmount = (amount) => Math.round((amount + Number.EPSILON) * 100) / 100
-  const chargeCost = roundAmount(Math.max(0, toAmount(energy)) * Math.max(0, toAmount(price)))
-  const serviceFee = roundAmount(chargeCost * SERVICE_FEE_RATE)
-  const totalAmount = roundAmount(chargeCost + serviceFee)
+  const { chargeCost, serviceFee, totalAmount } = energyAmounts(toAmount(energy), toAmount(price))
   const couponDiscount = Math.min(
     totalAmount,
     Math.max(0, roundAmount(couponDiscountFor(coupon, totalAmount)))
@@ -295,7 +298,7 @@ export const useChargingStore = defineStore('charging', {
           duration: 0,
           energy: 0,
           cost: 0,
-          speed: this.sessionModel.powerKw,
+          speed: powerAtBattery(this.sessionModel, this.sessionModel.initialBattery),
           battery: this.sessionModel.initialBattery,
           elapsedRealSeconds: 0
         }
@@ -478,7 +481,17 @@ export const useChargingStore = defineStore('charging', {
         this.sessionStation = saved.station
         this.sessionConnector = saved.connector
         this.sessionVehicle = saved.vehicle
-        this.sessionModel = saved.model
+        const modeledDuration = chargingDurationSeconds(saved.model)
+        this.sessionModel =
+          Number.isFinite(modeledDuration) && modeledDuration > 0
+            ? {
+                ...saved.model,
+                targetBattery: saved.model.targetBattery ?? 100,
+                targetEnergy:
+                  (((saved.model.targetBattery ?? 100) - saved.model.initialBattery) / 100) *
+                  saved.model.batteryCapacityKwh
+              }
+            : null
         this.chargingData = { ...saved.data, speed: 0 }
         this.lastReceipt = saved.phase === 'paid' ? saved.lastReceipt : null
         this.reviewSubmitted = !!saved.reviewSubmitted
