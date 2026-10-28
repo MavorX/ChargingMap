@@ -170,9 +170,26 @@ test('wallet validation, vehicle draft protection and local preferences survive 
   await page.locator('#account-name').fill('Charging Demo')
   await page.getByRole('button', { name: '保存', exact: true }).click()
   await page.reload()
+  await expect(page.getByRole('heading', { name: '地图加载失败', exact: true })).toBeVisible()
   await openAccount(page)
   await expect(page.getByRole('heading', { name: 'Charging Demo', exact: true })).toBeVisible()
   expect((await ledger(page)).balance).toBe(40)
+})
+
+test('account lazy panels reopen after three full reloads of the built app', async ({ page }) => {
+  await boot(page)
+  await expect(page.locator('script[type="module"][src]')).toHaveAttribute(
+    'src',
+    /^\/assets\/.+\.js$/
+  )
+  for (let reload = 0; reload < 3; reload++) {
+    await openAccount(page)
+    await page.getByRole('button', { name: '设置与个人资料', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '设置', exact: true })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { name: '地图加载失败', exact: true })).toBeVisible()
+  }
+  await openAccount(page)
 })
 
 test('a failed detail request offers a usable retry', async ({ page }) => {

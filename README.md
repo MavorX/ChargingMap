@@ -322,9 +322,9 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-浏览器回归故意阻断地图 SDK，以固定环境验证列表、完整充电支付、预约、账户、详情重试和窄屏中英文布局；真实地图另用 `scripts/capture-presentation.mjs` 验证。Windows 已安装 Edge 时可在 PowerShell 设置 `$env:BROWSER_EXECUTABLE='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'` 后运行，免装 Chromium。CI 新增独立浏览器任务。
+浏览器回归自动构建到 `.cache/browser-test/`，在 5176 端口预览构建产物，不使用开发服务器或覆盖 `dist/`。测试固定假地图 key 与空账户、故意阻断地图 SDK，验证列表、完整充电支付、预约、账户及多次刷新、详情重试和窄屏中英文布局；真实地图另用 `scripts/capture-presentation.mjs` 验证。默认使用与 CI 一致的 Playwright Chromium。Windows 已安装 Edge 时可在 PowerShell 设置 `$env:BROWSER_EXECUTABLE='C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'` 后运行，免装 Chromium，但 Edge 通过不能代替 CI Chromium 验证。
 
-当前本地结果：**45 个测试文件、427 项单元/组件测试和 8 条浏览器流程通过**。store/services 行覆盖率 **89.61%**（不是全项目覆盖率）；完整范围、真实 SDK 验证与未覆盖边界见 [TEST_REPORT.md](TEST_REPORT.md)。PPT 的编辑、截图与重新生成方式见 [演示文稿说明](docs/presentation/README.md)。
+当前本地结果：**45 个测试文件、427 项单元/组件测试和 9 条浏览器流程通过**。store/services 行覆盖率 **89.61%**（不是全项目覆盖率）；完整范围、真实 SDK 验证与未覆盖边界见 [TEST_REPORT.md](TEST_REPORT.md)。PPT 的编辑、截图与重新生成方式见 [演示文稿说明](docs/presentation/README.md)。
 
 本地使用 Node 版本管理器时可运行 `nvm install` / `nvm use`（或按所用工具读取 `.nvmrc`）。当前 `jsdom` 等开发依赖要求 Node `^22.22.2 || ^24.15.0 || >=26.0.0`；只修改工作流或只看本地测试结果会导致环境不一致。
 

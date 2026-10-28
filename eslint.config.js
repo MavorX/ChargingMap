@@ -6,6 +6,7 @@ export default [
   {
     ignores: [
       'dist/**',
+      '.cache/browser-test/**',
       'node_modules/**',
       'public/data/**',
       'coverage/**',

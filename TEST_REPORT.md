@@ -115,3 +115,13 @@ CI 新增独立 Chromium 浏览器任务；常规任务运行 coverage、lint、
 5. 预约仍仅本页内存；图片仅本地预览；本地账本会随清除站点存储丢失，不是跨设备账户。
 6. 依赖 0 漏洞仅是该日期 npm 已知公告的扫描结果，不排除未知漏洞；后续升级地图 SDK 应重新检查 canvas 选择器、文字/路线可读性和请求数。
 7. PPT 截图与结果来自本轮本地版本。**Git 推送、远端 CI 和 GitHub Pages 部署是不同状态**，未将推送视作网站已更新。
+
+## 8. GitHub CI 回归修复补充（2026-10-28）
+
+- 主分支 `04788a6`（[运行 40553091725](https://github.com/MavorX/ChargingMap/actions/runs/40553091725)）和 `3a003d9`（[运行 40613658474](https://github.com/MavorX/ChargingMap/actions/runs/40613658474)）的 `verify` 均成功，`browser` 均失败，不能用前述本机 Edge 通过替代远端 Chromium 结果。
+- 下载日志和 trace 确认：账户用例刷新后，`UserProfile.vue` 的开发服务器模块请求一直 pending，“我的账户”面板未出现；原运行和重试都在同一处超时。该证据定位到开发服务器测试路径，不将其宣称为已证明的 Vite 或 Chromium 内部缺陷。
+- 浏览器服务器改为先构建 `.cache/browser-test/` 再预览静态产物，保留异步面板分包，不改产品功能、不覆盖 `dist/`；固定假 key 和空账户，生成文件不提交且不参与 ESLint 源码检查。
+- 保留原账户资金、草稿保护和昵称持久化断言，刷新后等待应用界面就绪；新增连续 3 次刷新并重新打开账户/设置的回归，同时断言入口来自 `/assets/*.js`，防止退回开发服务器测试。未跳过测试或放宽原有超时。
+- 在隔离工作树重新执行 `npm ci`、lint、格式、a11y、数据检查、coverage 和构建；**45 个文件 / 427 项单元组件测试通过，Playwright 自带 Chromium 156 的 9 条浏览器流程在禁用重试时全部通过**。上述为 Windows 本地记录，远端验收仍以相同提交 SHA 的 GitHub Actions `verify` 和 `browser` 两项结果为准。
+
+前文 8 条浏览器测试及 Edge 环境是最初审查的历史记录；本次补充后的浏览器用例总数为 9。
