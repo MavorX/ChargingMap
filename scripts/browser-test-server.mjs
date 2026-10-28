@@ -1,8 +1,7 @@
 import process from 'node:process'
 import { build, preview } from 'vite'
 
-// Test the shipped bundles, not Vite's on-demand development transforms: CI
-// traces showed UserProfile.vue stuck pending after a reload of the dev server.
+// Test the shipped bundles, not Vite's on-demand development transforms.
 // Keep this build separate from dist/ and never bake local map credentials or
 // optional demo-account data into the browser-test artifact.
 process.env.VITE_DEMO = 'false'

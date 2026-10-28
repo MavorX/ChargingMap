@@ -70,7 +70,7 @@ test('shared search, reset, paging and the left-side return path', async ({ page
   await page.getByRole('button', { name: '快充可用', exact: true }).click()
   await page.getByRole('button', { name: '收起站点列表', exact: true }).click()
   const expand = page.getByRole('button', { name: '展开站点列表', exact: true })
-  expect((await expand.boundingBox()).x).toBeLessThan(100)
+  await expect.poll(async () => (await expand.boundingBox())?.x ?? Infinity).toBeLessThan(100)
   await expand.click()
   await expect(page.getByRole('button', { name: '快充可用', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -158,7 +158,10 @@ test('wallet validation, vehicle draft protection and local preferences survive 
   await page.getByRole('button', { name: '确认提现', exact: true }).click()
   expect((await ledger(page)).balance).toBe(40)
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: /我的车辆/ }).click()
+  await page
+    .getByRole('dialog', { name: '我的账户', exact: true })
+    .getByRole('button', { name: /我的车辆/ })
+    .click()
   await page.getByRole('button', { name: '添加车辆', exact: true }).click()
   await page.locator('#vehicle-brand').fill('测试品牌')
   await page.getByRole('button', { name: '取消', exact: true }).click()

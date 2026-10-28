@@ -119,9 +119,10 @@ CI 新增独立 Chromium 浏览器任务；常规任务运行 coverage、lint、
 ## 8. GitHub CI 回归修复补充（2026-10-28）
 
 - 主分支 `04788a6`（[运行 40553091725](https://github.com/MavorX/ChargingMap/actions/runs/40553091725)）和 `3a003d9`（[运行 40613658474](https://github.com/MavorX/ChargingMap/actions/runs/40613658474)）的 `verify` 均成功，`browser` 均失败，不能用前述本机 Edge 通过替代远端 Chromium 结果。
-- 下载日志和 trace 确认：账户用例刷新后，`UserProfile.vue` 的开发服务器模块请求一直 pending，“我的账户”面板未出现；原运行和重试都在同一处超时。该证据定位到开发服务器测试路径，不将其宣称为已证明的 Vite 或 Chromium 内部缺陷。
+- 初始 trace 中刷新后的 `UserProfile.vue` 请求 pending；改为静态产物后的[隔离分支复测](https://github.com/MavorX/ChargingMap/actions/runs/40635064702)仍失败，且模块已返回 200，面板仍停留在离场动画阶段。仅换服务器不足以修复问题，不将其宣称为已证明的 Vite 或 Chromium 内部缺陷。
 - 浏览器服务器改为先构建 `.cache/browser-test/` 再预览静态产物，保留异步面板分包，不改产品功能、不覆盖 `dist/`；固定假 key 和空账户，生成文件不提交且不参与 ESLint 源码检查。
 - 保留原账户资金、草稿保护和昵称持久化断言，刷新后等待应用界面就绪；新增连续 3 次刷新并重新打开账户/设置的回归，同时断言入口来自 `/assets/*.js`，防止退回开发服务器测试。未跳过测试或放宽原有超时。
+- 功能测试统一使用 `reducedMotion: 'reduce'`，不依赖无头软件渲染的过渡帧推进；同时把侧栏位置改为等待最终布局的轮询断言，将“我的车辆”操作限定到已恢复的账户面板，防止在过渡间隙误选同名地图按钮。这些是功能测试时序保护，不是动画性能验收。
 - 在隔离工作树重新执行 `npm ci`、lint、格式、a11y、数据检查、coverage 和构建；**45 个文件 / 427 项单元组件测试通过，Playwright 自带 Chromium 156 的 9 条浏览器流程在禁用重试时全部通过**。上述为 Windows 本地记录，远端验收仍以相同提交 SHA 的 GitHub Actions `verify` 和 `browser` 两项结果为准。
 
 前文 8 条浏览器测试及 Edge 环境是最初审查的历史记录；本次补充后的浏览器用例总数为 9。
