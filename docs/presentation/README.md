@@ -19,29 +19,45 @@
 9. 质量验证 / Tests, data contracts & dependency audit
 10. 在线演示 / Try the demo
 
-沿用品牌绿 `#008C82`、深色 `#002733`、荧光强调 `#C2FE06`。未打包公司原始 `.potx`、模板手册、企业字体或环境密钥。
+**直接基于用户提供的 `VCTC Template_Rise Up.potx` 生成，不再只借用主题色。**使用原始封面、白底正文、深底正文和结束页四种版式，保留右上角公司字标、左下角“驭势而上 / RISE UP”、封面/结束页曲线背景及模板页脚位置。各页使用模板对应的深/浅色 Logo 原图和原始尺寸、位置。
+
+不上传模板原件、模板手册、企业字体或环境密钥；交付 PPT 中保留实际使用的公司母版、版式和标识，这是正常的模板继承，不是将整份 73 页模板（含手册与示例）打包进演示文稿。
 
 ## 编辑与来源
 
 - 标题、正文、卡片与流程图为可编辑对象；界面和分布图为图片。
-- 使用系统字体 Microsoft YaHei / Segoe UI，未嵌入或分发字体；其他系统若字体替换，需重新检查换行。
+- 保留模板主题与字体绑定：英文使用模板的 The Group HEAD Light / The Group TEXT，中文使用 Microsoft YaHei；不嵌入或分发企业字体。未安装企业字体时查看器会使用回退字体，其他系统需重新检查换行；Logo 为原始图形，不依赖字体安装。
+- 标题及英文副标题使用模板原始占位区域；正文避开右上与左下标识区，页脚更新为项目标题、日期和页码，不冒用模板的示例部门或分类。
 - `assets/` 为**正式演示素材**，不是调试截图；采自本轮本地真实高德 SDK + 模拟业务，保留地图版权。分布图直接根据仓库上海坐标与近似道路绘制，不是真实 POI。
 - `live-review.json` 记录本轮 42 个状态及主题请求验证；测试数字和边界见 [TEST_REPORT.md](../../TEST_REPORT.md)。
 - 在线演示可能仍运行旧部署；PPT 截图与测试不等于线上版本已更新。
 
 ## 重新生成 PPT
 
-从仓库根目录执行，Python 3.10+：
+从仓库根目录执行，Python 3.10+。需将公司提供的原始模板放在 `docs/presentation/VCTC Template_Rise Up.potx`，或用 `--template` 指定本地路径；模板原件不随 Git 提交。
 
 ```bash
 python -m pip install -r scripts/requirements-presentation.txt
 python scripts/build-presentation.py
 
+# 使用其他本地路径的原始模板
+python scripts/build-presentation.py --template /path/to/VCTC-template.potx
+
 # 可选：使用本机 LibreOffice 导出 PDF，并生成逐页 PNG 与总览
 python scripts/build-presentation.py --render-soffice /path/to/soffice --preview-dir /path/to/temporary/previews
 ```
 
-脚本不依赖公司模板，也不读取 `.env`。运行后写入当前目录中的 PPTX；带渲染参数时还生成 PDF 和 `ChargingMap_Preview.png`。逐页 PNG 请输出到临时目录，避免误提交全部调试产物。测试数写在生成脚本的质量页与备注中，测试变化后应同时更新，避免引用过期指标。
+脚本要求原始公司模板存在，不会悄悄退回无 Logo 的空白模板，也不读取 `.env`。只在内存中将 POTX 转为可编辑演示，保留四种已用版式及其母版，清理示例页、手册版式、旧占位文案和无关插件/OLE 数据；不修改原始模板。
+
+每次生成都自动验证 **10 页、20 处原始标识实例**：Logo 资源哈希、位置和尺寸必须与原模板相同，正文不得覆盖标识区域。带渲染参数时还生成 PDF 和 `ChargingMap_Preview.png`，并检查 PDF 的 20 处标识区域确实有可见内容。逐页 PNG 请输出到临时目录，避免误提交调试产物。测试数写在生成脚本的质量页与备注中，测试变化后应同步更新。
+
+### 模板回归检查
+
+```bash
+python scripts/test_presentation_template.py
+```
+
+8 项检查覆盖真实版式/双标识继承、Logo 缺失/移动/图像变更、正文遮挡、手册与 OLE 清理、原始模板不被修改，以及缺失原件时拒绝生成。自定义模板路径可设置 `CHARGINGMAP_TEMPLATE`。这些是文稿检查，不会重新采集界面，也不把历史应用测试当作本次重新运行。
 
 ## 重新采集真实界面
 

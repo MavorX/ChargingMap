@@ -41,6 +41,8 @@ playwright-report/
 *.tmp
 *.temp
 .cache/
+__pycache__/
+*.py[cod]
 
 # Local agent workspace
 .omo/

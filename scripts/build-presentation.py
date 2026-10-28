@@ -1,10 +1,13 @@
 """Build the editable bilingual ChargingMap project deck.
 
-Requires python-pptx and Pillow. Optional PDF/preview rendering also uses
-LibreOffice and PyMuPDF. Company template and font files are not redistributed.
+Requires the user-provided VCTC template, python-pptx and Pillow. Optional
+PDF/preview rendering also uses LibreOffice and PyMuPDF. The original template
+and font files are not redistributed; its used masters/logos remain in the deck.
 """
 
 import argparse
+from io import BytesIO
+import hashlib
 import json
 import math
 import os
@@ -12,12 +15,15 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from PIL import Image, ImageDraw
+from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Inches, Pt
 
@@ -25,20 +31,168 @@ from pptx.util import Inches, Pt
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "presentation"
 ASSETS = OUT / "assets"
+TEMPLATE = OUT / "VCTC Template_Rise Up.potx"
 W, H = 13.333333, 7.5
 INK, GREEN, NEON = "002733", "008C82", "C2FE06"
-MINT, GRAY, LINE, BG, WHITE = "99D1CD", "4C6870", "CCD3D6", "F4F7F7", "FFFFFF"
-CN, EN = "Microsoft YaHei", "Segoe UI"
+MINT, GRAY, LINE, BG, WHITE = "99D1CD", "4C6870", "CCD3D6", "FFFFFF", "FFFFFF"
+CN, EN, HEAD = "Microsoft YaHei", "+mn-lt", "+mj-lt"
 DEMO = "https://mavorx.github.io/ChargingMap/"
+FOOTER_TYPES = {PP_PLACEHOLDER.FOOTER, PP_PLACEHOLDER.DATE, PP_PLACEHOLDER.SLIDE_NUMBER}
+LAYOUT_PARTS = {"cover": "slideLayout3.xml", "light": "slideLayout24.xml",
+                "dark": "slideLayout23.xml", "final": "slideLayout40.xml"}
+
+
+def template_presentation(source):
+    """Open POTX in memory, retaining real layout/master artwork and geometry."""
+    if not source.is_file():
+        raise FileNotFoundError(f"The original company template is required: {source}")
+    converted = BytesIO()
+    with ZipFile(source) as original, ZipFile(converted, "w", ZIP_DEFLATED) as output:
+        for part in original.infolist():
+            payload = original.read(part.filename)
+            if part.filename == "[Content_Types].xml":
+                payload = payload.replace(
+                    b"application/vnd.openxmlformats-officedocument.presentationml.template.main+xml",
+                    b"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+                )
+            output.writestr(part, payload)
+    converted.seek(0)
+    return Presentation(converted)
+
+
+def prune_unreferenced_relationships(part):
+    """Remove unused add-in, OLE and guide assets, never inherited logo images."""
+    for rel in list(part.rels.values()):
+        if not rel.reltype.endswith(("/image", "/oleObject", "/tags", "/customXml")):
+            continue
+        if not any(value == rel.rId for element in part._element.iter()
+                   for name, value in element.attrib.items()
+                   if name.startswith("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}")):
+            part.drop_rel(rel.rId)
+
+
+def load_template(source):
+    prs = template_presentation(source)
+    assert (prs.slide_width, prs.slide_height) == (12192000, 6858000)
+    layouts = {role: next(layout for layout in prs.slide_layouts
+                          if Path(str(layout.part.partname)).name == name)
+               for role, name in LAYOUT_PARTS.items()}
+    # Original sample slides and user-manual layouts are not project content.
+    for item in list(prs.slides._sldIdLst):
+        prs.part.drop_rel(item.rId)
+        prs.slides._sldIdLst.remove(item)
+    for element in list(prs.part._element):
+        if element.tag in {qn("p:extLst"), qn("p:sectionLst")}:
+            prs.part._element.remove(element)
+    master = prs.slide_masters[0]
+    keep = {layout.part for layout in layouts.values()}
+    for item in list(master.slide_layouts._sldLayoutIdLst):
+        if master.part.related_part(item.rId) not in keep:
+            master.part.drop_rel(item.rId)
+            master.slide_layouts._sldLayoutIdLst.remove(item)
+    for shape in list(master.shapes):
+        if not shape.is_placeholder and shape.name not in {"Picture 30", "Grafik 25"}:
+            # Only off-canvas guide marks, old classification and think-cell data.
+            master.shapes._spTree.remove(shape._element)
+    for container in [master, *layouts.values()]:
+        for shape in container.shapes:
+            if shape.is_placeholder and shape.has_text_frame:
+                shape.text = ""  # Remove instructions but retain placeholder styles.
+        prune_unreferenced_relationships(container.part)
+    for shape in prs.notes_master.shapes:
+        if shape.has_text_frame:
+            shape.text = ""  # Keep notes geometry/styles, not the template's sample text/date.
+    for part in list(prs.part.package.iter_parts()):
+        for rel in list(part.rels.values()):
+            if rel.reltype.endswith(("/customXml", "/tags", "/oleObject", "/thumbnail")):
+                if hasattr(part, "_element"):
+                    for element in list(part._element.iter()):
+                        if rel.rId in [value for name, value in element.attrib.items()
+                                       if name.startswith("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}")]:
+                            element.getparent().remove(element)
+                part.drop_rel(rel.rId)
+    for rel in list(prs.part.package._rels.values()):
+        if rel.reltype.endswith(("/custom-properties", "/thumbnail")):
+            prs.part.package.drop_rel(rel.rId)
+    prs._charging_layouts = layouts
+    return prs
+
+
+def logo_signature(shape):
+    assets = []
+    for element in shape._element.iter():
+        relationship = element.get(qn("r:embed"))
+        if relationship:
+            payload = shape.part.related_part(relationship).blob
+            assets.append(hashlib.sha256(payload).hexdigest())
+    return (shape.name, shape.left, shape.top, shape.width, shape.height, tuple(assets))
+
+
+def logo_shapes(slide):
+    layout = slide.slide_layout
+    shapes = list(layout.shapes)
+    if layout._element.get("showMasterSp") != "0":
+        shapes += list(layout.slide_master.shapes)
+    return [shape for shape in shapes if shape.shape_type == MSO_SHAPE_TYPE.PICTURE]
+
+
+def validate_branding(prs, source):
+    """Gate every slide on original template assets/geometry and clear areas."""
+    reference = template_presentation(source)
+    originals = {str(layout.part.partname): layout for layout in reference.slide_layouts}
+    assert len(prs.slide_masters) == 1 and len(prs.slide_layouts) == 4
+    assert len(prs.slides) == 10
+    checked = 0
+    for index, slide in enumerate(prs.slides, 1):
+        layout = slide.slide_layout
+        role = "cover" if index == 1 else "final" if index == 10 else "dark" if index == 3 else "light"
+        assert Path(str(layout.part.partname)).name == LAYOUT_PARTS[role], f"Wrong template layout: {index}"
+        original = originals[str(layout.part.partname)]
+        actual_bg, original_bg = layout._element.cSld.bg, original._element.cSld.bg
+        assert (actual_bg.xml if actual_bg is not None else None) == (original_bg.xml if original_bg is not None else None)
+        expected = list(original.shapes)
+        if original._element.get("showMasterSp") != "0":
+            expected += list(original.slide_master.shapes)
+        expected = [shape for shape in expected if shape.shape_type == MSO_SHAPE_TYPE.PICTURE]
+        marks = logo_shapes(slide)
+        assert len(marks) == len(expected) == 2, f"Missing company wordmark or RISE UP: slide {index}"
+        assert sorted(map(logo_signature, marks)) == sorted(map(logo_signature, expected)), f"Altered template logo: slide {index}"
+        artwork = [etree.tostring(shape._element, method="c14n") for shape in layout.shapes if not shape.is_placeholder]
+        original_artwork = [etree.tostring(shape._element, method="c14n") for shape in original.shapes if not shape.is_placeholder]
+        assert artwork == original_artwork, f"Original layout artwork was changed: slide {index}"
+        for shape in slide.shapes:
+            if shape.is_placeholder and shape.placeholder_format.type in FOOTER_TYPES:
+                continue  # Original right-aligned footer boxes extend behind the logo region.
+            for mark in marks:
+                overlaps = (shape.left < mark.left + mark.width and shape.left + shape.width > mark.left
+                            and shape.top < mark.top + mark.height and shape.top + shape.height > mark.top)
+                assert not overlaps, f"Slide {index}: {shape.name} covers the original {mark.name}"
+        checked += len(marks)
+    print(f"Template check passed: {checked} original logo instances on 10 slides; 4 genuine layouts; no logo overlap.")
+
+
+def update_document_properties(prs):
+    # python-pptx preserves this generic part verbatim; the source still lists
+    # all 73 sample slide titles unless explicitly replaced after composition.
+    namespace = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+    root = etree.Element(f"{{{namespace}}}Properties", nsmap={None: namespace})
+    values = {"Application": "ChargingMap Presentation Builder", "PresentationFormat": "Widescreen",
+              "Slides": str(len(prs.slides)), "Notes": str(len(prs.slides)), "HiddenSlides": "0"}
+    for name, value in values.items():
+        etree.SubElement(root, f"{{{namespace}}}{name}").text = value
+    for rel in prs.part.package._rels.values():
+        if rel.reltype.endswith("/extended-properties"):
+            rel.target_part._blob = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
 
 
 def color(value):
     return RGBColor.from_string(value)
 
 
-def box(slide, x, y, w, h, fill, stroke=None, rounded=False):
+def box(slide, x, y, w, h, fill, stroke=None):
+    # The supplied template explicitly specifies sharp-corner text/image boxes.
     shape = slide.shapes.add_shape(
-        MSO_SHAPE.ROUNDED_RECTANGLE if rounded else MSO_SHAPE.RECTANGLE,
+        MSO_SHAPE.RECTANGLE,
         Inches(x), Inches(y), Inches(w), Inches(h),
     )
     shape.fill.solid()
@@ -52,14 +206,13 @@ def box(slide, x, y, w, h, fill, stroke=None, rounded=False):
     effect_ref = shape._element.find("{http://schemas.openxmlformats.org/presentationml/2006/main}style/{http://schemas.openxmlformats.org/drawingml/2006/main}effectRef")
     if effect_ref is not None:
         effect_ref.set("idx", "0")
-    if rounded:
-        shape.adjustments[0] = 0.12
     return shape
 
 
 def text(slide, value, x, y, w, h, size=18, fill=INK, bold=False,
-         font=CN, align=PP_ALIGN.LEFT, link=None):
-    shape = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+         font=CN, align=PP_ALIGN.LEFT, link=None, shape=None):
+    if shape is None:
+        shape = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     frame = shape.text_frame
     frame.clear()
     frame.margin_left = frame.margin_right = 0
@@ -95,7 +248,7 @@ def pair(slide, zh, en, x, y, w, size=18, fill=INK, secondary=GRAY, center=False
 
 
 def pill(slide, value, x, y, w, fill=GREEN, fg=WHITE):
-    box(slide, x, y, w, 0.35, fill, rounded=True)
+    box(slide, x, y, w, 0.35, fill)
     text(slide, value, x + 0.1, y + 0.055, w - 0.2, 0.24, size=10, fill=fg, font=EN,
          align=PP_ALIGN.CENTER)
 
@@ -111,8 +264,7 @@ def photo(slide, name, x, y, w, crop=None, dark=False):
             source = cached
             iw, ih = image.size
     h = w * ih / iw
-    box(slide, x + 0.06, y + 0.065, w, h, "DDE5E5" if not dark else "001C25", rounded=True)
-    box(slide, x - 0.018, y - 0.018, w + 0.036, h + 0.036, INK if dark else LINE, rounded=True)
+    box(slide, x - 0.018, y - 0.018, w + 0.036, h + 0.036, INK if dark else LINE)
     slide.shapes.add_picture(str(source), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
     return h
 
@@ -122,20 +274,36 @@ def phone(slide, name, x, y, w=2.0):
 
 
 def new_slide(prs, number, zh, en, section, dark=False):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    slide.background.fill.solid()
-    slide.background.fill.fore_color.rgb = color(INK if dark else BG)
+    role = "cover" if number == 1 else "final" if number == 10 else "dark" if dark else "light"
+    layout = prs._charging_layouts[role]
+    slide = prs.slides.add_slide(layout)
+    # Do not paint a new slide background or copy over the original brand areas.
+    for shape in list(slide.shapes):
+        if shape.is_placeholder:
+            slide.shapes._spTree.remove(shape._element)
     fg, muted = (WHITE, MINT) if dark else (INK, GRAY)
-    box(slide, 0.55, 0.36, 0.09, 0.09, NEON)
-    text(slide, f"{number:02d} / {section}", 0.76, 0.28, 11.8, 0.28, size=10.5,
-         fill=muted, font=EN, bold=True)
-    text(slide, zh, 0.55, 0.74, 12.2, 0.55, size=28, fill=fg, bold=True)
-    text(slide, en, 0.56, 1.36, 12.1, 0.35, size=15, fill=muted, font=EN)
-    box(slide, 0.55, 7.08, 12.22, 0.009, "33545F" if dark else LINE)
-    text(slide, "VWer-Charging  /  PROJECT OVERVIEW  /  中英双语", 0.55, 7.18, 11, 0.18,
-         size=8, fill=muted, font=EN)
-    text(slide, f"{number:02d}", 12.25, 7.15, 0.5, 0.22, size=10, fill=muted,
-         font=EN, align=PP_ALIGN.RIGHT)
+    if number not in {1, 10}:
+        heading = next(p for p in layout.placeholders if p.placeholder_format.type == PP_PLACEHOLDER.TITLE)
+        action = next(p for p in layout.placeholders if p.name == "Action Title")
+        slide.shapes.clone_placeholder(heading)
+        title_shape = slide.placeholders[heading.placeholder_format.idx]
+        title_shape.width = Inches(9.7)  # Keep the top-right wordmark clear.
+        text(slide, zh, 0, 0, 0, 0, size=26, fill=fg, bold=True, shape=title_shape)
+        slide.shapes.clone_placeholder(action)
+        subtitle = slide.placeholders[action.placeholder_format.idx]
+        text(slide, en, 0, 0, 0, 0, size=15, fill=muted if dark else GREEN,
+             font=EN, shape=subtitle)
+    for placeholder in layout.placeholders:
+        kind = placeholder.placeholder_format.type
+        if kind not in FOOTER_TYPES:
+            continue
+        slide.shapes.clone_placeholder(placeholder)
+        target = slide.placeholders[placeholder.placeholder_format.idx]
+        value = (str(number) if kind == PP_PLACEHOLDER.SLIDE_NUMBER else
+                 "2026.10.28" if kind == PP_PLACEHOLDER.DATE else
+                 "ChargingMap  |  Project Overview / 项目介绍  |  DEMO")
+        text(slide, value, 0, 0, 0, 0, size=7.5, fill="99A9AD" if dark else GRAY,
+             font=EN, align=PP_ALIGN.RIGHT, shape=target)
     return slide
 
 
@@ -180,7 +348,7 @@ def plot_distribution():
     image.save(ASSETS / "synthetic-distribution.png", optimize=True)
 
 
-def build():
+def build(template=TEMPLATE):
     ASSETS.mkdir(parents=True, exist_ok=True)
     required = ["desktop-light.png", "desktop-dark.png", "desktop-filter.png", "mobile-detail.png",
                 "mobile-charging.png", "mobile-plug.png", "mobile-unplug.png", "mobile-paid.png",
@@ -189,27 +357,26 @@ def build():
     if missing:
         raise FileNotFoundError(f"Capture/copy presentation screenshots first: {missing}")
     plot_distribution()
-    prs = Presentation()
-    prs.slide_width, prs.slide_height = Inches(W), Inches(H)
+    prs = load_template(template)
     prs.core_properties.title = "VWer-Charging | 项目介绍 / Project Overview"
     prs.core_properties.subject = "Designed synthetic data, dual-theme maps, and a connected charging demo"
     prs.core_properties.author = "ChargingMap"
+    prs.core_properties.last_modified_by = "ChargingMap"
     prs.core_properties.keywords = "ChargingMap, EV, Vue, AMap, bilingual, synthetic data"
     prs.core_properties.comments = "Editable bilingual presentation. All stations and transactions are simulated."
 
     # 01 — Hero
     s = new_slide(prs, 1, "", "", "PROJECT OVERVIEW", dark=True)
-    pill(s, "SIMULATED EV CHARGING EXPERIENCE", 0.55, 1.05, 3.85, fill="17434E", fg=MINT)
-    text(s, "VWer-\nCharging", 0.55, 1.72, 4.5, 1.66, size=44, fill=WHITE, font=EN, bold=True)
-    text(s, "让每一次出发，\n都满电。", 0.58, 3.68, 4.3, 1.1, size=29, fill=WHITE, bold=True)
-    text(s, "One map.\nA connected charging journey.", 0.6, 5.0, 4.15, 0.83, size=19, fill=MINT, font=EN)
-    photo(s, "desktop-light.png", 5.17, 1.12, 7.57, dark=True)
-    text(s, "项目介绍  /  2026.10", 0.6, 6.47, 4.3, 0.25, size=12, fill=MINT)
-    text(s, "模拟站点与交易  /  Simulated stations & transactions", 5.2, 6.56, 7.5, 0.25,
+    text(s, "VWer-Charging", 0.446, 1.86, 6.4, 0.83, size=40, fill=WHITE, font=HEAD)
+    text(s, "让每一次出发，都满电。", 0.446, 2.98, 6.25, 0.6, size=26, fill=WHITE)
+    text(s, "One map.\nA connected charging journey.", 0.446, 3.82, 6.1, 0.96, size=23, fill=MINT, font=EN)
+    photo(s, "desktop-light.png", 7.08, 2.0, 5.65, dark=True)
+    text(s, "2026.10 / 项目介绍 / Project Overview", 0.446, 5.31, 6.2, 0.3, size=12.5, fill=MINT)
+    text(s, "模拟站点与交易 / Simulated stations & transactions", 7.1, 6.12, 5.65, 0.26,
          size=10.5, fill=MINT, font=EN)
     notes(s, "项目定位：Vue + Pinia + 高德地图的充电服务演示，不控制真实设备、不发生真实扣款。\n"
           "A front-end EV charging demo, not a live operator platform. Screenshots were captured locally in Edge with the real AMap SDK.\n"
-          "本稿沿用品牌绿 #008C82、深色 #002733、荧光强调 #C2FE06；未打包企业模板与字体文件。")
+          "本稿直接使用用户提供的 VCTC Template_Rise Up.potx，保留原始母版、封面曲线、右上角公司字标和左下角 RISE UP 标识；不分发模板原件、手册页或字体文件。")
 
     # 02 — The journey
     s = new_slide(prs, 2, "从找站，到完成充电", "One connected journey — from discovery to completion.", "EXPERIENCE")
@@ -236,7 +403,7 @@ def build():
         y = 2.1 + i * 1.08
         text(s, f"0{i + 1}", 8.26, y + 0.03, 0.55, 0.38, size=18, fill=NEON, font=EN, bold=True)
         pair(s, zh, en, 9.03, y, 3.55, size=20, fill=WHITE, secondary=MINT)
-    text(s, "110 m 最小间距 / min gap  ·  ≤ 5 站 / sites within 250 m  ·  35–180 m 偏移 / offset", 0.62, 6.68, 12.0, 0.26, size=11.5, fill=MINT)
+    text(s, "110 m 最小间距 / min gap  ·  ≤ 5 站 / sites within 250 m  ·  35–180 m 偏移 / offset", 0.62, 6.64, 12.0, 0.22, size=11.5, fill=MINT)
     notes(s, "图中直接绘制仓库内上海 1500 个模拟坐标及近似道路，右侧为中心城区局部；不是测绘数据或真实 POI。\n"
           "生成器按道路分段长度、道路权重、多中心需求高斯叠加与连续街区噪声抽样，并偏移到道路两侧 35–180 米的假设停车区域。\n"
           "110 米只防近乎重叠，不是目标间距。任一站点 250 米内最多 5 站（含自身），不为凑数量放宽约束。\n"
@@ -248,12 +415,12 @@ def build():
              ("20", "每片 100 站", "100 stations per detail shard"), ("1", "同片请求共享", "One in-flight request per shard")]
     for i, (metric, zh, en) in enumerate(cards):
         x = 0.55 + 3.14 * i
-        box(s, x, 2.22, 2.8, 2.86, WHITE, LINE, rounded=True)
+        box(s, x, 2.22, 2.8, 2.86, WHITE, LINE)
         text(s, metric, x + 0.22, 2.53, 2.4, 0.94, size=48, fill=GREEN, font=EN, bold=True)
         pair(s, zh, en, x + 0.23, 3.69, 2.34, size=18)
         if i < 3:
             text(s, "→", x + 2.86, 3.28, 0.28, 0.4, size=18, fill=GRAY, font=EN)
-    box(s, 0.55, 5.67, 12.22, 0.93, INK, rounded=True)
+    box(s, 0.55, 5.67, 12.22, 0.93, INK)
     text(s, "同一参数，逐字节一致", 0.85, 5.9, 5.8, 0.39, size=21, fill=WHITE, bold=True)
     text(s, "Same parameters. Byte-identical output.", 6.55, 5.96, 5.8, 0.34, size=17, fill=MINT, font=EN)
     notes(s, "默认 seed=42，上海 1500 站、合肥 500 站；两个地区使用独立的随机流。相同参数重复运行逐字节一致，上海数量变化不影响合肥数据。\n"
@@ -267,8 +434,8 @@ def build():
     pill(s, "夜间 / DARK", 6.87, 1.9, 1.58, fill=INK)
     photo(s, "desktop-light.png", 0.55, 2.4, 5.9)
     photo(s, "desktop-dark.png", 6.87, 2.4, 5.9)
-    text(s, "0", 0.6, 6.62, 0.5, 0.45, size=29, fill=GREEN, font=EN, bold=True)
-    text(s, "新增样式 / 瓦片请求  ·  New style / tile requests during toggles", 1.21, 6.64, 11.5, 0.3, size=13, fill=GRAY)
+    text(s, "0", 0.6, 6.55, 0.5, 0.33, size=22, fill=GREEN, font=EN, bold=True)
+    text(s, "新增样式 / 瓦片请求  ·  New style / tile requests during toggles", 1.21, 6.58, 11.5, 0.26, size=12, fill=GRAY)
     notes(s, "技术方案：固定复用 amap://styles/dark 和同一个地图实例，白天仅对底图 canvas 做局部 CSS 明暗合成。不是逐次调用 setMapStyle，也没有另一张隐藏地图。\n"
           "DOM 标记、信息窗及版权区域不随底图反色。相机、标记节点和测试折线保持不变。\n"
           "本轮 Edge 实测：1440×1000 与 390×844 各连续切换 8 次，并阻断远程样式/瓦片服务后再切换；新增相应请求为 0。\n"
@@ -296,7 +463,7 @@ def build():
     for i, (zh, en) in enumerate(stages):
         row, col = divmod(i, 3)
         x, y = 0.55 + col * 1.94, 2.34 + row * 1.34
-        box(s, x, y, 1.72, 1.04, INK if i == 3 else WHITE, LINE if i != 3 else None, rounded=True)
+        box(s, x, y, 1.72, 1.04, INK if i == 3 else WHITE, LINE if i != 3 else None)
         text(s, zh, x + 0.12, y + 0.19, 1.48, 0.33, size=17, fill=WHITE if i == 3 else INK, bold=True, align=PP_ALIGN.CENTER)
         text(s, en, x + 0.08, y + 0.62, 1.56, 0.22, size=10.5, fill=MINT if i == 3 else GRAY, font=EN, align=PP_ALIGN.CENTER)
         if col < 2:
@@ -317,7 +484,7 @@ def build():
     photo(s, "english-detail-1440.png", 0.55, 2.04, 6.84)
     phone(s, "mobile-english.png", 8.0, 2.04, 2.05)
     phone(s, "mobile-charging-dark.png", 10.66, 2.04, 2.05)
-    text(s, "桌面 / DESKTOP", 0.62, 6.85, 4.8, 0.21, size=10, fill=GRAY, font=EN)
+    text(s, "桌面 / DESKTOP", 1.5, 6.85, 4.8, 0.21, size=10, fill=GRAY, font=EN)
     text(s, "中文 ⇄ English", 7.9, 6.63, 2.3, 0.28, size=12, fill=GREEN, align=PP_ALIGN.CENTER)
     text(s, "明暗一致 / LIGHT & DARK", 10.35, 6.63, 2.7, 0.28, size=11, fill=GRAY, align=PP_ALIGN.CENTER)
     notes(s, "中文和英文在渲染时切换，不改写订单中的标准站点、车辆或金额数据；金额仍为人民币。语言与主题保存到当前浏览器。\n"
@@ -331,7 +498,7 @@ def build():
                ("2,000", "站点契约校验", "Validated demo stations"), ("0", "依赖审计告警", "Known npm audit findings")]
     for i, (metric, zh, en) in enumerate(metrics):
         x = 0.55 + i * 3.14
-        box(s, x, 2.12, 2.8, 2.72, INK if i == 0 else WHITE, None if i == 0 else LINE, rounded=True)
+        box(s, x, 2.12, 2.8, 2.72, INK if i == 0 else WHITE, None if i == 0 else LINE)
         text(s, metric, x + 0.23, 2.47, 2.4, 0.88, size=45, fill=NEON if i == 0 else GREEN, font=EN, bold=True)
         pair(s, zh, en, x + 0.23, 3.66, 2.33, size=17, fill=WHITE if i == 0 else INK, secondary=MINT if i == 0 else GRAY)
     text(s, "本轮修复 / FIXED IN THIS REVIEW", 0.58, 5.32, 11.9, 0.3, size=11, fill=GRAY, font=EN, bold=True)
@@ -346,12 +513,12 @@ def build():
 
     # 10 — Close
     s = new_slide(prs, 10, "", "", "TRY THE DEMO", dark=True)
-    text(s, "可讲解。可演示。可扩展。", 0.6, 1.45, 12.1, 0.8, size=34, fill=WHITE, bold=True)
-    text(s, "Explain it. Demo it. Build on it.", 0.63, 2.44, 11.8, 0.55, size=25, fill=MINT, font=EN)
+    text(s, "可讲解。可演示。\n可扩展。", 0.446, 1.22, 7.4, 1.4, size=34, fill=NEON)
+    text(s, "Explain it. Demo it. Build on it.", 0.446, 2.87, 11.8, 0.55, size=23, fill=MINT, font=EN)
     for x, zh, en in [(0.63, "有设计的数据", "DESIGNED DATA"), (4.87, "轻量双色地图", "ONE MAP, TWO THEMES"), (9.0, "连贯充电闭环", "CONNECTED JOURNEY")]:
         box(s, x, 3.64, 0.08, 0.62, NEON)
         pair(s, zh, en, x + 0.25, 3.57, 3.6, size=20, fill=WHITE, secondary=MINT)
-    box(s, 0.63, 5.03, 4.05, 0.63, NEON, rounded=True)
+    box(s, 0.63, 5.03, 4.05, 0.63, NEON)
     text(s, "打开演示 / OPEN LIVE DEMO  ↗", 0.84, 5.19, 3.64, 0.31, size=15, fill=INK, bold=True, link=DEMO)
     text(s, DEMO, 0.65, 5.96, 11.9, 0.37, size=21, fill=WHITE, font=EN, link=DEMO)
     text(s, "模拟站点与交易，不接入真实设备。 / Simulated stations & transactions. No live charger control.",
@@ -367,6 +534,8 @@ def build():
             assert shape.left >= 0 and shape.top >= 0, (number, shape.name)
             assert shape.left + shape.width <= prs.slide_width + Inches(0.01), (number, shape.name)
             assert shape.top + shape.height <= prs.slide_height + Inches(0.01), (number, shape.name)
+    validate_branding(prs, template)
+    update_document_properties(prs)
     destination = OUT / "ChargingMap_Project_Overview_ZH-EN.pptx"
     prs.save(destination)
     print(f"Saved {destination} ({len(prs.slides)} slides)")
@@ -380,16 +549,31 @@ def render(deck, soffice, preview_dir):
     temporary_root = approved_temp if approved_temp.is_dir() else Path(tempfile.gettempdir())
     with tempfile.TemporaryDirectory(prefix="chargingmap-ppt-", dir=temporary_root) as temporary:
         profile = (Path(temporary) / "profile").as_uri()
-        subprocess.run([soffice, f"-env:UserInstallation={profile}", "--headless", "--convert-to", "pdf",
+        executable = Path(soffice)
+        if os.name == "nt" and executable.with_suffix(".com").is_file():
+            executable = executable.with_suffix(".com")
+        subprocess.run([str(executable), f"-env:UserInstallation={profile}", "--headless", "--convert-to", "pdf",
                         "--outdir", str(OUT), str(deck)], check=True, timeout=150)
     pdf = deck.with_suffix(".pdf")
+    assert pdf.stat().st_mtime_ns >= deck.stat().st_mtime_ns, "Renderer did not update the PDF"
     document = pymupdf.open(pdf)
     assert len(document) == 10, "PDF has missing slides"
+    presentation = Presentation(deck)
     preview_dir = Path(preview_dir)
     preview_dir.mkdir(parents=True, exist_ok=True)
     thumbs = []
     for i, page in enumerate(document):
         assert len(page.get_text().strip()) > 60, f"Missing editable text on slide {i + 1}"
+        for mark in logo_shapes(presentation.slides[i]):
+            region = pymupdf.Rect(mark.left / 12700, mark.top / 12700,
+                                 (mark.left + mark.width) / 12700, (mark.top + mark.height) / 12700)
+            pixels = page.get_pixmap(matrix=pymupdf.Matrix(2, 2), clip=region, alpha=False)
+            crop = Image.frombytes("RGB", (pixels.width, pixels.height), pixels.samples)
+            dark_slide = i in {0, 2, 9}
+            data = crop.tobytes()
+            ink_pixels = sum(min(rgb) > 180 if dark_slide else max(rgb) < 140
+                             for rgb in zip(data[::3], data[1::3], data[2::3]))
+            assert ink_pixels > 80, f"Company mark did not render on PDF slide {i + 1}: {mark.name}"
         image = page.get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5), alpha=False)
         filename = preview_dir / f"slide-{i + 1:02d}.png"
         image.save(filename)
@@ -400,14 +584,15 @@ def render(deck, soffice, preview_dir):
     for i, thumb in enumerate(thumbs):
         montage.paste(thumb, (16 + (i % 2) * 816, 16 + (i // 2) * 466))
     montage.save(OUT / "ChargingMap_Preview.png", optimize=True)
-    print(f"Rendered {pdf}; full-size previews: {preview_dir}")
+    print(f"Rendered {pdf}; verified 20 visible mark regions; full-size previews: {preview_dir}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--template", type=Path, default=TEMPLATE, help="User-provided VCTC POTX/PPTX template")
     parser.add_argument("--render-soffice", help="Optional LibreOffice soffice executable")
     parser.add_argument("--preview-dir", default=str(OUT / "preview"))
     arguments = parser.parse_args()
-    result = build()
+    result = build(arguments.template)
     if arguments.render_soffice:
         render(result, arguments.render_soffice, arguments.preview_dir)
